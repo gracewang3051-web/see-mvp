@@ -53,17 +53,22 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self.path = '/index.html'
         return super().do_GET()
 
-    KB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kb_talent')
+    KB_TALENT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kb_talent')
+    KB_PORTRAIT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kb_portrait')
 
-    def _load_kb(self):
+    def _load_kb(self, dirs=None):
+        """加载知识库，默认 kb_talent + kb_portrait"""
+        if dirs is None:
+            dirs = [self.KB_TALENT, self.KB_PORTRAIT]
         kb = ""
-        if os.path.isdir(self.KB_DIR):
-            for fname in sorted(os.listdir(self.KB_DIR)):
-                if fname.endswith(('.txt', '.md')):
-                    try:
-                        with open(os.path.join(self.KB_DIR, fname), 'r') as f:
-                            kb += f"\n--- {fname} ---\n" + f.read()
-                    except: pass
+        for kdir in dirs:
+            if os.path.isdir(kdir):
+                for fname in sorted(os.listdir(kdir)):
+                    if fname.endswith(('.txt', '.md')):
+                        try:
+                            with open(os.path.join(kdir, fname), 'r') as f:
+                                kb += f"\n--- {fname} ---\n" + f.read()
+                        except: pass
         return kb.strip()
 
     def _call_deepseek(self, prompt):
@@ -80,8 +85,9 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
     def _report(self, body):
         data = json.loads(body)
+        kb = self._load_kb([self.KB_PORTRAIT])
         prompt = REPORT_PROMPTS.get(data.get('type', 'portrait'), REPORT_PROMPTS['portrait'])(
-            data.get('portrait', {}), data.get('baseReport', ''))
+            data.get('portrait', {}), data.get('baseReport', ''), kb)
         content, usage = self._call_deepseek(prompt)
         self._json(200, {"content": content, "usage": usage,
                          "cost": round(usage.get("total_tokens", 0) / 1000 * 0.002, 6)})
@@ -185,18 +191,22 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
 
 REPORT_PROMPTS = {
-    'portrait': lambda p, b: f"""生成基础思维画像报告（800-1200字Markdown）。
+    'portrait': lambda p, b, kb: f"""你是思维特质分析师。严格依据下方知识库框架分析数据。
 
-数据：{json.dumps(p, ensure_ascii=False)}
+## 知识库（SEE卡应用手册）
+{kb[:4000] if kb else '（知识库待补充）'}
 
-结构：
+## 用户思维画像数据
+{json.dumps(p, ensure_ascii=False)}
+
+生成800-1200字Markdown报告，必须引用知识库中的概念和术语：
 ## 基础思维画像报告
 ### 一、核心思维模式
 ### 二、各维度解读
 ### 三、综合优势
 ### 四、潜在盲区
 ### 五、成长建议""",
-    'communication': lambda p, b: f"""生成沟通与关系报告（600-900字Markdown）。
+    'communication': lambda p, b, kb: f"""生成沟通与关系报告（600-900字Markdown）。
 
 画像：{p.get('traits', [])}
 
@@ -206,7 +216,7 @@ REPORT_PROMPTS = {
 ### 二、与不同类型人的沟通建议
 ### 三、亲密关系中的你
 ### 四、团队协作建议""",
-    'action': lambda p, b: f"""生成成长行动计划报告（600-900字Markdown）。
+    'action': lambda p, b, kb: f"""生成成长行动计划报告（600-900字Markdown）。
 
 画像：{p.get('traits', [])}
 
