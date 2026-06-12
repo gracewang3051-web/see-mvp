@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover"
+    />
+    <title>SEE 生命印迹 H5</title>
+    <link rel="stylesheet" href="./h5.css" />
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  </head>
+  <body>
+    <main class="h5-app">
+      <section class="hero-screen" id="entryScreen">
+        <nav class="topbar">
+          <div class="mini-logo">SEE</div>
+          <button id="dealerSwitchBtn">切换顾问</button>
+        </nav>
+
+        <div class="hero-copy">
+          <p class="kicker">元认知训练体系 · SEE 生命印迹</p>
+          <h1>SEE 帮助你看见的<br />不是答案，而是你自己</h1>
+          <p>
+            通过照片信息读取、知识库对照与图文报告模板，生成一份可审核、可编辑、可转发的成长报告。
+          </p>
+        </div>
+
+        <div class="dealer-card-h5" id="dealerCard"></div>
+
+        <div class="stats-strip">
+          <div><strong>OCR</strong><span>照片读取</span></div>
+          <div><strong>KB</strong><span>知识库对照</span></div>
+          <div><strong>AI</strong><span>文字草稿</span></div>
+        </div>
+
+        <button class="main-action" data-go="uploadScreen">开始生成报告</button>
+
+        <section class="content-section">
+          <p class="section-kicker">CORE PHILOSOPHY</p>
+          <h2>不是测量你是什么，而是帮助你看见自己</h2>
+          <p>
+            SEE 是成长导向的元认知训练体系。它更像一面镜子，通过当下信息、情境选择和知识库解读，帮助用户看见思维模式、理解背后的原因，并找到调整方向。
+          </p>
+          <div class="mini-card-list">
+            <div>
+              <strong>一面镜子，而非一把尺子</strong>
+              <p>不急着给人贴标签，而是呈现动态的、情境相关的思维状态。</p>
+            </div>
+            <div>
+              <strong>AI 时代，以人为本</strong>
+              <p>AI 用来帮助人更好地理解自己的思考，而不是替代人的选择。</p>
+            </div>
+            <div>
+              <strong>思维多样性的呈现</strong>
+              <p>理性分析、感性直觉、高负荷与外界支援都可能是同一个人在不同场景下的真实状态。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="content-section dark-section">
+          <p class="section-kicker">ABCD BRAIN MODEL</p>
+          <h2>四种脑区调用模式</h2>
+          <div class="abcd-grid">
+            <div><b>A</b><strong>理性左脑</strong><span>事实、逻辑、数据、判断</span></div>
+            <div><b>B</b><strong>感性右脑</strong><span>感觉、情绪、共情、关系</span></div>
+            <div><b>C</b><strong>双脑高负荷</strong><span>复杂整合、全力调用、容易疲惫</span></div>
+            <div><b>D</b><strong>外界支援</strong><span>回避、拖延、依赖、暂不调用</span></div>
+          </div>
+        </section>
+
+        <section class="content-section">
+          <p class="section-kicker">THREE-STEP SYSTEM</p>
+          <h2>呈现 → 理解 → 调整</h2>
+          <div class="step-card-list">
+            <div><span>01</span><strong>呈现</strong><p>把当下思维模式可视化，让用户先看见自己的状态。</p></div>
+            <div><span>02</span><strong>理解</strong><p>结合知识库和顾问经验，理解差异来自哪里、如何影响关系和行动。</p></div>
+            <div><span>03</span><strong>调整</strong><p>把洞察转化为沟通、学习、决策和成长中的具体行动。</p></div>
+          </div>
+        </section>
+
+        <section class="content-section">
+          <p class="section-kicker">FIVE COGNITIVE FUNCTIONS</p>
+          <h2>五大认知功能区</h2>
+          <p>SEE 不是只看一个标签，而是从不同功能区观察用户如何思考、判断、感受和行动。</p>
+          <div class="function-list">
+            <div><b>1</b><strong>精神功能</strong><span>决策导航、价值判断、抽象思考</span></div>
+            <div><b>2</b><strong>逻辑空间</strong><span>结构拆解、关系推演、系统分析</span></div>
+            <div><b>3</b><strong>体觉功能</strong><span>身体感知、行动节奏、现实落地</span></div>
+            <div><b>4</b><strong>视觉功能</strong><span>图像理解、空间感、视觉表达</span></div>
+            <div><b>5</b><strong>听觉功能</strong><span>语言接收、语气敏感、沟通节奏</span></div>
+          </div>
+        </section>
+
+        <section class="content-section dark-section">
+          <p class="section-kicker">APPLICATION SCENARIOS</p>
+          <h2>五大应用场景</h2>
+          <div class="scenario-list">
+            <span>亲子教育</span>
+            <span>个人成长</span>
+            <span>亲密关系</span>
+            <span>职场发展</span>
+            <span>团队配置</span>
+          </div>
+          <p>
+            同一套 SEE 底层知识，可以根据不同入口、不同经销商、不同模板，生成不同侧重点的文字报告和图文报告。
+          </p>
+        </section>
+
+        <section class="content-section cta-section">
+          <p class="section-kicker">REPORT FLOW</p>
+          <h2>从资料到报告</h2>
+          <p>上传信息后，系统先读取内容，再对照知识库生成文字草稿，最后套入图文模板。</p>
+          <button class="main-action" data-go="uploadScreen">上传资料开始体验</button>
+        </section>
+      </section>
+
+      <section class="step-screen" id="uploadScreen">
+        <header class="section-head">
+          <button class="back-btn" data-go="entryScreen">‹</button>
+          <div>
+            <p>STEP 01</p>
+            <h2>上传信息并读取</h2>
+          </div>
+        </header>
+
+        <label class="mobile-upload" for="h5ImageInput">
+          <input id="h5ImageInput" type="file" accept="image/*" />
+          <span>+</span>
+          <strong>上传含文字的照片</strong>
+          <small>指纹记录、访谈稿、测评信息或客户资料</small>
+        </label>
+        <div class="mobile-preview" id="h5ImagePreview">照片预览</div>
+
+        <div class="button-grid">
+          <button class="dark-btn" id="h5OcrBtn">OCR 识别</button>
+          <button class="light-btn" id="h5SampleBtn">样例输入</button>
+        </div>
+
+        <label class="field-block">
+          <span>识别结果</span>
+          <textarea id="h5OcrText" placeholder="OCR 文字会出现在这里，也可以直接粘贴。"></textarea>
+        </label>
+
+        <div class="field-grid">
+          <label>
+            客户称呼
+            <input id="h5CustomerName" value="体验用户" />
+          </label>
+          <label>
+            场景
+            <select id="h5Scenario">
+              <option value="亲子教育">亲子教育</option>
+              <option value="个人成长">个人成长</option>
+              <option value="职场发展">职场发展</option>
+              <option value="关系沟通">关系沟通</option>
+              <option value="团队配置">团队配置</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field-block">
+          <span>家庭角色</span>
+          <input id="h5FamilyRoles" value="妈妈、爸爸、女儿" />
+        </label>
+
+        <button class="main-action" id="h5DraftBtn">生成文字报告草稿</button>
+      </section>
+
+      <section class="step-screen" id="draftScreen">
+        <header class="section-head">
+          <button class="back-btn" data-go="uploadScreen">‹</button>
+          <div>
+            <p>STEP 02</p>
+            <h2>文字报告草稿</h2>
+          </div>
+        </header>
+
+        <div class="process-card">
+          <span>信息上传</span>
+          <span>OCR读取</span>
+          <span>知识库对照</span>
+          <span>文字报告</span>
+        </div>
+
+        <textarea id="h5DraftText" class="draft-editor" placeholder="可编辑的文字报告草稿"></textarea>
+
+        <label class="field-block">
+          <span>图文模板</span>
+          <select id="h5Template">
+            <option value="familyBrain">家庭大脑偏好</option>
+            <option value="lifeTree">家族生命树</option>
+          </select>
+        </label>
+
+        <button class="main-action" id="h5GraphicBtn">生成图文报告</button>
+      </section>
+
+      <section class="step-screen report-screen" id="reportScreen">
+        <header class="section-head">
+          <button class="back-btn" data-go="draftScreen">‹</button>
+          <div>
+            <p>STEP 03</p>
+            <h2>图文报告</h2>
+          </div>
+        </header>
+
+        <div class="report-output" id="h5ReportOutput"></div>
+        <div class="knowledge-log" id="h5KnowledgeLog"></div>
+        <button class="main-action" data-go="entryScreen">返回入口</button>
+      </section>
+    </main>
+
+    <script src="./knowledge.js"></script>
+    <script src="./h5.js"></script>
+  </body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEE 生命印迹 DEMO</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="dealer-panel">
+        <div class="brand-lockup">
+          <div class="brand-mark">SEE</div>
+          <div>
+            <h1>生命印迹</h1>
+            <p>经销商定制入口 DEMO</p>
+          </div>
+        </div>
+
+        <section class="panel-section">
+          <h2>入口</h2>
+          <div class="dealer-list" id="dealerList"></div>
+        </section>
+
+        <section class="panel-section dealer-profile" id="dealerProfile"></section>
+
+        <section class="panel-section">
+          <h2>知识库</h2>
+          <div class="knowledge-stack" id="knowledgeStack"></div>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <header class="workspace-header">
+          <div>
+            <p class="eyebrow">照片输入 · OCR · 知识库报告</p>
+            <h2 id="entryTitle">SEE 定制报告工作台</h2>
+          </div>
+          <div class="entry-chip" id="entryChip"></div>
+        </header>
+
+        <section class="input-grid">
+          <div class="tool-pane">
+            <div class="pane-title">
+              <h3>上传照片</h3>
+              <span id="ocrStatus">等待图片</span>
+            </div>
+            <label class="upload-zone" for="imageInput">
+              <input id="imageInput" type="file" accept="image/*" />
+              <span class="upload-icon">+</span>
+              <strong>选择一张含文字的照片</strong>
+              <small>例如指纹表、测评记录、访谈手写稿或客户信息页</small>
+            </label>
+            <div class="image-preview" id="imagePreview">
+              <div class="empty-preview">照片预览</div>
+            </div>
+            <div class="button-row">
+              <button class="primary" id="runOcrBtn">识别文字</button>
+              <button class="secondary" id="sampleBtn">使用样例输入</button>
+            </div>
+          </div>
+
+          <div class="tool-pane">
+            <div class="pane-title">
+              <h3>识别结果</h3>
+              <span>可编辑</span>
+            </div>
+            <textarea id="ocrText" placeholder="照片识别出的文字会出现在这里，也可以直接粘贴客户信息。"></textarea>
+            <div class="form-row">
+              <label>
+                客户称呼
+                <input id="customerName" value="体验用户" />
+              </label>
+              <label>
+                应用场景
+                <select id="scenario">
+                  <option value="个人成长">个人成长</option>
+                  <option value="亲子教育">亲子教育</option>
+                  <option value="职场发展">职场发展</option>
+                  <option value="关系沟通">关系沟通</option>
+                  <option value="团队配置">团队配置</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                报告模板
+                <select id="reportTemplate">
+                  <option value="familyBrain">家庭大脑偏好</option>
+                  <option value="lifeTree">家族生命树</option>
+                </select>
+              </label>
+              <label>
+                家庭角色
+                <input id="familyRoles" value="妈妈、爸爸、女儿" />
+              </label>
+            </div>
+            <button class="primary full" id="generateBtn">生成文字报告草稿</button>
+          </div>
+        </section>
+
+        <section class="draft-panel">
+          <div class="pane-title">
+            <div>
+              <h3>文字报告草稿</h3>
+              <span>先审核和编辑文字，再套用图文模板</span>
+            </div>
+            <button class="secondary compact" id="graphicBtn">生成图文报告</button>
+          </div>
+          <div class="flow-steps">
+            <span>1 信息上传</span>
+            <span>2 OCR 读取</span>
+            <span>3 知识库对照</span>
+            <span>4 文字报告</span>
+            <span>5 图文报告</span>
+          </div>
+          <textarea id="draftText" class="draft-text" placeholder="这里会生成可编辑的文字报告草稿。"></textarea>
+        </section>
+
+        <section class="report-layout">
+          <div class="report-preview" id="reportPreview"></div>
+          <aside class="insight-panel">
+            <h3>调用过程</h3>
+            <div id="retrievalLog" class="retrieval-log"></div>
+          </aside>
+        </section>
+      </section>
+    </main>
+
+    <script src="./knowledge.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
