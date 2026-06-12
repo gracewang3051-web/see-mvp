@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SEE 生命印迹 · 自我觉察陪伴</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
+:root {
+  --bg: #0f0f28; --card: #161630; --border: #2a2a45;
+  --text: #e0dcd4; --muted: #8a8590; --accent: #6b96ac;
+  --accent2: #a08868; --danger: #e05555;
+  --shadow: 0 2px 12px rgba(0,0,0,.2); --radius: 14px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; background: var(--bg); color: var(--text); line-height:1.7; min-height:100vh; }
+.hero { background: linear-gradient(170deg, #0f0f28 0%, #162038 35%, #1a2440 60%, #1a2038 100%); color: #e0dcd4; padding: 36px 24px 0; text-align:center; }
+.hero-top { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 4px; }
+.hero-bg { margin-top: 20px; line-height: 0; }
+.hero-bg img { width: 100%; max-width: 720px; height: auto; display: block; margin: 0 auto; }
+.hero-logo { font-size: 2.6em; line-height: 1; }
+.hero-brand { text-align: left; }
+.hero-name { font-family: "Noto Serif SC", serif; font-size: 1.7em; font-weight: 700; letter-spacing: .06em; line-height: 1.2; color: #f0ece2; }
+.hero-subtitle { font-size: .88em; letter-spacing: .15em; font-weight: 400; color: #a09888; margin-top: 2px; }
+.hero .features { display: flex; justify-content: center; gap: 12px; margin-top: 24px; }
+.hero .feature { display: flex; flex-direction: column; align-items: center; gap: 6px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 16px 14px; flex: 1; max-width: 180px; transition: all .2s; backdrop-filter: blur(4px); cursor: pointer; }
+.hero .feature:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.25); transform: translateY(-1px); }
+.hero .feature-icon { font-size: 1.3em; }
+.hero .feature-text { font-size: .82em; font-weight: 500; color: #d8d2c4; white-space: nowrap; }
+@media (max-width: 420px) { .hero .features { gap: 6px; } .hero .feature { padding: 12px 8px; max-width: 120px; } .hero .feature-text { font-size: .7em; } }
+.container { max-width: 720px; margin: 0 auto; padding: 20px 16px; }
+.card { background: var(--card); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.card h2 { font-size: 1.1em; margin-bottom: 16px; display:flex; align-items:center; gap:8px; font-weight: 600; color: #e0dcd4; }
+.btn { display: inline-flex; align-items:center; gap:6px; padding: 10px 22px; border: none; border-radius: 10px; font-size: .9em; font-weight: 500; cursor: pointer; transition: all .15s; text-decoration:none; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+.btn-outline:hover { background: rgba(107,150,172,.1); }
+.hidden { display: none !important; }
+input { padding: 8px 12px; border:1px solid var(--border); border-radius:8px; font-size:.85em; background:#1a1a38; color:#e0dcd4; }
+
+.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 500px) { .report-grid { grid-template-columns: 1fr; } }
+.report-block { background: #1a1a35; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.report-block h3 { font-size: .95em; color: var(--accent2); margin-bottom: 8px; }
+.report-block .items { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.report-block .item { padding: 4px 12px; border-radius: 16px; font-size: .8em; cursor: pointer; background: #242444; color: var(--accent); border: 1px solid var(--accent); }
+.report-block .item:hover { background: #2a2a55; }
+.report-block .item.missing { background: #2a2020; color: var(--muted); border-color: #553333; cursor: pointer; }
+.report-block .item.missing:hover { background: #3a2828; }
+.report-block .action-hint { font-size: .78em; color: var(--muted); margin-top: 8px; text-align:center; }
+.report-block .action-hint a { color: var(--accent); }
+.report-block .action-btn { display:block; width:100%; margin-top:8px; padding:8px; text-align:center; border-radius:8px; font-size:.82em; cursor:pointer; background:var(--accent); color:#fff; border:none; }
+.report-block .action-btn:disabled { background:#3a3a55; color:var(--muted); cursor:not-allowed; }
+.report-block .action-btn:hover:not(:disabled) { background:#5a8296; }
+.report-view { padding: 22px; background: #1a1a35; border-radius: 10px; font-size: .92em; line-height: 1.85; max-height: 500px; overflow-y: auto; border: 1px solid #2a2a45; }
+.report-view h2 { font-family: "Noto Serif SC", serif; font-size: 1.15em; color: #d8d0c0; margin: 24px 0 10px; }
+.report-view h3 { color: #c0b898; margin: 18px 0 8px; font-family: "Noto Serif SC", serif; font-weight: 600; }
+.report-view ul { margin: 8px 0; padding-left: 20px; }
+.report-view li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-top">
+    <div class="hero-logo">🧬</div>
+    <div class="hero-brand">
+      <div class="hero-name">SEE 生命印迹</div>
+      <div class="hero-subtitle">元认知训练系统</div>
+    </div>
+  </div>
+  <div class="features">
+    <div class="feature" onclick="location.href='index.html'"><div class="feature-icon">🧠</div><div class="feature-text">思维画像报告</div></div>
+    <div class="feature" onclick="location.href='talent.html'"><div class="feature-icon">🌿</div><div class="feature-text">先天思维特质报告</div></div>
+    <div class="feature" style="background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3)"><div class="feature-icon">🪞</div><div class="feature-text">自我觉察陪伴</div></div>
+  </div>
+  <div class="hero-bg"><img src="hero_insight.jpg" alt=""></div>
+</div>
+
+<div class="container">
+
+<div class="card">
+  <h2>🔑 查看我的报告</h2>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <label style="font-size:.85em;color:var(--muted)">用户码</label>
+    <input type="text" id="userCode" placeholder="输入你的用户码" onchange="loadAll()" style="flex:1;max-width:240px">
+    <button class="btn btn-primary" onclick="loadAll()">加载报告</button>
+  </div>
+</div>
+
+<div class="card hidden" id="dashboard">
+  <h2>🪞 我的报告总览</h2>
+  <div class="report-grid">
+    <div class="report-block">
+      <h3>🧠 思维画像报告</h3>
+      <div class="items" id="itemsPortrait"></div>
+    </div>
+    <div class="report-block">
+      <h3>🌿 先天思维特质报告</h3>
+      <div class="items" id="itemsTalent"></div>
+    </div>
+    <div class="report-block">
+      <h3>📈 成长比对报告</h3>
+      <div id="growthBlock"></div>
+    </div>
+    <div class="report-block">
+      <h3>💎 信念系统探索</h3>
+      <div id="beliefBlock"></div>
+    </div>
+  </div>
+
+  <div style="font-size:.8em;color:var(--muted);margin-top:10px;text-align:center">
+    需要帮助？<span style="color:var(--accent);cursor:pointer" onclick="alert('请添加微信 SEElife2026 预约咨询顾问')">📲 预约你的咨询顾问</span>
+  </div>
+</div>
+
+<div class="card hidden" id="viewCard">
+  <h2 id="viewTitle"></h2>
+  <div class="report-view" id="viewContent"></div>
+  <button class="btn btn-outline" style="margin-top:12px" onclick="document.getElementById('viewCard').classList.add('hidden');document.getElementById('dashboard').classList.remove('hidden')">◀ 返回总览</button>
+</div>
+
+</div>
+
+<script>
+const ALL_REPORTS = { portrait:'🧬 基础思维画像', action:'🌱 个人成长建议', communication:'💞 关系洞察', career:'🚀 事业发展' };
+const ALL_TALENT = { portrait:'🧬 先天特质画像', learning:'📖 学习风格', emotion:'💫 情绪模式', potential:'🎯 潜能发展' };
+let allReports = { portraitVersions:[], talentVersions:[], growthVersions:[] };
+
+function migrateOld(key, newKey, versionBuilder) {
+  const old = localStorage.getItem(key);
+  if (!old) return;
+  try {
+    const d = JSON.parse(old);
+    // Check if already migrated
+    if (localStorage.getItem(newKey)) return;
+    const versions = [versionBuilder(d)];
+    localStorage.setItem(newKey, JSON.stringify({versions, time: d.time||new Date().toISOString()}));
+  } catch(e) {}
+}
+
+function loadAll() {
+  const code = document.getElementById('userCode').value.trim();
+  if (!code) return;
+  sessionStorage.setItem('see_code_shared', code);
+
+  // Migrate old data
+  migrateOld('see_reports_'+code, 'see_reports_v2_'+code, d => ({
+    time: d.time ? new Date(d.time).toLocaleDateString('zh-CN') : '历史报告',
+    hasPortrait: !!(d.reports||{}).portrait,
+    portrait: (d.reports||{}).portrait||'',
+    action: (d.reports||{}).action||'', communication: (d.reports||{}).communication||'', career: (d.reports||{}).career||''
+  }));
+  migrateOld('see_talent_reports_'+code, 'see_talent_reports_v2_'+code, d => ({
+    time: d.time ? new Date(d.time).toLocaleDateString('zh-CN') : '历史报告',
+    hasTalent: !!(d.reports||{}).portrait,
+    portrait: (d.reports||{}).portrait||'',
+    learning: (d.reports||{}).learning||'', emotion: (d.reports||{}).emotion||'', potential: (d.reports||{}).potential||''
+  }));
+  migrateOld('see_growth_reports_'+code, 'see_growth_reports_v2_'+code, d => ({
+    time: d.time ? new Date(d.time).toLocaleDateString('zh-CN') : '历史报告',
+    content: Object.values(d.reports||{})[0]||''
+  }));
+  const s1 = localStorage.getItem('see_reports_v2_' + code);
+  const s2 = localStorage.getItem('see_talent_reports_v2_' + code);
+  const sg = localStorage.getItem('see_growth_reports_v2_' + code);
+  allReports.portraitVersions = []; allReports.talentVersions = []; allReports.growthVersions = [];
+  try { if(s1) allReports.portraitVersions = JSON.parse(s1).versions||[]; } catch(e){}
+  try { if(s2) allReports.talentVersions = JSON.parse(s2).versions||[]; } catch(e){}
+  try { if(sg) allReports.growthVersions = JSON.parse(sg).versions||[]; } catch(e){}
+
+  // Portrait versions
+  const pvs = allReports.portraitVersions;
+  if (pvs.length) {
+    let h = '<div class="items">';
+    pvs.forEach((v,i) => {
+      if (v.hasPortrait) h += '<span class="item" onclick="viewR(\'portrait\','+i+')">🧬 第'+(i+1)+'次 '+v.time+'</span>';
+      else h += '<span class="item missing" onclick="location.href=\'index.html\'">🧬 第'+(i+1)+'次 '+v.time+' （未完成）</span>';
+    });
+    document.getElementById('itemsPortrait').innerHTML = h+'</div>';
+  } else {
+    document.getElementById('itemsPortrait').innerHTML = '<div class="action-hint">尚未生成<br><a href="index.html">👉 前往生成思维画像报告</a></div>';
+  }
+
+  // Talent versions
+  const tvs = allReports.talentVersions;
+  if (tvs.length) {
+    let h = '<div class="items">';
+    tvs.forEach((v,i) => {
+      if (v.hasTalent) h += '<span class="item" onclick="viewR(\'talent\','+i+')">🌿 第'+(i+1)+'次 '+v.time+'</span>';
+      else h += '<span class="item missing" onclick="location.href=\'talent.html\'">🌿 第'+(i+1)+'次 '+v.time+' （未完成）</span>';
+    });
+    document.getElementById('itemsTalent').innerHTML = h+'</div>';
+  } else {
+    document.getElementById('itemsTalent').innerHTML = '<div class="action-hint">尚未生成<br><a href="talent.html">👉 前往生成先天特质报告</a></div>';
+  }
+
+  // Growth section
+  const hasAnyPortrait = pvs.some(v => v.hasPortrait);
+  const hasAnyTalent = tvs.some(v => v.hasTalent);
+  const gvs = allReports.growthVersions;
+  let gHtml = gvs.length
+    ? '<div class="items">'+gvs.map((v,i) => `<span class="item" onclick="viewR(\'growth\','+i+')">📈 ${v.time||'第'+(i+1)+'次'}</span>`).join('')+'</div>'
+    : '';
+  if (hasAnyPortrait && hasAnyTalent) {
+    gHtml += '<div style="font-size:.78em;color:var(--muted);margin:6px 0">选择两份报告进行比对：</div>';
+    gHtml += '<select id="growthSrc1" style="width:100%;margin-bottom:4px;padding:4px;background:#1a1a38;color:#e0dcd4;border:1px solid var(--border);border-radius:6px">'+pvs.filter(v=>v.hasPortrait).map((v,i)=>'<option value="'+i+'">🧠 思维画像 第'+(i+1)+'次 '+v.time+'</option>').join('')+'</select>';
+    gHtml += '<select id="growthSrc2" style="width:100%;margin-bottom:4px;padding:4px;background:#1a1a38;color:#e0dcd4;border:1px solid var(--border);border-radius:6px">'+tvs.filter(v=>v.hasTalent).map((v,i)=>'<option value="'+i+'">🌿 先天特质 第'+(i+1)+'次 '+v.time+'</option>').join('')+'</select>';
+    gHtml += '<button class="action-btn" onclick="generateGrowth()" id="btnGrowth">📈 生成成长比对报告</button><span style="font-size:.75em;color:var(--muted);margin-left:6px" id="growthStatus"></span>';
+  } else {
+    gHtml += '<div class="action-hint">⚠️ 需要思维画像和先天特质报告各至少一份</div>';
+    if (!hasAnyPortrait) gHtml += '<div class="action-hint"><a href="index.html">👉 前往生成思维画像报告</a></div>';
+    if (!hasAnyTalent) gHtml += '<div class="action-hint"><a href="talent.html">👉 前往生成先天特质报告</a></div>';
+    gHtml += '<div class="action-hint"><span style="color:var(--accent);cursor:pointer" onclick="alert(\'请添加微信 SEElife2026 预约咨询顾问\')">📲 预约咨询顾问</span></div>';
+  }
+  document.getElementById('growthBlock').innerHTML = gHtml;
+
+  // Belief
+  document.getElementById('beliefBlock').innerHTML = `
+    <div class="action-hint">探索你的深层信念系统，识别限制性信念与赋能信念</div>
+    <div class="action-hint" style="margin-top:6px">此功能即将上线</div>
+    <div class="action-hint"><span style="color:var(--accent);cursor:pointer" onclick="alert('请添加微信 SEElife2026 预约信念系统探索')">📲 预约信念系统探索</span></div>
+  `;
+
+  document.getElementById('dashboard').classList.remove('hidden');
+  // Debug info
+  console.log('加载完成:', {
+    portraitVersions: allReports.portraitVersions.length,
+    talentVersions: allReports.talentVersions.length,
+    growthVersions: allReports.growthVersions.length,
+    code: code
+  });
+}
+
+async function generateGrowth() {
+  const code = document.getElementById('userCode').value.trim();
+  if (!code) return;
+  const btn = document.getElementById('btnGrowth');
+  btn.disabled = true; btn.textContent = '⏳ 分析中...';
+  document.getElementById('growthStatus').textContent = '';
+  const idx1 = parseInt(document.getElementById('growthSrc1').value);
+  const idx2 = parseInt(document.getElementById('growthSrc2').value);
+  const portrait = allReports.portraitVersions[idx1]?.portrait || '';
+  const talent = allReports.talentVersions[idx2]?.portrait || '';
+  try {
+    const resp = await fetch('/api/growth', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({portrait, talent})
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    const ver = {
+      time: new Date().toLocaleDateString('zh-CN') + ' ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}),
+      content: data.content,
+      src1: idx1, src2: idx2
+    };
+    allReports.growthVersions.push(ver);
+    localStorage.setItem('see_growth_reports_v2_' + code, JSON.stringify({versions: allReports.growthVersions, time: new Date().toISOString()}));
+    loadAll();
+    viewR('growth', allReports.growthVersions.length-1);
+    document.getElementById('growthStatus').textContent = '✅';
+  } catch(e) {
+    document.getElementById('growthStatus').textContent = '❌ ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '📈 生成成长比对报告';
+}
+
+function viewR(src, idx) {
+  const version = src==='portrait' ? allReports.portraitVersions[idx]
+    : src==='talent' ? allReports.talentVersions[idx]
+    : allReports.growthVersions[idx];
+  if (!version) return;
+  const content = version.content || version.portrait || '';
+  if (!content) return;
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('viewCard').classList.remove('hidden');
+  document.getElementById('viewTitle').textContent = version.time || ('报告 #'+(idx+1));
+  document.getElementById('viewContent').innerHTML = content
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>').replace(/\n\n/g,'</p><p>');
+}
+
+(function(){
+  const code = sessionStorage.getItem('see_code_shared');
+  if(code){ document.getElementById('userCode').value=code; loadAll(); }
+})();
+</script>
+</body>
+</html>

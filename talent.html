@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SEE 生命印迹 · 思维画像报告</title>
+<title>SEE 生命印迹 · 先天思维特质报告</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
 
@@ -134,28 +134,38 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
     </div>
   </div>
   <div class="features">
-    <div class="feature" style="background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3)"><div class="feature-icon">🧠</div><div class="feature-text">思维画像报告</div></div>
-    <div class="feature" onclick="location.href='talent.html'"><div class="feature-icon">🌿</div><div class="feature-text">先天思维特质报告</div></div>
+    <div class="feature" onclick="location.href='index.html'"><div class="feature-icon">🧠</div><div class="feature-text">思维画像报告</div></div>
+    <div class="feature" style="background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3)"><div class="feature-icon">🌿</div><div class="feature-text">先天思维特质报告</div></div>
     <div class="feature" onclick="location.href='insight.html'"><div class="feature-icon">🪞</div><div class="feature-text">自我觉察陪伴</div></div>
   </div>
-  <div class="hero-bg"><img src="hero_bg.jpg?v=2" alt=""></div>
+  <div class="hero-bg"><img src="hero_talent.jpg" alt=""></div>
 </div>
 
 <div class="container">
 
 <!-- ====== STEP 1: Upload ====== -->
 <div class="card">
-  <h2><span class="step-badge">1</span> 上传你的思维导图</h2>
+  <h2><span class="step-badge">1</span> 上传你的先天天赋特质报告</h2>
   <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <label style="font-size:.85em;color:var(--muted);white-space:nowrap">🔑 用户码</label>
     <input type="text" id="userCode" placeholder="输入你的用户码" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.85em;background:#1a1a38;color:#e0dcd4;flex:1;max-width:240px" onchange="loadUserReports()">
     <button class="btn btn-outline btn-sm" onclick="loadUserReports()">加载</button>
-    <span style="font-size:.75em;color:var(--muted)">报告自动保存，刷新不丢失</span>
+    <span style="font-size:.75em;color:var(--muted)">输入后报告自动保存，刷新不丢失</span>
   </div>
-  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-    <div class="icon">📸</div>
-    <p>点击或拖拽上传思维导图照片</p>
-    <p style="font-size:.75em;margin-top:4px">支持 JPG/PNG，请拍摄清晰</p>
+  <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" style="flex:1;min-width:220px">
+      <div class="icon">📸</div>
+      <p>点击或拖拽上传报告照片</p>
+      <p style="font-size:.75em;margin-top:4px">支持 JPG/PNG，请拍摄清晰</p>
+    </div>
+    <div style="flex-shrink:0;text-align:center">
+      <div style="font-size:.75em;color:var(--muted);margin-bottom:4px">📋 上传样本参考</div>
+      <img src="talent_sample.jpg" style="max-width:200px;max-height:180px;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src)" title="点击查看大图">
+    </div>
+  </div>
+  <div class="hidden" id="savedReportsSection" style="margin-top:12px;padding:10px 14px;background:#1a1a38;border-radius:8px;font-size:.85em">
+    <div style="color:var(--accent);margin-bottom:6px">📂 已保存的报告</div>
+    <div id="savedReportsList"></div>
   </div>
   <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFile(this.files[0])">
   <img id="preview" class="preview-img">
@@ -164,16 +174,12 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
     <button class="btn btn-outline btn-sm" onclick="toggleManual()">✏️ 手动输入</button>
     <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
   </div>
-  <div class="hidden" id="savedReportsSection" style="margin-top:12px;padding:10px 14px;background:#1a1a38;border-radius:8px;font-size:.85em">
-    <div style="color:var(--accent);margin-bottom:6px">📂 已保存的报告</div>
-    <div id="savedReportsList"></div>
-  </div>
 </div>
 
 <!-- ====== 合盘入口 ====== -->
 <div class="card">
   <h2>💫 关系合盘</h2>
-  <div style="font-size:.82em;color:var(--muted);margin-bottom:10px">上传对方思维导图，生成双人关系解读报告</div>
+  <div style="font-size:.82em;color:var(--muted);margin-bottom:10px">上传对方报告，生成双人关系解读</div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
     <div class="extra-card" onclick="startComposite('parent')" id="compositeParent">
       <div class="icon">👨‍👧</div><div class="title">亲子关系合盘</div>
@@ -195,8 +201,6 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 </div>
 
 <!-- ====== Manual ====== -->
-<div class="card hidden" id="manualCard">
-  <h2><span class="step-badge">✏</span> 手动输入答案</h2>
   <div id="manualEntries"></div>
   <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">✅ 确认答案</button>
 </div>
@@ -204,12 +208,10 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 <!-- ====== STEP 2: Results ====== -->
 <div class="card hidden" id="resultCard">
   <h2><span class="step-badge">2</span> 识别结果</h2>
-  <div style="font-size:.85em;color:var(--accent);margin-bottom:12px;padding:6px 12px;background:#f0f8ef;border-radius:6px">
-    👆 <strong>点击答案直接切换</strong> A→B→C→D，核对正确后生成报告
-  </div>
-  <div id="resultModules"></div>
+  <div style="font-size:.85em;color:var(--muted);margin-bottom:8px">AI 已提取报告中文字内容，核对后可生成报告</div>
+  <div style="padding:14px;background:#1a1a38;border-radius:10px;font-size:.85em;line-height:1.8;white-space:pre-wrap;max-height:300px;overflow-y:auto" id="ocrResult"></div>
   <div class="flex-row" style="margin-top:14px">
-    <button class="btn btn-primary" id="btnGenerate" onclick="generateReports()">📝 生成你的解读报告</button>
+    <button class="btn btn-primary" id="btnGenerate" onclick="generateTalentReport()">📝 生成先天思维特质报告</button>
     <span style="font-size:.8em;color:var(--muted)" id="costEstimate"></span>
   </div>
 </div>
@@ -240,132 +242,79 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 </div>
 
 <script>
-// ============ DATA ============
-const MODULES = [
-  { name: '战略方向', sub: '（目标/内在）', range: [1,5],
-    options: { A:'目标明确，按计划推进', B:'有愿景，有使命感', C:'同时具有目标与愿景', D:'目标持续性弱，需外部陪伴' },
-    dimension: 'strategic',
-    p: { A:{style:'目标驱动型',strength:'执行力强',risk:'缺乏灵活性',growth:'在计划中留探索空间'},
-         B:{style:'愿景驱动型',strength:'使命感强',risk:'目标不具体',growth:'将愿景拆解为步骤'},
-         C:{style:'双驱平衡型',strength:'方向与动力兼备',risk:'双重压力',growth:'灵活切换模式'},
-         D:{style:'探索过渡型',strength:'心态开放',risk:'缺乏持续动力',growth:'建立小目标+监督'} }
-  },
-  { name: '思维功能', sub: '（创意转化器）', range: [6,10],
-    options: { A:'擅长分析，注重逻辑', B:'看整体，善于宏观把握', C:'既有深度分析又能宏观战略', D:'需外部梳理' },
-    dimension: 'thinking',
-    p: { A:{style:'分析型',strength:'逻辑严谨',risk:'忽略大局',growth:'从细节跳出来看全局'},
-         B:{style:'统合型',strength:'全局视野',risk:'忽略关键细节',growth:'培养细节意识'},
-         C:{style:'全维型',strength:'深度广度兼备',risk:'思维负载大',growth:'合理分配精力'},
-         D:{style:'梳理型',strength:'借助外力理清',risk:'独立迷失',growth:'建立思维框架'} }
-  },
-  { name: '听觉', sub: '（沟通/路径）', range: [11,15],
-    options: { A:'听内容，抓重点', B:'听情绪，抓语气', C:'同时理解内容和情感', D:'对复杂信息容易漂移' },
-    dimension: 'listening',
-    p: { A:{style:'内容型',strength:'抓取关键信息',risk:'忽略情绪需求',growth:'加入情感确认'},
-         B:{style:'情感型',strength:'共情能力强',risk:'忽略事实层面',growth:'关注事实'},
-         C:{style:'全息型',strength:'内容情感兼顾',risk:'精力消耗大',growth:'调整倾听深度'},
-         D:{style:'要点型',strength:'快节奏沟通',risk:'复杂遗漏',growth:'重要对话做笔记'} }
-  },
-  { name: '视觉', sub: '（审美/细节）', range: [16,20],
-    options: { A:'关注细节，对视觉敏感', B:'注重美感与整体', C:'兼具细节与审美', D:'容易忽略视觉线索' },
-    dimension: 'visual',
-    p: { A:{style:'细节型',strength:'观察力强',risk:'因小失大',growth:'培养连接能力'},
-         B:{style:'审美型',strength:'品位出众',risk:'忽略功能性',growth:'关注实用性'},
-         C:{style:'全观型',strength:'细节整体平衡',risk:'标准过高',growth:'降低完美要求'},
-         D:{style:'大局型',strength:'不被细节困扰',risk:'错过重要信息',growth:'培养敏感度'} }
-  },
-  { name: '体觉', sub: '（行动/感受）', range: [21,25],
-    options: { A:'按步骤，行动力强', B:'直觉反应，身体先行', C:'力量与控制结合', D:'需外部推动' },
-    dimension: 'kinesthetic',
-    p: { A:{style:'执行型',strength:'行动力强效率高',risk:'缺乏直觉信任',growth:'留出直觉空间'},
-         B:{style:'直觉型',strength:'反应迅速',risk:'缺乏规划',growth:'重要决定理性检查'},
-         C:{style:'掌控型',strength:'力量精准兼备',risk:'完美主义',growth:'80%准备就行动'},
-         D:{style:'启动型',strength:'启动后能坚持',risk:'启动困难',growth:'建立启动仪式'} }
-  }
-];
-
-const ALL_QUESTIONS = [
-  '决策依据（你如何启动？）','责任边界（你如何面对责任？）','小组角色（你在团队中如何定位？）','规则适应（你如何对待规则？）','任务启动风格（你如何做决定？）',
-  '信息加工方式（你如何处理信息？）','社会反馈标签（别人如何评价你的思维？）','任务启动模式（你如何启动思考？）','表达输出风格（你如何表达想法？）','抽象思维偏好（你如何理解抽象概念？）',
-  '倾听关注点（你听什么？）','社会沟通反馈（别人如何回应你的沟通？）','声音感知模式（你如何感知声音？）','冲突沟通模式（冲突时你如何沟通？）','输出策略（你如何说服别人？）',
-  '信息接收模式（你如何看？）','社会评价反馈（别人如何评价你视觉判断？）','记忆与再现模式（你如何记住画面？）','创作与修饰倾向（你如何表达美？）','视觉输入偏好（你喜欢看什么？）',
-  '任务执行风格（你如何行动？）','运动学习偏好（你如何学动作？）','身体愉悦体验（你如何感受身体？）','情绪身体反应（情绪如何影响身体？）','社交身体语言（你如何用身体连接？）'
-];
-const QUESTIONS = [];
-ALL_QUESTIONS.forEach((text, i) => {
-  QUESTIONS.push({ id: 'q'+String(i+1).padStart(2,'0'), text, module: Math.floor(i/5) });
-});
-
-// ============ STATE ============
 const API_BASE = window.location.origin;
 let state = {
-  imageData: null, answers: {}, handwritten: {},
-  confidence: { overall: 0, items: [] },
+  imageData: null, ocrText: '',
   reports: {}, reportOrder: [],
-  totalCost: 0, totalTokens: 0, recognitionDone: false
+  totalCost: 0, recognitionDone: false,
+  userCode: ''
 };
 
-// ===== 用户码 & 持久化（与 talent 页共享）=====
 function getUserCode() {
   return document.getElementById('userCode').value.trim() || sessionStorage.getItem('see_code_shared') || '';
 }
+
 function saveReports() {
   const code = getUserCode();
   if (!code) return;
-  // Load existing versions
   let versions = [];
-  try { const s = localStorage.getItem('see_reports_v2_' + code); if(s) versions = JSON.parse(s).versions||[]; } catch(e){}
-  // Append new version
+  try { const s = localStorage.getItem('see_talent_reports_v2_' + code); if(s) versions = JSON.parse(s).versions||[]; } catch(e){}
   versions.push({
     time: new Date().toLocaleDateString('zh-CN') + ' ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}),
-    hasPortrait: !!state.reports.portrait,
-    portrait: state.reports.portrait||'',
-    action: state.reports.action||'', communication: state.reports.communication||'', career: state.reports.career||''
+    hasTalent: !!state.reports.portrait,
+    portrait: state.reports.portrait||'', learning: state.reports.learning||'', emotion: state.reports.emotion||'', potential: state.reports.potential||''
   });
   if (versions.length > 20) versions = versions.slice(-20);
-  localStorage.setItem('see_reports_v2_' + code, JSON.stringify({versions, time: new Date().toISOString()}));
+  localStorage.setItem('see_talent_reports_v2_' + code, JSON.stringify({versions, time: new Date().toISOString()}));
   sessionStorage.setItem('see_code_shared', code);
 }
+
 function loadUserReports() {
   const code = getUserCode();
+  if (!code) return;
+  sessionStorage.setItem('see_code_shared', code);
   // Migrate old data
   try {
-    const old = localStorage.getItem('see_reports_' + code);
-    if (old && !localStorage.getItem('see_reports_v2_' + code)) {
+    const old = localStorage.getItem('see_talent_reports_' + code);
+    if (old && !localStorage.getItem('see_talent_reports_v2_' + code)) {
       const d = JSON.parse(old);
-      localStorage.setItem('see_reports_v2_' + code, JSON.stringify({versions: [{
+      localStorage.setItem('see_talent_reports_v2_' + code, JSON.stringify({versions: [{
         time: d.time ? new Date(d.time).toLocaleDateString('zh-CN') : '历史报告',
-        hasPortrait: !!(d.reports||{}).portrait,
+        hasTalent: !!(d.reports||{}).portrait,
         portrait: (d.reports||{}).portrait||'',
-        action: (d.reports||{}).action||'', communication: (d.reports||{}).communication||'', career: (d.reports||{}).career||''
+        learning: (d.reports||{}).learning||'', emotion: (d.reports||{}).emotion||'', potential: (d.reports||{}).potential||''
       }], time: d.time||new Date().toISOString()}));
     }
   } catch(e){}
-  if (!code) return;
-  sessionStorage.setItem('see_code_shared', code);
-  const saved = localStorage.getItem('see_reports_v2_' + code);
+  const saved = localStorage.getItem('see_talent_reports_v2_' + code);
   if (saved) {
     try {
       const data = JSON.parse(saved);
       const versions = data.versions || [];
       if (versions.length > 0) {
         const last = versions[versions.length-1];
-        state.reports = {portrait: last.portrait||'', action: last.action||'', communication: last.communication||'', career: last.career||''};
+        state.reports = {portrait: last.portrait||'', learning: last.learning||'', emotion: last.emotion||'', potential: last.potential||''};
         state.reportOrder = Object.keys(state.reports).filter(k => state.reports[k]);
-        showSavedReports();
       }
+      showSavedReports();
     } catch(e) {}
+  } else {
+    document.getElementById('savedReportsSection').classList.add('hidden');
   }
 }
+
 function showSavedReports() {
   const keys = Object.keys(state.reports);
-  if (keys.length === 0) { document.getElementById('savedReportsSection').classList.add('hidden'); return; }
+  if (keys.length === 0) return;
   document.getElementById('savedReportsSection').classList.remove('hidden');
-  const names = {portrait:'🧬 基础画像', action:'🌱 成长建议', communication:'💞 关系洞察', career:'🚀 事业发展'};
-  document.getElementById('savedReportsList').innerHTML = keys.map(k =>
-    `<span style="cursor:pointer;margin-right:12px;color:var(--accent)" onclick="viewSavedReport('${k}')">${names[k]||k}</span>`
-  ).join('');
+  const names = {portrait:'🧬 先天特质画像', learning:'📖 学习风格', emotion:'💫 情绪模式', potential:'🎯 潜能发展'};
+  let html = '';
+  keys.forEach(k => {
+    html += `<span style="cursor:pointer;margin-right:12px;color:var(--accent)" onclick="viewSavedReport('${k}')">${names[k]||k}</span>`;
+  });
+  document.getElementById('savedReportsList').innerHTML = html;
 }
+
 function viewSavedReport(key) {
   if (state.reports[key]) {
     document.getElementById('reportCard').classList.remove('hidden');
@@ -375,11 +324,13 @@ function viewSavedReport(key) {
   }
 }
 
-// ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
+  // Auto-load if code in session
   const savedCode = sessionStorage.getItem('see_code_shared');
-  if (savedCode) { document.getElementById('userCode').value = savedCode; loadUserReports(); }
-  initManualEntries();
+  if (savedCode) {
+    document.getElementById('userCode').value = savedCode;
+    loadUserReports();
+  }
   const zone = document.getElementById('uploadZone');
   zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
@@ -399,178 +350,76 @@ function handleFile(file) {
   reader.readAsDataURL(file);
 }
 
-// ============ RECOGNITION ============
 async function startRecognition() {
   const btn = document.getElementById('btnRecognize');
   btn.disabled = true; btn.textContent = '🔍 识别中...';
   try {
-    const resp = await fetch(API_BASE + '/api/vision', {
+    const resp = await fetch(API_BASE + '/api/ocr', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({image: state.imageData})
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
-    state.answers = data.answers || {};
-    state.handwritten = data.handwritten_fields || {};
-    state.confidence = data.confidence || {overall:0, items:[]};
+    state.ocrText = data.text || '';
     state.recognitionDone = true;
-    showResults();
-  } catch(e) { toggleManual(); }
+    document.getElementById('resultCard').classList.remove('hidden');
+    document.getElementById('btnGenerate').disabled = false;
+    document.getElementById('ocrResult').textContent = state.ocrText || '(未识别到文字)';
+    if (data.usage) document.getElementById('costEstimate').textContent = 'token: '+(data.usage.total_tokens||0);
+  } catch(e) {
+    document.getElementById('ocrResult').textContent = '识别失败: ' + e.message;
+    document.getElementById('resultCard').classList.remove('hidden');
+  }
   btn.disabled = false; btn.textContent = '🔍 AI 智能识别';
 }
 
-// ============ SHOW RESULTS ============
-function showResults() {
-  document.getElementById('resultCard').classList.remove('hidden');
-  document.getElementById('btnGenerate').disabled = false;
-  let html = '';
-  MODULES.forEach(m => {
-    html += `<div class="module-title">${m.name} ${m.sub}</div><div class="result-grid">`;
-    for (let i = m.range[0]; i <= m.range[1]; i++) {
-      const qid = 'q'+String(i).padStart(2,'0');
-      const ans = state.answers[qid] || '?';
-      const low = (state.confidence.uncertain_items||[]).includes(qid);
-      const q = QUESTIONS.find(x => x.id === qid);
-      html += `<div class="result-item${low?' low-conf':''}" onclick="overviewToggle('${qid}',this)">
-        <div class="q">${q?q.text:qid}</div>
-        <div class="ans" id="ans_${qid}">${ans}</div>
-      </div>`;
-    }
-    html += '</div>';
-  });
-  document.getElementById('resultModules').innerHTML = html;
-}
-
-function overviewToggle(qid, el) {
-  const order = ['A','B','C','D'];
-  const cur = state.answers[qid] || 'A';
-  const next = order[(order.indexOf(cur)+1)%4];
-  state.answers[qid] = next;
-  document.getElementById('ans_'+qid).textContent = next;
-  el.classList.remove('low-conf');
-}
-
-// ============ MANUAL ============
-function toggleManual() { document.getElementById('manualCard').classList.toggle('hidden'); }
-function initManualEntries() {
-  let html = '';
-  MODULES.forEach(m => {
-    html += `<div class="module-title">${m.name} ${m.sub}</div><div style="display:flex;flex-direction:column;gap:6px">`;
-    for (let i=m.range[0];i<=m.range[1];i++) {
-      const qid='q'+String(i).padStart(2,'0');
-      const q = QUESTIONS.find(x=>x.id===qid);
-      html += `<div style="display:flex;align-items:center;gap:8px;font-size:.85em">
-        <span style="flex:1">${q?q.text:qid}</span>
-        <select id="man_${qid}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85em;width:60px">
-          <option value="">-</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
-      </div>`;
-    }
-    html += '</div>';
-  });
-  document.getElementById('manualEntries').innerHTML = html;
-}
-function applyManual() {
-  for (let i=1;i<=25;i++) {
-    const v = document.getElementById('man_q'+String(i).padStart(2,'0'))?.value;
-    if (v) state.answers['q'+String(i).padStart(2,'0')] = v;
-  }
-  if (Object.keys(state.answers).length < 10) return;
-  state.handwritten = {self_label:'我',strategy_result:'深度',receiver_result:'结果',output_result:'分析'};
-  state.confidence = {overall:0.85,items:[]};
-  state.recognitionDone = true;
-  showResults();
-  document.getElementById('manualCard').classList.add('hidden');
-}
-
-// ============ REPORT ============
-function buildPortrait() {
-  const p = {modules:[], handwritten:state.handwritten, traits:[], dominant:{}};
-  MODULES.forEach(m => {
-    const counts = {A:0,B:0,C:0,D:0};
-    for (let i=m.range[0];i<=m.range[1];i++) {
-      const a = state.answers['q'+String(i).padStart(2,'0')];
-      if (a && counts[a]!==undefined) counts[a]++;
-    }
-    const dom = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
-    const persona = m.p[dom];
-    p.modules.push({name:m.name,dimension:m.dimension,dominant:dom,style:persona.style,strength:persona.strength,risk:persona.risk,growth:persona.growth});
-    p.dominant[m.dimension] = dom;
-    p.traits.push(`${m.name}: ${persona.style}`);
-  });
-  return p;
-}
-
-async function generateReports() {
+async function generateTalentReport() {
   if (!state.recognitionDone) return;
   document.getElementById('btnGenerate').disabled = true;
   document.getElementById('reportCard').classList.remove('hidden');
   document.getElementById('reportContent').classList.add('loading');
-  document.getElementById('reportContent').textContent = '正在为你生成思维画像报告...';
+  document.getElementById('reportContent').textContent = '正在结合知识库生成报告...';
   document.getElementById('extraCards').classList.add('hidden');
-
-  const portrait = buildPortrait();
   try {
-    const r = await callAPI('portrait', portrait, '');
-    state.reports = {portrait: r.content};
+    const resp = await fetch(API_BASE + '/api/talent', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ocrText: state.ocrText, type: 'portrait'})
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    state.reports = {portrait: data.content};
     state.reportOrder = ['portrait'];
     saveReports();
     document.getElementById('reportContent').classList.remove('loading');
-    document.getElementById('reportContent').innerHTML = parseMD(r.content);
+    document.getElementById('reportContent').innerHTML = parseMD(data.content);
     document.getElementById('extraCards').classList.remove('hidden');
-    // Reset extra cards
-    ['extraAction','extraComm','extraCareer'].forEach(id => {
+    ['extraLearning','extraEmotion','extraPotential'].forEach(id => {
       const el = document.getElementById(id);
-      el.classList.remove('loading','done');
-      el.onclick = function(){ generateExtra(id==='extraAction'?'action':id==='extraComm'?'communication':'career'); };
+      if(el) el.classList.remove('loading','done');
     });
-  } catch(e) {
-    document.getElementById('reportContent').textContent = '生成失败: '+e.message;
-  }
+  } catch(e) { document.getElementById('reportContent').textContent = '生成失败: '+e.message; }
   document.getElementById('btnGenerate').disabled = false;
 }
 
 async function generateExtra(type) {
-  const names = {action:'个人成长建议',communication:'关系洞察',career:'事业发展'};
-  const idMap = {action:'extraAction',communication:'extraComm',career:'extraCareer'};
+  const idMap = {learning:'extraLearning',emotion:'extraEmotion',potential:'extraPotential'};
   const card = document.getElementById(idMap[type]);
-  if (state.reports[type]) {
-    document.getElementById('reportContent').innerHTML = parseMD(state.reports[type]);
-    return;
-  }
-  card.classList.add('loading');
-  card.querySelector('.icon').textContent = '⏳';
+  if (state.reports[type]) { document.getElementById('reportContent').innerHTML = parseMD(state.reports[type]); return; }
+  card.classList.add('loading'); if(card) card.querySelector('.icon').textContent = '⏳';
   try {
-    const portrait = buildPortrait();
-    const r = await callAPI(type, portrait, state.reports.portrait||'');
-    state.reports[type] = r.content;
+    const resp = await fetch(API_BASE + '/api/talent', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ocrText: state.ocrText, type, baseReport: state.reports.portrait||''})
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    state.reports[type] = data.content;
     state.reportOrder.push(type);
-    document.getElementById('reportContent').innerHTML = parseMD(r.content);
-    card.classList.remove('loading');
-    card.classList.add('done');
-    card.querySelector('.icon').textContent = '✅';
-    card.querySelector('.desc').textContent = '已生成';
-  } catch(e) {
-    card.classList.remove('loading');
-    card.querySelector('.icon').textContent = '⚠️';
-    card.querySelector('.desc').textContent = '失败，请重试';
-  }
-}
-
-async function callAPI(type, portrait, baseReport) {
-  const resp = await fetch(API_BASE + '/api/report', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({type, portrait, baseReport})
-  });
-  const data = await resp.json();
-  if (data.error) throw new Error(data.error);
-  if (data.usage) {
-    const t = data.usage.total_tokens||0;
-    const c = data.cost||0;
-    state.totalTokens += t;
-    state.totalCost += c;
-    document.getElementById('costEstimate').textContent = `token: ${t} | 成本 ¥${c.toFixed(4)}`;
-  }
-  return data;
+    saveReports();
+    document.getElementById('reportContent').innerHTML = parseMD(data.content);
+    card.classList.remove('loading'); card.classList.add('done');
+    if(card) card.querySelector('.icon').textContent = '✅'; if(card) card.querySelector('.desc').textContent = '已生成';
+  } catch(e) { card.classList.remove('loading'); if(card) card.querySelector('.icon').textContent = '⚠️'; }
 }
 
 // ===== 合盘 =====
@@ -579,7 +428,6 @@ function startComposite(type) {
   compositeType = type;
   document.getElementById('compositeFile').click();
 }
-
 async function handleCompositeFile(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -589,15 +437,13 @@ async function handleCompositeFile(file) {
     const status = document.getElementById(ids[compositeType]+'Status');
     status.classList.remove('hidden');
     status.textContent = '⏳ 识别中...';
-    // Upload for OCR
     const resp = await fetch(API_BASE + '/api/vision', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({image: e.target.result})
     });
     const data = await resp.json();
-    if (data.error) { status.textContent = '❌ ' + data.error; return; }
+    if (data.error) { status.textContent = '❌'; return; }
     status.textContent = '⏳ 生成合盘报告...';
-    // Generate composite
     const compResp = await fetch(API_BASE + '/api/composite', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
@@ -608,11 +454,11 @@ async function handleCompositeFile(file) {
       })
     });
     const compData = await compResp.json();
-    if (compData.error) { status.textContent = '❌ ' + compData.error; return; }
+    if (compData.error) { status.textContent = '❌'; return; }
     document.getElementById('reportContent').classList.remove('loading');
     document.getElementById('reportContent').innerHTML = parseMD(compData.content);
     document.getElementById('reportCard').classList.remove('hidden');
-    status.textContent = '✅ 已生成';
+    status.textContent = '✅';
   };
   reader.readAsDataURL(file);
 }
