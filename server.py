@@ -4,9 +4,9 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http.client import HTTPSConnection
 from urllib.parse import urlparse
 
-# ===== API Keys（只在服务端，前端看不到）=====
-BAOSI_KEY = "sk-jw7uoD3MnSEGLe18VR9GXaJasbm3pfONpvLGzATKTiR3wCC4"
-DEEPSEEK_KEY = "sk-358a10450b8444aa983e022ae72aa73c"
+# ===== API Keys（从环境变量读取，不写入代码）=====
+BAOSI_KEY = os.environ.get("BAOSI_KEY", "")
+DEEPSEEK_KEY = os.environ.get("DEEPSEEK_KEY", "")
 
 # ===== 直连请求（服务器不需要代理）=====
 
