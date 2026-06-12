@@ -2,7 +2,7 @@
 图片识别: 豆包视觉 (doubao-seed-1-6-vision)
 报告生成: DeepSeek
 """
-import json, base64, ssl, os, subprocess, tempfile, re
+import json, base64, ssl, os, re
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http.client import HTTPSConnection
 from urllib.parse import urlparse
@@ -35,17 +35,19 @@ def api_call(url, payload, headers, timeout=180):
 
 
 def compress_image(image_b64):
-    """压缩图片"""
-    tin = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
-    tout = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
-    tin.write(base64.b64decode(image_b64))
-    tin.close(); tout.close()
-    subprocess.run(['sips', '-s', 'format', 'jpeg', '-s', 'formatOptions', '30', '-Z', '800',
-        tin.name, '--out', tout.name], capture_output=True)
-    with open(tout.name, 'rb') as f:
-        compressed = base64.b64encode(f.read()).decode()
-    os.unlink(tin.name); os.unlink(tout.name)
-    return compressed
+    """压缩图片（使用 PIL，Linux 兼容）"""
+    try:
+        from io import BytesIO
+        from PIL import Image
+        img = Image.open(BytesIO(base64.b64decode(image_b64)))
+        img = img.convert('RGB')
+        img.thumbnail((800, 800), Image.LANCZOS)
+        buf = BytesIO()
+        img.save(buf, format='JPEG', quality=30)
+        return base64.b64encode(buf.getvalue()).decode()
+    except ImportError:
+        # 无 PIL 则直接返回原图
+        return image_b64
 
 
 class SEEHandler(SimpleHTTPRequestHandler):
