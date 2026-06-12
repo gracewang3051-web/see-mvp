@@ -8,18 +8,15 @@ from urllib.parse import urlparse
 BAOSI_KEY = "sk-jw7uoD3MnSEGLe18VR9GXaJasbm3pfONpvLGzATKTiR3wCC4"
 DEEPSEEK_KEY = "sk-358a10450b8444aa983e022ae72aa73c"
 
-# ===== 代理请求 =====
-PROXY_HOST = "localhost"
-PROXY_PORT = 7890
+# ===== 直连请求（服务器不需要代理）=====
 
 def proxy_request(url, payload, headers, timeout=180):
-    """通过本地代理发送 HTTPS 请求"""
+    """直连 API（宝思/DeepSeek 国内直连通）"""
     parsed = urlparse(url)
-    conn = HTTPSConnection(PROXY_HOST, PROXY_PORT, timeout=timeout)
-    conn.set_tunnel(parsed.hostname, parsed.port or 443)
+    conn = HTTPSConnection(parsed.hostname, parsed.port or 443, timeout=timeout)
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx.check_hostname = True
+    ctx.verify_mode = ssl.CERT_REQUIRED
     conn._context = ctx
     conn.connect()
     conn.request("POST", parsed.path + ("?" + parsed.query if parsed.query else ""),
