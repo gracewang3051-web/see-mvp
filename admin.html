@@ -91,6 +91,16 @@ td .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-s
   </div>
 </div>
 
+<!-- Server Config -->
+<div class="card">
+  <h2>⚙️ 站点地址</h2>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input type="text" id="serverUrlInput" placeholder="https://report.puxin2022.com" style="flex:1;min-width:200px;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.9em">
+    <button class="btn btn-primary btn-sm" onclick="saveServerUrl()">💾 保存</button>
+  </div>
+  <div style="font-size:.75em;color:var(--muted);margin-top:6px">当前: <span id="currentUrl"></span> | 本地测试用 localhost，生产用域名</div>
+</div>
+
 <!-- Generate QR -->
 <div class="card">
   <h2>🎫 生成入口二维码</h2>
@@ -178,6 +188,34 @@ td .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-s
   </table>
 </div>
 
+<!-- Dealer Management -->
+<div class="card">
+  <h2>🏪 经销商管理</h2>
+  <div class="grid2">
+    <div>
+      <div class="form-row"><label>经销商编码</label><input type="text" id="dealerCode" placeholder="如 DEMO001"><button class="btn btn-outline btn-sm" onclick="document.getElementById('dealerCode').value='DL'+randomStr(4)">🎲</button></div>
+      <div class="form-row"><label>品牌名称</label><input type="text" id="dealerBrand" placeholder="如 思维成长中心"></div>
+      <div class="form-row"><label>经销商名</label><input type="text" id="dealerName" placeholder="如 XX教育科技"></div>
+      <div class="form-row"><label>Logo表情</label><input type="text" id="dealerLogo" placeholder="如 🌟" style="width:60px;flex:0 0 60px"></div>
+      <div class="form-row"><label>主色调</label><input type="color" id="dealerColor" value="#6b96ac" style="width:50px;flex:0 0 50px"></div>
+      <div class="form-row"><label>顾问微信</label><input type="text" id="dealerWX" placeholder="微信号"></div>
+      <div class="form-row"><label>最大用户数</label><input type="number" id="dealerMaxUsers" value="100" min="1"></div>
+      <button class="btn btn-primary" onclick="addDealer()">➕ 添加经销商</button>
+    </div>
+    <div style="font-size:.82em;color:var(--muted)">
+      <p>经销商通过专属链接接入：</p>
+      <code style="display:block;padding:8px;background:#1a1a38;border-radius:6px;margin:6px 0">http://域名/?dealer=编码</code>
+      <p>经销商获得：独立品牌页面 + 独立用户管理 + 独立额度</p>
+    </div>
+  </div>
+  <table style="margin-top:12px">
+    <thead><tr><th>编码</th><th>品牌</th><th>经销商</th><th>用户/上限</th><th>状态</th><th>专属链接</th><th>操作</th></tr></thead>
+    <tbody id="dealerTableBody">
+      <tr><td colspan="7" style="text-align:center;color:var(--muted)">暂无经销商</td></tr>
+    </tbody>
+  </table>
+</div>
+
 <!-- User Code Management -->
 <div class="card">
   <h2>👥 用户码管理</h2>
@@ -249,14 +287,25 @@ td .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-s
 
 <script>
 // ============ DATA ============
-const SERVER_URL = window.location.origin;
+const SAVED_URL = localStorage.getItem('see_server_url');
+const SERVER_URL = SAVED_URL || (window.location.origin === 'http://localhost:8088' || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('192.168') ? 'https://report.puxin2022.com' : window.location.origin);
 
 function getCodes() { return JSON.parse(localStorage.getItem('see_admin_codes') || '[]'); }
 function saveCodes(data) { localStorage.setItem('see_admin_codes', JSON.stringify(data)); }
 function getRecords() { return JSON.parse(localStorage.getItem('see_admin_records') || '[]'); }
 
+// ============ SERVER URL ============
+function saveServerUrl() {
+  var url = document.getElementById('serverUrlInput').value.trim();
+  if (url) { localStorage.setItem('see_server_url', url); location.reload(); }
+}
+document.getElementById('serverUrlInput').value = SERVER_URL;
+document.getElementById('currentUrl').textContent = SERVER_URL;
+
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('serverUrlInput').value = SERVER_URL;
+  document.getElementById('currentUrl').textContent = SERVER_URL;
   document.getElementById('qrExpires').value = new Date(Date.now()+90*86400000).toISOString().slice(0,10);
   refreshAll();
 });
@@ -342,6 +391,62 @@ function delUserCode(code) {
   toast('已删除');
 }
 
+// ===== Dealer Management =====
+function getDealers() { return JSON.parse(localStorage.getItem('see_dealers') || '{}'); }
+function saveDealers(data) { localStorage.setItem('see_dealers', JSON.stringify(data)); }
+
+function addDealer() {
+  const code = document.getElementById('dealerCode').value.trim().toUpperCase();
+  if (!code) { toast('请输入编码', true); return; }
+  const d = {
+    code, name: document.getElementById('dealerName').value.trim(),
+    brand: document.getElementById('dealerBrand').value.trim() || code,
+    logo: document.getElementById('dealerLogo').value || '🌟',
+    colorPrimary: document.getElementById('dealerColor').value,
+    contactWX: document.getElementById('dealerWX').value.trim(),
+    maxUsers: parseInt(document.getElementById('dealerMaxUsers').value) || 100,
+    active: true, createdAt: new Date().toISOString()
+  };
+  const dealers = getDealers();
+  dealers[code] = d;
+  saveDealers(dealers);
+  ['dealerCode','dealerBrand','dealerName','dealerLogo','dealerWX'].forEach(id => document.getElementById(id).value = '');
+  refreshAll();
+  toast('经销商 ' + code + ' 已添加');
+}
+
+function renderDealerTable() {
+  const dealers = getDealers();
+  const keys = Object.keys(dealers);
+  if (keys.length === 0) {
+    document.getElementById('dealerTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">暂无经销商</td></tr>';
+    return;
+  }
+  let html = '';
+  keys.forEach(code => {
+    const d = dealers[code];
+    const link = window.location.origin + '/?dealer=' + code;
+    html += `<tr>
+      <td><code>${esc(code)}</code></td>
+      <td>${d.logo} ${esc(d.brand)}</td>
+      <td>${esc(d.name)}</td>
+      <td>0/${d.maxUsers}</td>
+      <td>${d.active?'<span class="badge badge-active">启用</span>':'<span class="badge badge-expired">停用</span>'}</td>
+      <td><code style="font-size:.75em">?dealer=${code}</code></td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="copyToClipboard('${link}');toast('已复制')">📋</button>
+        <button class="btn btn-danger btn-sm" onclick="toggleDealer('${code}')">${d.active?'⏸':'▶'}</button>
+      </td>
+    </tr>`;
+  });
+  document.getElementById('dealerTableBody').innerHTML = html;
+}
+
+function toggleDealer(code) {
+  const dealers = getDealers();
+  if (dealers[code]) { dealers[code].active = !dealers[code].active; saveDealers(dealers); refreshAll(); }
+}
+
 function refreshAll() {
   const codes = getCodes();
   let users = 0, reports = 0;
@@ -358,6 +463,7 @@ function refreshAll() {
   renderRecordTable();
   renderActTable();
   renderUserTable();
+  renderDealerTable();
 }
 
 // ============ ACTIVATION CODES ============
