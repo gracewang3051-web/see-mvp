@@ -45,6 +45,8 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self._proxy_talent(body)
         elif self.path == '/api/talent-v2':
             self._proxy_talent_v2(body)
+        elif self.path == '/api/parse-answers':
+            self._proxy_parse_answers(body)
         elif self.path == '/api/belief':
             self._proxy_belief(body)
         elif self.path == '/api/growth':
@@ -393,6 +395,44 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 "debug": engine_result['debug'],
                 "version": "v2"
             })
+        except Exception as e:
+            self._json(500, {"error": str(e)})
+
+    # ===== Parse Answers（Tesseract.js OCR → DeepSeek 解析）=====
+    def _proxy_parse_answers(self, body):
+        try:
+            data = json.loads(body)
+            ocr_text = data.get('ocrText', '')
+            prompt = f"""你是一个答题卡解析器。从以下OCR识别文字中，提取25道选择题的答案和手写字段。
+
+识别规则：
+1. 找到每道题(编号q01-q25)，判断选中的是A/B/C/D中的哪一个
+2. 每道题只有一个答案
+3. 手写字段（图片右侧区域）：
+   - self_label: "我"相关的手写文字
+   - strategy_result: "深度"相关的手写文字
+   - receiver_result: "结果"相关的手写文字
+   - output_result: "分析"相关的手写文字
+
+只输出纯JSON，不要任何解释：
+{{"answers":{{"q01":"A","q02":"B",...}},"handwritten_fields":{{"self_label":"","strategy_result":"","receiver_result":"","output_result":""}},"confidence":{{"overall":0.9,"uncertain_items":[]}}}}
+
+OCR文字内容：
+{ocr_text[:5000]}"""
+
+            result = proxy_request(
+                "https://api.deepseek.com/v1/chat/completions",
+                json.dumps({
+                    "model": "deepseek-chat",
+                    "messages": [{"role":"user","content": prompt}],
+                    "max_tokens": 2000, "temperature": 0.1
+                }).encode(),
+                {"Content-Type":"application/json","Authorization":f"Bearer {DEEPSEEK_KEY}"}
+            )
+            content = result["choices"][0]["message"]["content"]
+            parsed = self._extract_json(content)
+            usage = result.get("usage", {})
+            self._json(200, {**parsed, "usage": usage})
         except Exception as e:
             self._json(500, {"error": str(e)})
 

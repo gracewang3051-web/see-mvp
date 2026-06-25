@@ -122,8 +122,13 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 
 #manualCard select, #manualCard input { background: #1a1a38; color: #e0dcd4; border-color: #3a3a55; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script>window.Tesseract||document.write('<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"><\/script>')</script>
+<script src="tesseract.min.js"></script>
+<script>
+window.TESSERACT_CONFIG = {
+  workerPath: 'tesseract/worker.min.js',
+  langPath: 'https://unpkg.com/tesseract.js@5/dist/',
+};
+</script>
 </head>
 <body>
 
@@ -357,7 +362,9 @@ async function startFullFlow() {
 
   let ocrText = '';
   try {
+    var cfg = window.TESSERACT_CONFIG || {};
     const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
+      workerPath: cfg.workerPath, langPath: cfg.langPath,
       logger: m => {
         if (m.status === 'recognizing text') {
           btn.textContent = '🔍 识别 ' + Math.round(m.progress * 100) + '%';

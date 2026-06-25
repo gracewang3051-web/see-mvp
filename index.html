@@ -122,6 +122,9 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 
 #manualCard select, #manualCard input { background: #1a1a38; color: #e0dcd4; border-color: #3a3a55; }
 </style>
+<script src="dealer.js"></script>
+<script src="tesseract.min.js"></script>
+<script>window.TESSERACT_CONFIG={workerPath:"tesseract/worker.min.js",langPath:"https://unpkg.com/tesseract.js@5/dist/"};</script>
 </head>
 <body>
 
@@ -170,6 +173,48 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
   </div>
 </div>
 
+<!-- ====== Manual ====== -->
+<div class="card hidden" id="manualCard">
+  <h2><span class="step-badge">✏</span> 手动输入答案</h2>
+  <div id="manualEntries"></div>
+  <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">✅ 确认答案</button>
+</div>
+
+<!-- ====== STEP 2: Results ====== -->
+<div class="card hidden" id="resultCard">
+  <h2><span class="step-badge">2</span> 识别结果</h2>
+  <div style="font-size:.85em;color:var(--accent);margin-bottom:12px;padding:6px 12px;background:#f0f8ef;border-radius:6px">
+    👆 <strong>点击答案直接切换</strong> A→B→C→D，核对正确后生成报告
+  </div>
+  <div id="resultModules"></div>
+  <div class="flex-row" style="margin-top:14px">
+    <button class="btn btn-primary" id="btnGenerate" onclick="generateReports()">📝 生成你的解读报告</button>
+  </div>
+</div>
+
+<!-- ====== STEP 3: Report ====== -->
+<div class="card hidden" id="reportCard">
+  <h2><span class="step-badge">3</span> 你的解读报告 <button class="btn btn-outline btn-sm" onclick="downloadReport()" style="float:right;font-size:.75em">📥 下载报告</button></h2>
+  <div class="report-content loading" id="reportContent">正在生成...</div>
+  <div class="extra-cards hidden" id="extraCards">
+    <div class="extra-card" onclick="generateExtra('action')" id="extraAction">
+      <div class="icon">🌱</div>
+      <div class="title">个人成长建议</div>
+      <div class="desc">行动计划 · 练习建议 · 成长路径</div>
+    </div>
+    <div class="extra-card" onclick="generateExtra('communication')" id="extraComm">
+      <div class="icon">💞</div>
+      <div class="title">关系洞察</div>
+      <div class="desc">家庭关系 · 伴侣沟通 · 亲子互动</div>
+    </div>
+    <div class="extra-card" onclick="generateExtra('career')" id="extraCareer">
+      <div class="icon">🚀</div>
+      <div class="title">事业发展</div>
+      <div class="desc">职业方向 · 优势发挥 · 团队定位</div>
+    </div>
+  </div>
+</div>
+
 <!-- ====== 合盘入口 ====== -->
 <div class="card">
   <h2>💫 关系合盘</h2>
@@ -194,48 +239,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
   <input type="file" id="compositeFile" accept="image/*" class="hidden" onchange="handleCompositeFile(this.files[0])">
 </div>
 
-<!-- ====== Manual ====== -->
-<div class="card hidden" id="manualCard">
-  <h2><span class="step-badge">✏</span> 手动输入答案</h2>
-  <div id="manualEntries"></div>
-  <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">✅ 确认答案</button>
-</div>
 
-<!-- ====== STEP 2: Results ====== -->
-<div class="card hidden" id="resultCard">
-  <h2><span class="step-badge">2</span> 识别结果</h2>
-  <div style="font-size:.85em;color:var(--accent);margin-bottom:12px;padding:6px 12px;background:#f0f8ef;border-radius:6px">
-    👆 <strong>点击答案直接切换</strong> A→B→C→D，核对正确后生成报告
-  </div>
-  <div id="resultModules"></div>
-  <div class="flex-row" style="margin-top:14px">
-    <button class="btn btn-primary" id="btnGenerate" onclick="generateReports()">📝 生成你的解读报告</button>
-    <span style="font-size:.8em;color:var(--muted)" id="costEstimate"></span>
-  </div>
-</div>
-
-<!-- ====== STEP 3: Report ====== -->
-<div class="card hidden" id="reportCard">
-  <h2><span class="step-badge">3</span> 你的解读报告</h2>
-  <div class="report-content loading" id="reportContent">正在生成...</div>
-  <div class="extra-cards hidden" id="extraCards">
-    <div class="extra-card" onclick="generateExtra('action')" id="extraAction">
-      <div class="icon">🌱</div>
-      <div class="title">个人成长建议</div>
-      <div class="desc">行动计划 · 练习建议 · 成长路径</div>
-    </div>
-    <div class="extra-card" onclick="generateExtra('communication')" id="extraComm">
-      <div class="icon">💞</div>
-      <div class="title">关系洞察</div>
-      <div class="desc">家庭关系 · 伴侣沟通 · 亲子互动</div>
-    </div>
-    <div class="extra-card" onclick="generateExtra('career')" id="extraCareer">
-      <div class="icon">🚀</div>
-      <div class="title">事业发展</div>
-      <div class="desc">职业方向 · 优势发挥 · 团队定位</div>
-    </div>
-  </div>
-</div>
 
 </div>
 
@@ -302,7 +306,7 @@ let state = {
   imageData: null, answers: {}, handwritten: {},
   confidence: { overall: 0, items: [] },
   reports: {}, reportOrder: [],
-  totalCost: 0, totalTokens: 0, recognitionDone: false
+  recognitionDone: false
 };
 
 // ===== 用户码 & 持久化（与 talent 页共享）=====
@@ -402,21 +406,34 @@ function handleFile(file) {
 // ============ RECOGNITION ============
 async function startRecognition() {
   const btn = document.getElementById('btnRecognize');
-  btn.disabled = true; btn.textContent = '🔍 识别中...';
+  btn.disabled = true; btn.textContent = '⏳ 加载OCR引擎...';
   try {
-    const resp = await fetch(API_BASE + '/api/vision', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({image: state.imageData})
+    var cfg = window.TESSERACT_CONFIG || {};
+    const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
+      workerPath: cfg.workerPath, langPath: cfg.langPath,
+      logger: m => {
+        if (m.status === 'recognizing text') btn.textContent = '🔍 识别 ' + Math.round(m.progress*100) + '%';
+        else if (m.status && m.status.includes('loading')) btn.textContent = '⏳ 加载引擎...';
+      }
     });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
-    state.answers = data.answers || {};
-    state.handwritten = data.handwritten_fields || {};
-    state.confidence = data.confidence || {overall:0, items:[]};
+    const { data: ocrData } = await worker.recognize(state.imageData);
+    await worker.terminate();
+    var ocrText = ocrData.text || '';
+    document.getElementById('uploadStatus').textContent = 'OCR: ' + ocrText.length + '字';
+    btn.textContent = '🧠 解析答案...';
+    var resp = await fetch(API_BASE + '/api/parse-answers', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ocrText: ocrText})
+    });
+    var parsed = await resp.json();
+    if (parsed.error) throw new Error(parsed.error);
+    state.answers = parsed.answers || {};
+    state.handwritten = parsed.handwritten_fields || {};
+    state.confidence = parsed.confidence || {overall:0, items:[]};
     state.recognitionDone = true;
     showResults();
   } catch(e) { toggleManual(); }
-  btn.disabled = false; btn.textContent = '🔍 AI 智能识别';
+  btn.disabled = false; btn.textContent = '🔍 重新识别';
 }
 
 // ============ SHOW RESULTS ============
@@ -563,13 +580,6 @@ async function callAPI(type, portrait, baseReport) {
   });
   const data = await resp.json();
   if (data.error) throw new Error(data.error);
-  if (data.usage) {
-    const t = data.usage.total_tokens||0;
-    const c = data.cost||0;
-    state.totalTokens += t;
-    state.totalCost += c;
-    document.getElementById('costEstimate').textContent = `token: ${t} | 成本 ¥${c.toFixed(4)}`;
-  }
   return data;
 }
 
@@ -589,12 +599,16 @@ async function handleCompositeFile(file) {
     const status = document.getElementById(ids[compositeType]+'Status');
     status.classList.remove('hidden');
     status.textContent = '⏳ 识别中...';
-    // Upload for OCR
-    const resp = await fetch(API_BASE + '/api/vision', {
+    var cfg = window.TESSERACT_CONFIG || {};
+    var worker = await Tesseract.createWorker('chi_sim+eng', 1, {workerPath: cfg.workerPath, langPath: cfg.langPath});
+    var ocrRes = await worker.recognize(e.target.result);
+    await worker.terminate();
+    var ocrText = ocrRes.data.text || '';
+    var parseResp = await fetch(API_BASE + '/api/parse-answers', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({image: e.target.result})
+      body: JSON.stringify({ocrText: ocrText})
     });
-    const data = await resp.json();
+    var data = await parseResp.json();
     if (data.error) { status.textContent = '❌ ' + data.error; return; }
     status.textContent = '⏳ 生成合盘报告...';
     // Generate composite
@@ -627,6 +641,26 @@ function parseMD(md) {
     .replace(/\n\n/g,'</p><p>')
     .replace(/^(?!<)(.+)$/gm,'<p>$1</p>');
 }
+var REPORT_LABELS={portrait:'📋 思维画像报告',action:'🌱 个人成长建议',communication:'💞 关系洞察',career:'🚀 事业发展',composite:'💫 合盘报告'};
+function downloadReport(){
+  var md='';
+  for(var i=0;i<state.reportOrder.length;i++){
+    var k=state.reportOrder[i];
+    if(state.reports[k]) md+='# '+(REPORT_LABELS[k]||'报告')+'\n\n'+state.reports[k]+'\n\n---\n\n';
+  }
+  if(!md) return;
+  var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download='SEE_报告_'+new Date().toISOString().slice(0,10)+'.md';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 </script>
+
+
+
+
+
 </body>
 </html>
