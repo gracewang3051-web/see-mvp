@@ -248,6 +248,13 @@ let state = {
 };
 
 function getUserCode() {
+  var urlCode = new URLSearchParams(window.location.search).get('code') || '';
+  if (urlCode) {
+    sessionStorage.setItem('see_code_shared', urlCode);
+    var inp = document.getElementById('userCode');
+    if (inp) { inp.value = urlCode; inp.parentElement.classList.add('hidden'); }
+    return urlCode;
+  }
   return document.getElementById('userCode').value.trim() || sessionStorage.getItem('see_code_shared') || '';
 }
 

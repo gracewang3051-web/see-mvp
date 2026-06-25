@@ -311,6 +311,14 @@ let state = {
 
 // ===== 用户码 & 持久化（与 talent 页共享）=====
 function getUserCode() {
+  // URL 参数优先（扫码进入）
+  var urlCode = new URLSearchParams(window.location.search).get('code') || '';
+  if (urlCode) {
+    sessionStorage.setItem('see_code_shared', urlCode);
+    var inp = document.getElementById('userCode');
+    if (inp) { inp.value = urlCode; inp.parentElement.classList.add('hidden'); }
+    return urlCode;
+  }
   return document.getElementById('userCode').value.trim() || sessionStorage.getItem('see_code_shared') || '';
 }
 function saveReports() {
