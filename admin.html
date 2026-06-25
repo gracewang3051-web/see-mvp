@@ -299,6 +299,8 @@ function saveServerUrl() {
   var url = document.getElementById('serverUrlInput').value.trim();
   if (url) { localStorage.setItem('see_server_url', url); location.reload(); }
 }
+document.getElementById('serverUrlInput').value = SERVER_URL;
+document.getElementById('currentUrl').textContent = SERVER_URL;
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
