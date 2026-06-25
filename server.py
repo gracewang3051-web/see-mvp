@@ -1,25 +1,24 @@
 """SEE 生命印迹 - 本地测试服务端（保护 API Key）"""
-import json, base64, ssl, os, subprocess, tempfile
+import json, base64, ssl, os, subprocess, tempfile, sys
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http.client import HTTPSConnection
 from urllib.parse import urlparse
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from engine.rule_engine import process as engine_process
 
-# ===== API Keys（只在服务端，前端看不到）=====
-BAOSI_KEY = "SET_VIA_ENV"
-DEEPSEEK_KEY = "SET_VIA_ENV"
+# ===== API Keys（环境变量注入，不写入代码）=====
+BAOSI_KEY = os.environ.get('BAOSI_KEY', '')
+DEEPSEEK_KEY = os.environ.get('DEEPSEEK_KEY', '')
 
-# ===== 代理请求 =====
-PROXY_HOST = "localhost"
-PROXY_PORT = 7890
+# ===== 直连请求（服务器不需要代理）=====
 
 def proxy_request(url, payload, headers, timeout=180):
-    """通过本地代理发送 HTTPS 请求"""
+    """直连 API（宝思/DeepSeek 国内直连通）"""
     parsed = urlparse(url)
-    conn = HTTPSConnection(PROXY_HOST, PROXY_PORT, timeout=timeout)
-    conn.set_tunnel(parsed.hostname, parsed.port or 443)
+    conn = HTTPSConnection(parsed.hostname, parsed.port or 443, timeout=timeout)
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx.check_hostname = True
+    ctx.verify_mode = ssl.CERT_REQUIRED
     conn._context = ctx
     conn.connect()
     conn.request("POST", parsed.path + ("?" + parsed.query if parsed.query else ""),
@@ -44,6 +43,8 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self._proxy_ocr(body)
         elif self.path == '/api/talent':
             self._proxy_talent(body)
+        elif self.path == '/api/talent-v2':
+            self._proxy_talent_v2(body)
         elif self.path == '/api/belief':
             self._proxy_belief(body)
         elif self.path == '/api/growth':
@@ -335,6 +336,63 @@ class SEEHandler(SimpleHTTPRequestHandler):
             usage = result.get("usage", {})
             tokens = usage.get("total_tokens", 0)
             self._json(200, {"content": content, "usage": usage, "cost": round(tokens/1000*0.003, 6)})
+        except Exception as e:
+            self._json(500, {"error": str(e)})
+
+    # ===== Talent V2（新版：规则引擎 + 结构化知识库）=====
+    def _proxy_talent_v2(self, body):
+        """新版天赋报告：使用 rule_engine.py 结构化 pipeline"""
+        try:
+            data = json.loads(body)
+            ocr_text = data.get('ocrText', '')
+            report_type = data.get('type', 'portrait')
+            base_report = data.get('baseReport', '')
+
+            # 支持结构化输入
+            structured = data.get('structured', None)
+
+            # 如果有 base_report，拼接起来
+            full_text = ocr_text
+            if base_report:
+                full_text = ocr_text + '\n\n[基础报告]\n' + base_report
+
+            # 运行规则引擎
+            engine_result = engine_process(full_text, report_type, structured_data=structured)
+            # Debug log
+            m = engine_result['debug']['metrics']
+            with open('/tmp/see_v2_debug.log', 'a') as lf:
+                lf.write(f"[V2] OCR={len(full_text)}ch | TRC={m.get('trc')} ATD={m.get('atd')} | channels={m.get('learning_channels')} primary={m.get('primary_channel')} | rules={len(engine_result['debug']['rule_outputs'])}\n")
+                lf.write(f"  OCR_TEXT: {full_text[:500]}\n")
+                lf.write(f"  RULES: {[r['label'] for r in engine_result['debug']['rule_outputs']]}\n\n")
+
+            # 构建消息
+            messages = [
+                {"role": "system", "content": engine_result['system_prompt']},
+                {"role": "user", "content": engine_result['user_prompt']},
+            ]
+
+            result = proxy_request(
+                "https://api.deepseek.com/v1/chat/completions",
+                json.dumps({
+                    "model": "deepseek-chat",
+                    "messages": messages,
+                    "max_tokens": 3500, "temperature": 0.7
+                }).encode(),
+                {"Content-Type":"application/json","Authorization":f"Bearer {DEEPSEEK_KEY}"}
+            )
+            content = result["choices"][0]["message"]["content"]
+            usage = result.get("usage", {})
+            tokens = usage.get("total_tokens", 0)
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            cost = (prompt_tokens * 0.27 + completion_tokens * 1.10) / 1_000_000
+            self._json(200, {
+                "content": content,
+                "usage": usage,
+                "cost": round(cost, 6),
+                "debug": engine_result['debug'],
+                "version": "v2"
+            })
         except Exception as e:
             self._json(500, {"error": str(e)})
 

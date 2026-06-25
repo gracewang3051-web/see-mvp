@@ -122,6 +122,8 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 
 #manualCard select, #manualCard input { background: #1a1a38; color: #e0dcd4; border-color: #3a3a55; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>window.Tesseract||document.write('<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"><\/script>')</script>
 </head>
 <body>
 
@@ -170,12 +172,35 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
   <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFile(this.files[0])">
   <img id="preview" class="preview-img">
   <div class="flex-row" style="margin-top:10px">
-    <button class="btn btn-primary" id="btnRecognize" disabled onclick="startRecognition()">🔍 AI 智能识别</button>
+    <button class="btn btn-primary" id="btnRecognize" disabled onclick="startFullFlow()">🔍 识别并生成报告</button>
     <button class="btn btn-outline btn-sm" onclick="toggleManual()">✏️ 手动输入</button>
     <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
   </div>
 </div>
 
+<!-- ====== STEP 2: Report ====== -->
+<div class="card hidden" id="reportCard">
+  <h2><span class="step-badge">2</span> 你的解读报告 <button class="btn btn-outline btn-sm" onclick="downloadReport()" style="float:right;font-size:.75em">📥 下载报告</button></h2>
+  <div id="ocrProgress" style="font-size:.8em;color:var(--muted);margin-bottom:8px"></div>
+  <div class="report-content loading" id="reportContent">正在生成...</div>
+  <div class="extra-cards hidden" id="extraCards">
+    <div class="extra-card" onclick="generateExtra('action')" id="extraAction">
+      <div class="icon">🌱</div>
+      <div class="title">个人成长建议</div>
+      <div class="desc">行动计划 · 练习建议 · 成长路径</div>
+    </div>
+    <div class="extra-card" onclick="generateExtra('communication')" id="extraComm">
+      <div class="icon">💞</div>
+      <div class="title">关系洞察</div>
+      <div class="desc">家庭关系 · 伴侣沟通 · 亲子互动</div>
+    </div>
+    <div class="extra-card" onclick="generateExtra('career')" id="extraCareer">
+      <div class="icon">🚀</div>
+      <div class="title">事业发展</div>
+      <div class="desc">职业方向 · 优势发挥 · 团队定位</div>
+    </div>
+  </div>
+</div>
 <!-- ====== 合盘入口 ====== -->
 <div class="card">
   <h2>💫 关系合盘</h2>
@@ -205,39 +230,6 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
   <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">✅ 确认答案</button>
 </div>
 
-<!-- ====== STEP 2: Results ====== -->
-<div class="card hidden" id="resultCard">
-  <h2><span class="step-badge">2</span> 识别结果</h2>
-  <div style="font-size:.85em;color:var(--muted);margin-bottom:8px">AI 已提取报告中文字内容，核对后可生成报告</div>
-  <div style="padding:14px;background:#1a1a38;border-radius:10px;font-size:.85em;line-height:1.8;white-space:pre-wrap;max-height:300px;overflow-y:auto" id="ocrResult"></div>
-  <div class="flex-row" style="margin-top:14px">
-    <button class="btn btn-primary" id="btnGenerate" onclick="generateTalentReport()">📝 生成先天思维特质报告</button>
-    <span style="font-size:.8em;color:var(--muted)" id="costEstimate"></span>
-  </div>
-</div>
-
-<!-- ====== STEP 3: Report ====== -->
-<div class="card hidden" id="reportCard">
-  <h2><span class="step-badge">3</span> 你的解读报告</h2>
-  <div class="report-content loading" id="reportContent">正在生成...</div>
-  <div class="extra-cards hidden" id="extraCards">
-    <div class="extra-card" onclick="generateExtra('action')" id="extraAction">
-      <div class="icon">🌱</div>
-      <div class="title">个人成长建议</div>
-      <div class="desc">行动计划 · 练习建议 · 成长路径</div>
-    </div>
-    <div class="extra-card" onclick="generateExtra('communication')" id="extraComm">
-      <div class="icon">💞</div>
-      <div class="title">关系洞察</div>
-      <div class="desc">家庭关系 · 伴侣沟通 · 亲子互动</div>
-    </div>
-    <div class="extra-card" onclick="generateExtra('career')" id="extraCareer">
-      <div class="icon">🚀</div>
-      <div class="title">事业发展</div>
-      <div class="desc">职业方向 · 优势发挥 · 团队定位</div>
-    </div>
-  </div>
-</div>
 
 </div>
 
@@ -350,38 +342,53 @@ function handleFile(file) {
   reader.readAsDataURL(file);
 }
 
-async function startRecognition() {
+async function startFullFlow() {
   const btn = document.getElementById('btnRecognize');
-  btn.disabled = true; btn.textContent = '🔍 识别中...';
-  try {
-    const resp = await fetch(API_BASE + '/api/ocr', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({image: state.imageData})
-    });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
-    state.ocrText = data.text || '';
-    state.recognitionDone = true;
-    document.getElementById('resultCard').classList.remove('hidden');
-    document.getElementById('btnGenerate').disabled = false;
-    document.getElementById('ocrResult').textContent = state.ocrText || '(未识别到文字)';
-    if (data.usage) document.getElementById('costEstimate').textContent = 'token: '+(data.usage.total_tokens||0);
-  } catch(e) {
-    document.getElementById('ocrResult').textContent = '识别失败: ' + e.message;
-    document.getElementById('resultCard').classList.remove('hidden');
-  }
-  btn.disabled = false; btn.textContent = '🔍 AI 智能识别';
-}
+  const status = document.getElementById('uploadStatus');
+  btn.disabled = true;
 
-async function generateTalentReport() {
-  if (!state.recognitionDone) return;
-  document.getElementById('btnGenerate').disabled = true;
+  // === Phase 1: OCR ===
+  btn.textContent = '⏳ 加载OCR引擎...';
   document.getElementById('reportCard').classList.remove('hidden');
   document.getElementById('reportContent').classList.add('loading');
+  document.getElementById('reportContent').textContent = '正在识别图片中的文字...';
+  document.getElementById('ocrProgress').style.display = 'block';
+  document.getElementById('ocrProgress').textContent = '';
+
+  let ocrText = '';
+  try {
+    const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          btn.textContent = '🔍 识别 ' + Math.round(m.progress * 100) + '%';
+        } else if (m.status === 'loading tesseract core' || m.status === 'loading language traineddata') {
+          btn.textContent = '⏳ 加载引擎...';
+        } else {
+          btn.textContent = '⏳ ' + m.status;
+        }
+      }
+    });
+    const { data } = await worker.recognize(state.imageData);
+    await worker.terminate();
+    ocrText = data.text || '';
+    document.getElementById('ocrProgress').textContent = '✅ OCR: ' + ocrText.length + '字';
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
+    document.getElementById('reportContent').textContent = '❌ OCR失败: ' + e.message;
+    document.getElementById('ocrProgress').textContent = '❌ 识别失败，请重试';
+    return;
+  }
+
+  state.ocrText = ocrText;
+  state.recognitionDone = true;
+
+  // === Phase 2: Generate Report ===
+  btn.textContent = '📝 生成报告中...';
   document.getElementById('reportContent').textContent = '正在结合知识库生成报告...';
   document.getElementById('extraCards').classList.add('hidden');
+
   try {
-    const resp = await fetch(API_BASE + '/api/talent', {
+    const resp = await fetch(API_BASE + '/api/talent-v2', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ocrText: state.ocrText, type: 'portrait'})
     });
@@ -389,37 +396,59 @@ async function generateTalentReport() {
     if (data.error) throw new Error(data.error);
     state.reports = {portrait: data.content};
     state.reportOrder = ['portrait'];
+    state.lastDebug = data.debug || null;
     saveReports();
     document.getElementById('reportContent').classList.remove('loading');
-    document.getElementById('reportContent').innerHTML = parseMD(data.content);
+    document.getElementById('reportContent').innerHTML = renderStack();
+    document.getElementById('reportCard').scrollIntoView({behavior:'smooth',block:'start'});
     document.getElementById('extraCards').classList.remove('hidden');
-    ['extraLearning','extraEmotion','extraPotential'].forEach(id => {
+    ['extraAction','extraComm','extraCareer'].forEach(id => {
       const el = document.getElementById(id);
       if(el) el.classList.remove('loading','done');
     });
-  } catch(e) { document.getElementById('reportContent').textContent = '生成失败: '+e.message; }
-  document.getElementById('btnGenerate').disabled = false;
+    showDebug(data.debug);
+  } catch(e) { document.getElementById('reportContent').textContent = '生成失败: ' + e.message; }
+
+  btn.disabled = false;
+  btn.textContent = '🔄 重新识别并生成';
 }
 
 async function generateExtra(type) {
-  const idMap = {learning:'extraLearning',emotion:'extraEmotion',potential:'extraPotential'};
+  const idMap = {action:'extraAction',communication:'extraComm',career:'extraCareer'};
   const card = document.getElementById(idMap[type]);
-  if (state.reports[type]) { document.getElementById('reportContent').innerHTML = parseMD(state.reports[type]); return; }
-  card.classList.add('loading'); if(card) card.querySelector('.icon').textContent = '⏳';
+  if (!card) return;
+  var reportCard = document.getElementById('reportCard');
+  var rc = document.getElementById('reportContent');
+  var labelMap = {action:'🌱 个人成长建议',communication:'💞 关系洞察',career:'🚀 事业发展'};
+  reportCard.classList.remove('hidden');
+  rc.classList.remove('loading');
+
+  // 构建堆叠显示：已有的报告 + 新报告
+  if (state.reports[type]) {
+    rc.innerHTML = renderStack();
+    reportCard.scrollIntoView({behavior:'smooth',block:'start'});
+    return;
+  }
+
+  card.classList.add('loading'); card.querySelector('.icon').textContent = '⏳';
   try {
-    const resp = await fetch(API_BASE + '/api/talent', {
+    var resp = await fetch(API_BASE + '/api/talent-v2', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ocrText: state.ocrText, type, baseReport: state.reports.portrait||''})
+      body: JSON.stringify({ocrText: state.ocrText, type: type, baseReport: state.reports.portrait||''})
     });
-    const data = await resp.json();
+    var data = await resp.json();
     if (data.error) throw new Error(data.error);
     state.reports[type] = data.content;
     state.reportOrder.push(type);
     saveReports();
-    document.getElementById('reportContent').innerHTML = parseMD(data.content);
+    rc.innerHTML = renderStack();
+    reportCard.scrollIntoView({behavior:'smooth',block:'start'});
     card.classList.remove('loading'); card.classList.add('done');
-    if(card) card.querySelector('.icon').textContent = '✅'; if(card) card.querySelector('.desc').textContent = '已生成';
-  } catch(e) { card.classList.remove('loading'); if(card) card.querySelector('.icon').textContent = '⚠️'; }
+    card.querySelector('.icon').textContent = '✅'; card.querySelector('.desc').textContent = '已生成';
+  } catch(e) {
+    card.classList.remove('loading'); card.querySelector('.icon').textContent = '⚠️';
+    card.querySelector('.desc').textContent = '失败: '+e.message;
+  }
 }
 
 // ===== 合盘 =====
@@ -472,6 +501,46 @@ function parseMD(md) {
     .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>')
     .replace(/\n\n/g,'</p><p>')
     .replace(/^(?!<)(.+)$/gm,'<p>$1</p>');
+}
+
+var REPORT_LABELS = {portrait:'📋 先天思维特质报告',action:'🌱 个人成长建议',communication:'💞 关系洞察',career:'🚀 事业发展'};
+function renderStack() {
+  var parts = [];
+  for (var i = 0; i < state.reportOrder.length; i++) {
+    var k = state.reportOrder[i];
+    if (state.reports[k]) {
+      parts.push('<div style="background:linear-gradient(135deg,#2a2a48,#1e1e40);padding:20px;border-radius:10px;margin-bottom:16px;border-left:3px solid var(--accent)"><div style="font-weight:700;font-size:1em;color:var(--accent);margin-bottom:12px">'+(REPORT_LABELS[k]||'📋 报告')+'</div>'+parseMD(state.reports[k])+'</div>');
+    }
+  }
+  return parts.join('<hr style="border-color:#2a2a45;margin:20px 0">');
+}
+
+function showDebug(debug) {
+  if (!debug) return;
+  var rules = debug.rule_outputs || [];
+  var metrics = debug.metrics || {};
+  var html = '<details style="margin-top:12px;font-size:.8em;color:var(--muted)"><summary style="cursor:pointer;padding:6px 0">🔍 引擎调试信息</summary><div style="padding:10px;background:#111;border-radius:8px;margin-top:6px;line-height:1.6;max-height:400px;overflow-y:auto"><b>指标提取:</b> TRC='+(metrics.trc||'?')+' ATD='+(metrics.atd||'?')+' 行为='+(metrics.behavior_mode||'?')+' 通道='+(metrics.primary_channel||'?')+'<br><b>命中规则 ('+rules.length+'):</b><br>'+rules.map(function(r,i){return '&nbsp;&nbsp;'+(i+1)+'. <b>'+r.label+'</b> '+(r.traits||[]).join('·')+' '+(r.supports||[]).slice(0,2).join(' | ')}).join('<br>')+'<br><b>检索:</b> 洞察'+(debug.insights_count||0)+'条 · 表达'+(debug.narratives_count||0)+'条 · 方案'+(debug.interventions_count||0)+'条<br><b>OCR原文:</b> <span style="word-break:break-all">'+(state.ocrText||'').substring(0,300)+'...</span></div></details>';
+  var reportCard = document.getElementById('reportCard');
+  var el = document.getElementById('debugPanel');
+  if (!el) { el = document.createElement('div'); el.id = 'debugPanel'; reportCard.appendChild(el); }
+  el.innerHTML = html;
+}
+
+function downloadReport() {
+  var md = '';
+  for (var i = 0; i < state.reportOrder.length; i++) {
+    var k = state.reportOrder[i];
+    if (state.reports[k]) {
+      md += '# ' + (REPORT_LABELS[k] || '报告') + '\n\n' + state.reports[k] + '\n\n---\n\n';
+    }
+  }
+  if (!md) return;
+  var blob = new Blob([md], {type: 'text/markdown;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'SEE_报告_' + new Date().toISOString().slice(0,10) + '.md';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 </script>
 </body>
