@@ -60,8 +60,16 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
   .hero .feature-text { font-size: .7em; }
 }
 
-.container { max-width: 720px; margin: 0 auto; padding: 20px 16px; }
-.card { background: var(--card); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.container { max-width: 720px; margin: 0 auto; padding: 20px 12px; }
+.card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.report-content { padding: 16px; background: #1a1a35; border-radius: 10px; font-size: .9em; line-height: 1.8; max-height: 500px; overflow-y: auto; border: 1px solid #2a2a45; }
+@media (max-width: 500px) {
+  .container { padding: 12px 6px; }
+  .card { padding: 12px 10px; border-radius: 10px; }
+  .report-content { padding: 12px 10px; font-size: .85em; }
+  .btn { padding: 10px 16px; font-size: .85em; }
+  h2 { font-size: 1em; }
+}
 .card h2 { font-size: 1.1em; margin-bottom: 16px; display:flex; align-items:center; gap:8px; font-weight: 600; color: #e0dcd4; }
 
 .step-badge { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:var(--accent); color:#0f0f28; font-size:.8em; font-weight:700; margin-right:6px; flex-shrink:0; }
@@ -69,11 +77,11 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 .upload-zone p, .upload-zone .icon { color: #8a8590; }
 
 /* Upload */
-.upload-zone { border: 2px dashed #3a3a55; border-radius: var(--radius); padding: 40px 24px; text-align: center; cursor: pointer; transition: all .2s; background: #1a1a38; }
+.upload-zone { border: 2px dashed #3a3a55; border-radius: var(--radius); text-align: center; cursor: pointer; transition: all .2s; background: #1a1a38; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:200px; padding: 16px; }
 .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: #1e1e40; }
-.upload-zone .icon { font-size: 2.2em; margin-bottom: 6px; }
-.upload-zone p { color: var(--muted); font-size: .9em; }
-.preview-img { max-width: 100%; max-height: 300px; border-radius: 8px; margin: 10px 0; border: 1px solid var(--border); display: none; }
+.upload-zone .icon { font-size: 2em; margin-bottom: 6px; }
+.upload-zone p { color: var(--muted); font-size: .85em; }
+.preview-img { max-width: 100%; max-height: 280px; border-radius: 8px; border: 1px solid var(--border); display: none; }
 .preview-img.show { display: block; }
 
 .btn { display: inline-flex; align-items:center; gap:6px; padding: 10px 22px; border: none; border-radius: 10px; font-size: .9em; font-weight: 500; cursor: pointer; transition: all .15s; }
@@ -94,9 +102,6 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 .result-item.low-conf .ans { color: var(--danger); background: #3e2020; }
 
 .module-title { font-weight: 600; color: var(--accent2); margin: 14px 0 6px; font-size: .9em; padding-bottom: 3px; border-bottom: 1px solid #2a2a45; }
-
-/* Reports */
-.report-content { padding: 22px; background: #1a1a35; border-radius: 10px; font-size: .92em; line-height: 1.85; max-height: 500px; overflow-y: auto; border: 1px solid #2a2a45; }
 .report-content.loading { text-align:center; color: var(--muted); padding: 40px; border: none; }
 .report-content h1 { font-family: "Noto Serif SC", serif; font-size: 1.3em; color: #e8dcc0; margin: 20px 0 16px; font-weight: 700; border-bottom: 1px solid #3a3a55; padding-bottom: 8px; }
 .report-content h2 { font-family: "Noto Serif SC", serif; font-size: 1.1em; color: #d0c8a0; margin: 20px 0 10px; }
@@ -160,14 +165,17 @@ window.TESSERACT_CONFIG = {
     <span style="font-size:.75em;color:var(--muted)">输入后报告自动保存，刷新不丢失</span>
   </div>
   <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
-    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" style="flex:1;min-width:220px">
-      <div class="icon">📸</div>
-      <p>点击或拖拽上传报告照片</p>
-      <p style="font-size:.75em;margin-top:4px">支持 JPG/PNG，请拍摄清晰</p>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" style="flex:1;min-width:200px;position:relative;overflow:hidden">
+      <div id="uploadPlaceholder">
+        <div class="icon">📸</div>
+        <p>点击或拖拽上传报告照片</p>
+        <p style="font-size:.75em;margin-top:4px">支持 JPG/PNG，请拍摄清晰</p>
+      </div>
+      <img id="preview" class="preview-img" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain">
     </div>
     <div style="flex-shrink:0;text-align:center">
       <div style="font-size:.75em;color:var(--muted);margin-bottom:4px">📋 上传样本参考</div>
-      <img src="talent_sample.jpg" style="max-width:200px;max-height:180px;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src)" title="点击查看大图">
+      <img src="talent_sample.jpg" style="max-width:200px;max-height:200px;border-radius:8px;border:1px solid var(--border);cursor:pointer;object-fit:contain" onclick="window.open(this.src)" title="点击查看大图">
     </div>
   </div>
   <div class="hidden" id="savedReportsSection" style="margin-top:12px;padding:10px 14px;background:#1a1a38;border-radius:8px;font-size:.85em">
@@ -175,7 +183,6 @@ window.TESSERACT_CONFIG = {
     <div id="savedReportsList"></div>
   </div>
   <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFile(this.files[0])">
-  <img id="preview" class="preview-img">
   <div class="flex-row" style="margin-top:10px;align-items:center;gap:12px">
     <label style="font-size:.8em;color:var(--muted);white-space:nowrap">🎂 年龄 *</label>
     <input type="number" id="reportAge" value="" min="0" max="120" placeholder="必填" required style="width:60px;padding:5px 8px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
@@ -183,13 +190,11 @@ window.TESSERACT_CONFIG = {
     <select id="reportTarget" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em;cursor:pointer">
       <option value="self">🙋 本人</option>
       <option value="parent">👨‍👩‍👧 父母</option>
-      <option value="other">👤 代他人解读</option>
       <option value="global">🌍 全局视角</option>
     </select>
   </div>
   <div class="flex-row" style="margin-top:6px">
     <button class="btn btn-primary" id="btnRecognize" disabled onclick="startFullFlow()">🔍 识别并生成报告</button>
-    <button class="btn btn-outline btn-sm" onclick="toggleManual()">✏️ 手动输入</button>
     <select id="reportStyle" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em;cursor:pointer">
       <option value="gentle">🌿 温和顾问</option>
       <option value="parent">💝 亲子顾问</option>
@@ -203,7 +208,7 @@ window.TESSERACT_CONFIG = {
 
 <!-- ====== STEP 2: Report ====== -->
 <div class="card hidden" id="reportCard">
-  <h2><span class="step-badge">2</span> 你的解读报告 <button class="btn btn-outline btn-sm" onclick="downloadReport()" style="float:right;font-size:.75em">📥 下载报告</button></h2>
+  <h2><span class="step-badge">2</span> 你的解读报告 <span style="float:right;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="downloadReport(null,'doc')" style="font-size:.65em;padding:3px 8px">📥 Word</button><button class="btn btn-outline btn-sm" onclick="downloadReport(null,'pdf')" style="font-size:.65em;padding:3px 8px">🖨️ PDF</button></span></h2>
   <div id="ocrProgress" style="font-size:.8em;color:var(--muted);margin-bottom:8px"></div>
   <div class="report-content loading" id="reportContent">正在生成...</div>
 </div>
@@ -353,8 +358,10 @@ function handleFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
     state.imageData = e.target.result;
-    document.getElementById('preview').src = state.imageData;
-    document.getElementById('preview').classList.add('show');
+    document.getElementById('uploadPlaceholder').style.display = 'none';
+    var pv = document.getElementById('preview');
+    pv.src = state.imageData;
+    pv.style.display = 'block';
     document.getElementById('btnRecognize').disabled = false;
     document.getElementById('uploadStatus').textContent = file.name;
   };
@@ -626,7 +633,11 @@ function renderStack() {
         '<div style="background:linear-gradient(135deg,#2a2a48,#1e1e40);padding:20px;border-radius:10px;margin-bottom:16px;border-left:3px solid var(--accent)">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
         '<span style="font-weight:700;font-size:1em;color:var(--accent)">'+getReportLabel(k)+'</span>'+
-        '<button class="btn btn-outline btn-sm" onclick="downloadReport(\''+k+'\')" style="font-size:.7em">📥 下载此份</button>'+
+        '<span style="display:flex;gap:4px">'+
+        '<button class="btn btn-outline btn-sm" onclick="downloadReport(\''+k+'\',\'md\')" style="font-size:.65em;padding:3px 8px">MD</button>'+
+        '<button class="btn btn-outline btn-sm" onclick="downloadReport(\''+k+'\',\'doc\')" style="font-size:.65em;padding:3px 8px">Word</button>'+
+        '<button class="btn btn-outline btn-sm" onclick="downloadReport(\''+k+'\',\'pdf\')" style="font-size:.65em;padding:3px 8px">PDF</button>'+
+        '</span>'+
         '</div>'+
         '<div>'+parseMD(state.reports[k])+'</div>'+
         '</div>'
@@ -647,12 +658,14 @@ function showDebug(debug) {
   el.innerHTML = html;
 }
 
-function downloadReport(key) {
+function downloadReport(key, format) {
+  var key = key || null;
+  var format = format || 'md';
   var md = '';
   var filename = 'SEE_报告';
   if (key) {
     md = '# ' + getReportLabel(key) + '\n\n' + (state.reports[key]||'');
-    filename = 'SEE_' + getReportLabel(key).replace(/[📋\s]/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.md';
+    filename = 'SEE_' + getReportLabel(key).replace(/[📋\s]/g,'_');
   } else {
     for (var i = 0; i < state.reportOrder.length; i++) {
       var k = state.reportOrder[i];
@@ -660,13 +673,36 @@ function downloadReport(key) {
         md += '# ' + getReportLabel(k) + '\n\n' + state.reports[k] + '\n\n---\n\n';
       }
     }
-    filename = 'SEE_全部报告_' + new Date().toISOString().slice(0,10) + '.md';
+    filename = 'SEE_全部报告';
   }
   if (!md) return;
+
+  if (format === 'pdf') {
+    // 浏览器打印为 PDF
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><meta charset=utf-8><style>body{font-family:serif;max-width:720px;margin:0 auto;padding:20px;line-height:1.8;color:#333}h1{font-size:1.4em}h2{font-size:1.15em;margin-top:20px}h3{font-size:1em}p{margin:8px 0}li{margin:4px 0}</style></head><body>' + parseMD(md) + '</body></html>');
+    printWindow.document.close();
+    setTimeout(function(){ printWindow.print(); }, 500);
+    return;
+  }
+
+  if (format === 'doc') {
+    // Word 可打开的 HTML 文件
+    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{font-family:serif;line-height:1.8}h1{font-size:1.3em}h2{font-size:1.1em}h3{font-size:1em}</style></head><body>' + parseMD(md) + '</body></html>';
+    var blob = new Blob([html], {type: 'application/msword;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename + '.doc';
+    a.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  // Default: Markdown
   var blob = new Blob([md], {type: 'text/markdown;charset=utf-8'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
-  a.href = url; a.download = filename;
+  a.href = url; a.download = filename + '.md';
   a.click();
   URL.revokeObjectURL(url);
 }

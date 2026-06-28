@@ -59,6 +59,12 @@ class SEEHandler(SimpleHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def end_headers(self):
+        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
+        self.send_header('Cross-Origin-Embedder-Policy', 'credentialless')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        super().end_headers()
+
     def do_GET(self):
         if self.path == '/':
             self.path = '/index.html'
