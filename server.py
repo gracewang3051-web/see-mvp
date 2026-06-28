@@ -3,8 +3,9 @@ import json, base64, ssl, os, subprocess, tempfile, sys
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http.client import HTTPSConnection
 from urllib.parse import urlparse
+from socketserver import ThreadingMixIn
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from engine.rule_engine import process as engine_process
+from engine.orchestrator import CognitiveEngine
 
 # ===== API Keys（环境变量注入，不写入代码）=====
 BAOSI_KEY = os.environ.get('BAOSI_KEY', '')
@@ -47,6 +48,8 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self._proxy_talent_v2(body)
         elif self.path == '/api/parse-answers':
             self._proxy_parse_answers(body)
+        elif self.path == '/api/talent-chat':
+            self._proxy_talent_chat(body)
         elif self.path == '/api/belief':
             self._proxy_belief(body)
         elif self.path == '/api/growth':
@@ -341,31 +344,26 @@ class SEEHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             self._json(500, {"error": str(e)})
 
-    # ===== Talent V2（新版：规则引擎 + 结构化知识库）=====
+    # ===== Talent V2（新版：三层认知引擎）=====
     def _proxy_talent_v2(self, body):
-        """新版天赋报告：使用 rule_engine.py 结构化 pipeline"""
+        """新版天赋报告：CognitiveEngine 三层 pipeline"""
         try:
             data = json.loads(body)
             ocr_text = data.get('ocrText', '')
             report_type = data.get('type', 'portrait')
             base_report = data.get('baseReport', '')
+            style = data.get('style', 'gentle')
+            age = data.get('age')
+            target = data.get('target', 'self')
 
-            # 支持结构化输入
-            structured = data.get('structured', None)
-
-            # 如果有 base_report，拼接起来
+            # 拼接基础报告
             full_text = ocr_text
             if base_report:
                 full_text = ocr_text + '\n\n[基础报告]\n' + base_report
 
-            # 运行规则引擎
-            engine_result = engine_process(full_text, report_type, structured_data=structured)
-            # Debug log
-            m = engine_result['debug']['metrics']
-            with open('/tmp/see_v2_debug.log', 'a') as lf:
-                lf.write(f"[V2] OCR={len(full_text)}ch | TRC={m.get('trc')} ATD={m.get('atd')} | channels={m.get('learning_channels')} primary={m.get('primary_channel')} | rules={len(engine_result['debug']['rule_outputs'])}\n")
-                lf.write(f"  OCR_TEXT: {full_text[:500]}\n")
-                lf.write(f"  RULES: {[r['label'] for r in engine_result['debug']['rule_outputs']]}\n\n")
+            # 运行认知引擎
+            engine = CognitiveEngine()
+            engine_result = engine.run(full_text, report_type, style, age=age, target=target)
 
             # 构建消息
             messages = [
@@ -378,22 +376,24 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 json.dumps({
                     "model": "deepseek-chat",
                     "messages": messages,
-                    "max_tokens": 3500, "temperature": 0.7
+                    "max_tokens": 1600, "temperature": 0.5
                 }).encode(),
                 {"Content-Type":"application/json","Authorization":f"Bearer {DEEPSEEK_KEY}"}
             )
             content = result["choices"][0]["message"]["content"]
             usage = result.get("usage", {})
-            tokens = usage.get("total_tokens", 0)
-            prompt_tokens = usage.get("prompt_tokens", 0)
-            completion_tokens = usage.get("completion_tokens", 0)
-            cost = (prompt_tokens * 0.27 + completion_tokens * 1.10) / 1_000_000
+
+            # 校验输出
+            from engine.validator import validate
+            validation = validate(content, engine_result['debug']['structure'])
+
             self._json(200, {
                 "content": content,
                 "usage": usage,
-                "cost": round(cost, 6),
                 "debug": engine_result['debug'],
-                "version": "v2"
+                "validation": validation,
+                "version": "v3",
+                "style": style,
             })
         except Exception as e:
             self._json(500, {"error": str(e)})
@@ -433,6 +433,137 @@ OCR文字内容：
             parsed = self._extract_json(content)
             usage = result.get("usage", {})
             self._json(200, {**parsed, "usage": usage})
+        except Exception as e:
+            self._json(500, {"error": str(e)})
+
+    # ===== Talent Chat（报告对话 + 整合）=====
+    def _proxy_talent_chat(self, body):
+        """对话式报告咨询。基于知识库 + 画像身份，帮助用户产出认可的最终报告。"""
+        try:
+            data = json.loads(body)
+            report_text = data.get('reportText', '')
+            conversation = data.get('conversation', [])
+            user_message = data.get('userMessage', '')
+            action = data.get('action', 'chat')  # chat | summarize
+            age = data.get('age')
+            persona = data.get('persona', {})  # {style, target}
+
+            if not report_text:
+                self._json(400, {"error": "缺少报告内容"})
+                return
+
+            # 加载知识库上下文 + 纹型数据
+            from engine.retrieval import _kb
+            kb = _kb()
+            kb_context = kb.get('ontology', '')[:1500]
+
+            # 如果提供了 OCR 原文，也提取纹型信息
+            ocr_text = data.get('ocrText', '')
+            pattern_context = ''
+            if ocr_text:
+                from engine.extractor import extract_metrics
+                from engine.rules import apply_rules, rule_summary
+                try:
+                    m = extract_metrics(ocr_text)
+                    s = apply_rules(m)
+                    pis = s.get('pattern_insights', [])
+                    if pis:
+                        lines = ['\n## 当前报告的纹型数据（权威，不可编造）']
+                        for p in pis:
+                            lines.append(f"- {p['area']} 纹型={p['code']}：{p['insight']}")
+                        pattern_context = '\n'.join(lines)
+                except:
+                    pass
+
+            age_label = f'{age}岁' if age else '未知年龄'
+            target = persona.get('target', 'self')
+            style = persona.get('style', 'gentle')
+
+            # 角色指令
+            persona_guide = {
+                'self': f'你正在与报告本人（{age_label}）对话。用「你」称呼，语气亲切。',
+                'parent': f'你正在与一位家长对话，报告对象是{age_label}的孩子。用「您的孩子」称呼，先共情再建议。',
+                'other': f'你正在与一位第三方解读人对话，报告对象是{age_label}的人。语气中立专业，用「这位」称呼报告对象。',
+                'global': f'这份报告会分享给多个人看。兼顾本人、家人、老师同事的需求，给出分角色的建议。',
+            }.get(target, '')
+
+            if action == 'summarize':
+                prompt = f"""你是一个 SEE 报告整合专家。你的任务是基于原始报告和用户与你的全部讨论，生成一份用户完全认可的最终报告。
+
+## 你的身份
+{persona_guide}
+
+## 知识库参考（你回答的依据）
+{kb_context}
+
+## 原始报告
+{report_text[:3000]}
+
+## 全部讨论记录
+{json.dumps(conversation, ensure_ascii=False)}
+
+## 任务
+请直接输出一份最终的综合报告。只输出报告正文，不要任何前言、后记、解释或客气话。
+
+要求：
+1. 将原始报告中用户提出修正的部分全部更新
+2. 将讨论中用户确认的理解融入
+3. 使用与报告对象年龄匹配的语言
+4. {persona_guide}
+
+报告结构（必须严格遵循）：
+# {{报告标题}}
+## 一、行为解码
+## 二、先天特质地图（包含纹型解读）
+## 三、优势发挥分析
+## 四、成长提醒
+## 五、支持方案
+
+⚠️ 直接以 # 开头输出报告，不要加「好的」「以下是」等前缀。"""
+            else:
+                history = '\n'.join([f"{'用户' if m['role']=='user' else '顾问'}: {m['content'][:300]}" for m in conversation[-8:]])
+                prompt = f"""你是一个 SEE 报告顾问。你的目标是帮助用户最终获得一份他们完全认可的、准确的报告。
+
+## 你的身份
+{persona_guide}
+
+## 知识库（你的专业依据）
+{kb_context}
+{pattern_context}
+
+## 报告内容（当前版本）
+{report_text[:2500]}
+
+## 对话历史
+{history}
+
+## 用户刚才说
+{user_message}
+
+## 你的回应规则
+1. 先确认你理解了用户的问题或疑虑，再说你的分析
+2. 如果用户指出报告中有不准确的地方，认真考虑并给出修正建议
+3. 鼓励用户确认你的理解是否正确（「如果我的理解对的话...」）
+4. 如果用户认同某部分，记录下来并在总结时体现
+5. 每次回复 150-300 字，聚焦、有实质内容
+6. 基于知识库的专业知识来支撑你的回答，但不要堆砌术语
+7. ⚠️ 纹型编码必须是上方「纹型数据」中列出的编码（如 Wc、Lu、Ws 等），绝对禁止编造「正形」「负形」「标准型」等不存在的纹型名称
+8. ⚠️ 当用户说「可以整合」「出报告」「生成」等关键词时，不要再追问是否要出报告，直接说「好的，正在为您生成最终报告...」然后停止回复。前端会自动生成。
+9. ⚠️ 每次回复末尾必须加：「---\\n💡 如果满意请点击下方 **📝 生成整合报告** 按钮，我会将讨论结果整合为最终报告。如需继续调整请直接告诉我。」"""
+
+            result = proxy_request(
+                "https://api.deepseek.com/v1/chat/completions",
+                json.dumps({
+                    "model": "deepseek-chat",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 3000 if action == 'summarize' else 400,
+                    "temperature": 0.5
+                }).encode(),
+                {"Content-Type": "application/json", "Authorization": f"Bearer {DEEPSEEK_KEY}"}
+            )
+            reply = result["choices"][0]["message"]["content"]
+            usage = result.get("usage", {})
+            self._json(200, {"reply": reply, "action": action, "usage": usage})
         except Exception as e:
             self._json(500, {"error": str(e)})
 
@@ -564,13 +695,22 @@ OCR文字内容：
         return json.loads(match.group())
 
 
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    """多线程 HTTP 服务器，支持并发请求"""
+    daemon_threads = True
+
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    server = HTTPServer(('0.0.0.0', 8088), SEEHandler)
-    print('🔒 SEE 服务端启动: http://0.0.0.0:8088')
+    ThreadingHTTPServer.allow_reuse_address = True
+    server = ThreadingHTTPServer(('0.0.0.0', 8088), SEEHandler)
+    print('🔒 SEE 服务端启动 (多线程): http://0.0.0.0:8088')
     print('   API Key 仅在服务端，前端不可见')
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         server.shutdown()
         print('\n已停止')
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f'\n💥 服务端崩溃: {e}\n请手动重启: DEEPSEEK_KEY=sk-... python3 server.py')

@@ -124,7 +124,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 </style>
 <script src="dealer.js"></script>
 <script src="tesseract.min.js"></script>
-<script>window.TESSERACT_CONFIG={workerPath:"tesseract/worker.min.js",langPath:"https://unpkg.com/tesseract.js@5/dist/"};</script>
+<script>window.TESSERACT_CONFIG={workerPath:"tesseract/worker.min.js"};</script>
 </head>
 <body>
 
@@ -418,7 +418,7 @@ async function startRecognition() {
   try {
     var cfg = window.TESSERACT_CONFIG || {};
     const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
-      workerPath: cfg.workerPath, langPath: cfg.langPath,
+      workerPath: cfg.workerPath,
       logger: m => {
         if (m.status === 'recognizing text') btn.textContent = '🔍 识别 ' + Math.round(m.progress*100) + '%';
         else if (m.status && m.status.includes('loading')) btn.textContent = '⏳ 加载引擎...';

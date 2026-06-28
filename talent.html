@@ -98,9 +98,9 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 /* Reports */
 .report-content { padding: 22px; background: #1a1a35; border-radius: 10px; font-size: .92em; line-height: 1.85; max-height: 500px; overflow-y: auto; border: 1px solid #2a2a45; }
 .report-content.loading { text-align:center; color: var(--muted); padding: 40px; border: none; }
-.report-content h2 { font-family: "Noto Serif SC", serif; font-size: 1.15em; color: #d8d0c0; margin: 24px 0 10px; }
-.report-content h3 { color: #c0b898; margin: 18px 0 8px; font-family: "Noto Serif SC", serif; font-weight: 600; }
-.report-content h3:first-child { margin-top: 0; }
+.report-content h1 { font-family: "Noto Serif SC", serif; font-size: 1.3em; color: #e8dcc0; margin: 20px 0 16px; font-weight: 700; border-bottom: 1px solid #3a3a55; padding-bottom: 8px; }
+.report-content h2 { font-family: "Noto Serif SC", serif; font-size: 1.1em; color: #d0c8a0; margin: 20px 0 10px; }
+.report-content h3 { font-family: "Noto Serif SC", serif; font-size: .95em; color: #c0b898; margin: 14px 0 8px; font-weight: 600; }
 .report-content p { margin-bottom: 8px; }
 .report-content ul { margin: 8px 0; padding-left: 20px; }
 .report-content li { margin-bottom: 4px; }
@@ -126,7 +126,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 <script>
 window.TESSERACT_CONFIG = {
   workerPath: 'tesseract/worker.min.js',
-  langPath: 'https://unpkg.com/tesseract.js@5/dist/',
+  langPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/',
 };
 </script>
 </head>
@@ -176,9 +176,27 @@ window.TESSERACT_CONFIG = {
   </div>
   <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFile(this.files[0])">
   <img id="preview" class="preview-img">
-  <div class="flex-row" style="margin-top:10px">
+  <div class="flex-row" style="margin-top:10px;align-items:center;gap:12px">
+    <label style="font-size:.8em;color:var(--muted);white-space:nowrap">🎂 年龄 *</label>
+    <input type="number" id="reportAge" value="" min="0" max="120" placeholder="必填" required style="width:60px;padding:5px 8px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
+    <label style="font-size:.8em;color:var(--muted);white-space:nowrap;margin-left:8px">👤 对象</label>
+    <select id="reportTarget" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em;cursor:pointer">
+      <option value="self">🙋 本人</option>
+      <option value="parent">👨‍👩‍👧 父母</option>
+      <option value="other">👤 代他人解读</option>
+      <option value="global">🌍 全局视角</option>
+    </select>
+  </div>
+  <div class="flex-row" style="margin-top:6px">
     <button class="btn btn-primary" id="btnRecognize" disabled onclick="startFullFlow()">🔍 识别并生成报告</button>
     <button class="btn btn-outline btn-sm" onclick="toggleManual()">✏️ 手动输入</button>
+    <select id="reportStyle" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em;cursor:pointer">
+      <option value="gentle">🌿 温和顾问</option>
+      <option value="parent">💝 亲子顾问</option>
+      <option value="direct">🎯 专业规划师</option>
+      <option value="educator">📚 教育分析师</option>
+      <option value="coach">⚡ 成长教练</option>
+    </select>
     <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
   </div>
 </div>
@@ -188,25 +206,17 @@ window.TESSERACT_CONFIG = {
   <h2><span class="step-badge">2</span> 你的解读报告 <button class="btn btn-outline btn-sm" onclick="downloadReport()" style="float:right;font-size:.75em">📥 下载报告</button></h2>
   <div id="ocrProgress" style="font-size:.8em;color:var(--muted);margin-bottom:8px"></div>
   <div class="report-content loading" id="reportContent">正在生成...</div>
-  <div class="extra-cards hidden" id="extraCards">
-    <div class="extra-card" onclick="generateExtra('action')" id="extraAction">
-      <div class="icon">🌱</div>
-      <div class="title">个人成长建议</div>
-      <div class="desc">行动计划 · 练习建议 · 成长路径</div>
-    </div>
-    <div class="extra-card" onclick="generateExtra('communication')" id="extraComm">
-      <div class="icon">💞</div>
-      <div class="title">关系洞察</div>
-      <div class="desc">家庭关系 · 伴侣沟通 · 亲子互动</div>
-    </div>
-    <div class="extra-card" onclick="generateExtra('career')" id="extraCareer">
-      <div class="icon">🚀</div>
-      <div class="title">事业发展</div>
-      <div class="desc">职业方向 · 优势发挥 · 团队定位</div>
-    </div>
-  </div>
 </div>
-<!-- ====== 合盘入口 ====== -->
+<!-- ====== Chat ====== -->
+<div class="card" id="chatSection">
+  <h2>💬 进一步讨论</h2>
+  <div id="chatMessages" style="max-height:350px;overflow-y:auto;margin-bottom:10px;font-size:.85em;line-height:1.6"></div>
+  <div class="flex-row" style="gap:8px;margin-bottom:10px">
+    <input type="text" id="chatInput" placeholder="对这份报告有什么疑问？" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.85em" onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn btn-primary btn-sm" onclick="sendChat()">发送</button>
+  </div>
+  <button class="btn btn-primary" onclick="summarizeChat()" id="btnSummarize" style="display:block;width:100%;padding:14px;font-size:1em">📝 生成整合报告</button>
+</div>
 <div class="card">
   <h2>💫 关系合盘</h2>
   <div style="font-size:.82em;color:var(--muted);margin-bottom:10px">上传对方报告，生成双人关系解读</div>
@@ -230,9 +240,6 @@ window.TESSERACT_CONFIG = {
   <input type="file" id="compositeFile" accept="image/*" class="hidden" onchange="handleCompositeFile(this.files[0])">
 </div>
 
-<!-- ====== Manual ====== -->
-  <div id="manualEntries"></div>
-  <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">✅ 确认答案</button>
 </div>
 
 
@@ -324,7 +331,7 @@ function viewSavedReport(key) {
     document.getElementById('reportCard').classList.remove('hidden');
     document.getElementById('reportContent').classList.remove('loading');
     document.getElementById('reportContent').innerHTML = parseMD(state.reports[key]);
-    document.getElementById('extraCards').classList.remove('hidden');
+    document.getElementById('chatSection').style.display='block';
   }
 }
 
@@ -355,6 +362,11 @@ function handleFile(file) {
 }
 
 async function startFullFlow() {
+  var age = parseInt(document.getElementById('reportAge').value);
+  if (!age || age < 0) {
+    alert('请先填写年龄');
+    return;
+  }
   const btn = document.getElementById('btnRecognize');
   const status = document.getElementById('uploadStatus');
   btn.disabled = true;
@@ -371,7 +383,7 @@ async function startFullFlow() {
   try {
     var cfg = window.TESSERACT_CONFIG || {};
     const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
-      workerPath: cfg.workerPath, langPath: cfg.langPath,
+      workerPath: cfg.workerPath,
       logger: m => {
         if (m.status === 'recognizing text') {
           btn.textContent = '🔍 识别 ' + Math.round(m.progress * 100) + '%';
@@ -399,12 +411,11 @@ async function startFullFlow() {
   // === Phase 2: Generate Report ===
   btn.textContent = '📝 生成报告中...';
   document.getElementById('reportContent').textContent = '正在结合知识库生成报告...';
-  document.getElementById('extraCards').classList.add('hidden');
 
   try {
     const resp = await fetch(API_BASE + '/api/talent-v2', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ocrText: state.ocrText, type: 'portrait'})
+      body: JSON.stringify({ocrText: state.ocrText, type: 'portrait', style: document.getElementById('reportStyle').value, age: parseInt(document.getElementById('reportAge').value), target: document.getElementById('reportTarget').value})
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
@@ -415,11 +426,11 @@ async function startFullFlow() {
     document.getElementById('reportContent').classList.remove('loading');
     document.getElementById('reportContent').innerHTML = renderStack();
     document.getElementById('reportCard').scrollIntoView({behavior:'smooth',block:'start'});
-    document.getElementById('extraCards').classList.remove('hidden');
-    ['extraAction','extraComm','extraCareer'].forEach(id => {
-      const el = document.getElementById(id);
-      if(el) el.classList.remove('loading','done');
-    });
+    document.getElementById('chatSection').style.display='block';
+    state.conversation = [];
+    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('chatInput').value = '';
+    document.getElementById('btnSummarize').style.display = 'block';
     showDebug(data.debug);
   } catch(e) { document.getElementById('reportContent').textContent = '生成失败: ' + e.message; }
 
@@ -427,42 +438,123 @@ async function startFullFlow() {
   btn.textContent = '🔄 重新识别并生成';
 }
 
-async function generateExtra(type) {
-  const idMap = {action:'extraAction',communication:'extraComm',career:'extraCareer'};
-  const card = document.getElementById(idMap[type]);
-  if (!card) return;
-  var reportCard = document.getElementById('reportCard');
-  var rc = document.getElementById('reportContent');
-  var labelMap = {action:'🌱 个人成长建议',communication:'💞 关系洞察',career:'🚀 事业发展'};
-  reportCard.classList.remove('hidden');
-  rc.classList.remove('loading');
+// ===== 对话式咨询 =====
+async function sendChat() {
+  var input = document.getElementById('chatInput');
+  var msg = input.value.trim();
+  if (!msg) return;
+  if (!state.conversation) state.conversation = [];
 
-  // 构建堆叠显示：已有的报告 + 新报告
-  if (state.reports[type]) {
-    rc.innerHTML = renderStack();
-    reportCard.scrollIntoView({behavior:'smooth',block:'start'});
+  // 自动触发整合
+  if (/可以整合|出报告|生成.*报告|整合/.test(msg)) {
+    state.conversation.push({role:'user',content:msg});
+    appendChat('user', msg + ' ✅');
+    input.value = '';
+    document.getElementById('btnSummarize').click();
     return;
   }
 
-  card.classList.add('loading'); card.querySelector('.icon').textContent = '⏳';
+  appendChat('user', msg);
+  input.value = '';
+  var loadingId = 'loading_' + Date.now();
+  appendChat('assistant', '⏳ 思考中...', loadingId);
+
   try {
-    var resp = await fetch(API_BASE + '/api/talent-v2', {
+    var resp = await fetch(API_BASE + '/api/talent-chat', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ocrText: state.ocrText, type: type, baseReport: state.reports.portrait||''})
+      body: JSON.stringify({
+        reportText: state.reports.portrait||'',
+        conversation: state.conversation,
+        userMessage: msg,
+        action: 'chat',
+        ocrText: state.ocrText,
+        age: parseInt(document.getElementById('reportAge').value),
+        persona: {
+          target: document.getElementById('reportTarget').value,
+          style: document.getElementById('reportStyle').value
+        }
+      })
     });
     var data = await resp.json();
     if (data.error) throw new Error(data.error);
-    state.reports[type] = data.content;
-    state.reportOrder.push(type);
-    saveReports();
-    rc.innerHTML = renderStack();
-    reportCard.scrollIntoView({behavior:'smooth',block:'start'});
-    card.classList.remove('loading'); card.classList.add('done');
-    card.querySelector('.icon').textContent = '✅'; card.querySelector('.desc').textContent = '已生成';
+
+    var loadingEl = document.getElementById(loadingId);
+    if (loadingEl) loadingEl.innerHTML = '<b>顾问：</b>' + data.reply.replace(/\n/g,'<br>');
+
+    state.conversation.push({role:'user',content:msg});
+    state.conversation.push({role:'assistant',content:data.reply});
   } catch(e) {
-    card.classList.remove('loading'); card.querySelector('.icon').textContent = '⚠️';
-    card.querySelector('.desc').textContent = '失败: '+e.message;
+    var loadingEl = document.getElementById(loadingId);
+    if (loadingEl) loadingEl.innerHTML = '❌ 发送失败: ' + e.message;
   }
+}
+
+function appendChat(role, text, id) {
+  var container = document.getElementById('chatMessages');
+  var div = document.createElement('div');
+  if (id) div.id = id;
+  div.style.cssText = 'padding:8px 12px;margin-bottom:6px;border-radius:8px;' +
+    (role === 'user' ? 'background:#1e2a3a;text-align:right;' : 'background:#1a1a35;');
+  var prefix = role === 'user' ? '<b style="color:var(--accent2)">你：</b>' : '<b style="color:var(--accent)">顾问：</b>';
+  div.innerHTML = prefix + text.replace(/\n/g,'<br>');
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function summarizeChat() {
+  var convLen = state.conversation ? state.conversation.length : 0;
+  var hasReport = !!state.reports.portrait;
+  var hasOcr = !!state.ocrText;
+  if (!state.conversation || convLen === 0) {
+    alert('无法整合：尚无对话记录。请先在聊天框与顾问讨论。');
+    return;
+  }
+  if (!hasReport) {
+    alert('无法整合：原始报告丢失。请重新生成报告。');
+    return;
+  }
+  var btn = document.getElementById('btnSummarize');
+  btn.disabled = true; btn.textContent = '⏳ 整合中...';
+  try {
+    console.log('[summarize] sending - report:', hasReport, state.reports.portrait.length, 'conv:', convLen, 'ocr:', hasOcr);
+    var resp = await fetch(API_BASE + '/api/talent-chat', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        reportText: state.reports.portrait||'',
+        conversation: state.conversation,
+        action: 'summarize',
+        ocrText: state.ocrText,
+        age: parseInt(document.getElementById('reportAge').value),
+        persona: {
+          target: document.getElementById('reportTarget').value,
+          style: document.getElementById('reportStyle').value
+        }
+      })
+    });
+    var data = await resp.json();
+    console.log('[summarize] response:', Object.keys(data), 'reply len:', data.reply?data.reply.length:0);
+    if (data.error) throw new Error(data.error);
+
+    // 追加整合版（不覆盖原报告）
+    var v = (state.reportOrder.filter(function(k){return k.startsWith('final')}).length) + 1;
+    var key = 'final_' + v;
+    state.reports[key] = data.reply;
+    state.reportOrder.push(key);
+    saveReports();
+    var rc = document.getElementById('reportCard');
+    rc.classList.remove('hidden');
+    var content = document.getElementById('reportContent');
+    content.innerHTML = renderStack();
+    content.classList.remove('loading');
+    rc.scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(function(){ content.scrollTop = content.scrollHeight; }, 300);
+    alert('✅ 整合报告已生成！请向上滚动查看原报告，向下查看新报告。');
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '📝 生成整合报告';
+    alert('整合失败: ' + e.message);
+    return;
+  }
+  btn.disabled = false; btn.textContent = '📝 生成整合报告';
 }
 
 // ===== 合盘 =====
@@ -517,13 +609,28 @@ function parseMD(md) {
     .replace(/^(?!<)(.+)$/gm,'<p>$1</p>');
 }
 
+function getReportLabel(k) {
+  if (k === 'portrait') return '📋 先天思维特质报告';
+  if (k.startsWith('final')) return '📋 综合解读报告 V' + k.split('_')[1];
+  var m = {action:'🌱 个人成长建议',communication:'💞 关系洞察',career:'🚀 事业发展'};
+  return m[k] || '📋 报告';
+}
+
 var REPORT_LABELS = {portrait:'📋 先天思维特质报告',action:'🌱 个人成长建议',communication:'💞 关系洞察',career:'🚀 事业发展'};
 function renderStack() {
   var parts = [];
   for (var i = 0; i < state.reportOrder.length; i++) {
     var k = state.reportOrder[i];
     if (state.reports[k]) {
-      parts.push('<div style="background:linear-gradient(135deg,#2a2a48,#1e1e40);padding:20px;border-radius:10px;margin-bottom:16px;border-left:3px solid var(--accent)"><div style="font-weight:700;font-size:1em;color:var(--accent);margin-bottom:12px">'+(REPORT_LABELS[k]||'📋 报告')+'</div>'+parseMD(state.reports[k])+'</div>');
+      parts.push(
+        '<div style="background:linear-gradient(135deg,#2a2a48,#1e1e40);padding:20px;border-radius:10px;margin-bottom:16px;border-left:3px solid var(--accent)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+        '<span style="font-weight:700;font-size:1em;color:var(--accent)">'+getReportLabel(k)+'</span>'+
+        '<button class="btn btn-outline btn-sm" onclick="downloadReport(\''+k+'\')" style="font-size:.7em">📥 下载此份</button>'+
+        '</div>'+
+        '<div>'+parseMD(state.reports[k])+'</div>'+
+        '</div>'
+      );
     }
   }
   return parts.join('<hr style="border-color:#2a2a45;margin:20px 0">');
@@ -540,22 +647,34 @@ function showDebug(debug) {
   el.innerHTML = html;
 }
 
-function downloadReport() {
+function downloadReport(key) {
   var md = '';
-  for (var i = 0; i < state.reportOrder.length; i++) {
-    var k = state.reportOrder[i];
-    if (state.reports[k]) {
-      md += '# ' + (REPORT_LABELS[k] || '报告') + '\n\n' + state.reports[k] + '\n\n---\n\n';
+  var filename = 'SEE_报告';
+  if (key) {
+    md = '# ' + getReportLabel(key) + '\n\n' + (state.reports[key]||'');
+    filename = 'SEE_' + getReportLabel(key).replace(/[📋\s]/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.md';
+  } else {
+    for (var i = 0; i < state.reportOrder.length; i++) {
+      var k = state.reportOrder[i];
+      if (state.reports[k]) {
+        md += '# ' + getReportLabel(k) + '\n\n' + state.reports[k] + '\n\n---\n\n';
+      }
     }
+    filename = 'SEE_全部报告_' + new Date().toISOString().slice(0,10) + '.md';
   }
   if (!md) return;
   var blob = new Blob([md], {type: 'text/markdown;charset=utf-8'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
-  a.href = url; a.download = 'SEE_报告_' + new Date().toISOString().slice(0,10) + '.md';
+  a.href = url; a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
 </script>
+
+
+
+
 </body>
 </html>
+
