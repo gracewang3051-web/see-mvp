@@ -677,34 +677,36 @@ function downloadReport(key, format) {
   }
   if (!md) return;
 
-  if (format === 'pdf') {
-    // 浏览器打印为 PDF
-    var printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><meta charset=utf-8><style>body{font-family:serif;max-width:720px;margin:0 auto;padding:20px;line-height:1.8;color:#333}h1{font-size:1.4em}h2{font-size:1.15em;margin-top:20px}h3{font-size:1em}p{margin:8px 0}li{margin:4px 0}</style></head><body>' + parseMD(md) + '</body></html>');
-    printWindow.document.close();
-    setTimeout(function(){ printWindow.print(); }, 500);
+  if (format === 'md') {
+    // Markdown 纯文本下载
+    var blob0 = new Blob([md], {type: 'text/markdown;charset=utf-8'});
+    var url0 = URL.createObjectURL(blob0);
+    var a0 = document.createElement('a');
+    a0.href = url0; a0.download = filename + '.md';
+    document.body.appendChild(a0); a0.click(); document.body.removeChild(a0);
+    URL.revokeObjectURL(url0);
     return;
   }
 
-  if (format === 'doc') {
-    // Word 可打开的 HTML 文件
-    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{font-family:serif;line-height:1.8}h1{font-size:1.3em}h2{font-size:1.1em}h3{font-size:1em}</style></head><body>' + parseMD(md) + '</body></html>';
-    var blob = new Blob([html], {type: 'application/msword;charset=utf-8'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = filename + '.doc';
-    a.click();
-    URL.revokeObjectURL(url);
-    return;
-  }
-
-  // Default: Markdown
-  var blob = new Blob([md], {type: 'text/markdown;charset=utf-8'});
+  var html = '<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:serif;max-width:720px;margin:20px auto;padding:16px;line-height:1.9;color:#333;font-size:16px}h1{font-size:1.4em}h2{font-size:1.15em;margin-top:24px}h3{font-size:1em}p{margin:10px 0}li{margin:6px 0}</style></head><body><h1>' + getReportLabel(key||'report') + '</h1>' + parseMD(md) + '</body></html>';
+  var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
   var url = URL.createObjectURL(blob);
+
+  // 移动端优先：直接在新窗口打开，用户可自行保存/打印
+  var isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
+  if (isMobile) {
+    var w = window.open(url, '_blank');
+    if (!w) { alert('请允许弹出窗口，或长按链接保存'); location.href = url; }
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    return;
+  }
+
+  // 桌面端：直接下载
   var a = document.createElement('a');
-  a.href = url; a.download = filename + '.md';
-  a.click();
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = filename + (format === 'doc' ? '.doc' : '.html');
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  if (format === 'pdf') { setTimeout(function(){ window.open(url, '_blank'); }, 300); }
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
 }
 </script>
 
