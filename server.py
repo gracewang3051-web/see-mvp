@@ -378,7 +378,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
             result = proxy_request(
                 "https://api.deepseek.com/v1/chat/completions",
                 json.dumps({
-                    "model": "deepseek-chat",
+                    "model": "deepseek-v4-pro",
                     "messages": messages,
                     "max_tokens": 1600, "temperature": 0.5
                 }).encode(),
@@ -427,7 +427,7 @@ OCR文字内容：
             result = proxy_request(
                 "https://api.deepseek.com/v1/chat/completions",
                 json.dumps({
-                    "model": "deepseek-chat",
+                    "model": "deepseek-v4-pro",
                     "messages": [{"role":"user","content": prompt}],
                     "max_tokens": 2000, "temperature": 0.1
                 }).encode(),
@@ -558,7 +558,7 @@ OCR文字内容：
             result = proxy_request(
                 "https://api.deepseek.com/v1/chat/completions",
                 json.dumps({
-                    "model": "deepseek-chat",
+                    "model": "deepseek-v4-pro",
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": 3000 if action == 'summarize' else 400,
                     "temperature": 0.5

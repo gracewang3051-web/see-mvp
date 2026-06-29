@@ -28,6 +28,18 @@ PATTERN_MATRIX = {
         'visual_left': '观察好为人师，喜欢指出他人错误',
         'visual_right': '观察展现权威，注重标准',
     },
+    'Wsc': {
+        'spirit_left':  '执行中有强烈权威感，注重计划和规则，喜欢带领他人',
+        'spirit_right': '目标设定有权威倾向，希望获得广泛认可和尊重',
+        'thinking_left': '分析时注重规则和权威，逻辑严谨有说服力',
+        'thinking_right': '创意兼具权威性和实用性，善于融合',
+        'kinesthetic_left': '行动有权威感，注重操作的标准和规范',
+        'kinesthetic_right': '动作展现自信和力量，有领导气质',
+        'auditory_left': '倾听时有权威意识，喜欢纠正和指导',
+        'auditory_right': '偏好有权威感的音乐，对音质有要求',
+        'visual_left': '观察注重标准和细节，对不符合规范的事物敏感',
+        'visual_right': '观察有审美权威，注重品质和格调',
+    },
     'We': {
         'spirit_left':  '执行时带入情感角色，可能因感受变化而调整决策',
         'spirit_right': '目标充满想象力和情感色彩，可能善变',

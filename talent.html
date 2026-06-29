@@ -649,9 +649,21 @@ function renderStack() {
 
 function showDebug(debug) {
   if (!debug) return;
-  var rules = debug.rule_outputs || [];
-  var metrics = debug.metrics || {};
-  var html = '<details style="margin-top:12px;font-size:.8em;color:var(--muted)"><summary style="cursor:pointer;padding:6px 0">🔍 引擎调试信息</summary><div style="padding:10px;background:#111;border-radius:8px;margin-top:6px;line-height:1.6;max-height:400px;overflow-y:auto"><b>指标提取:</b> TRC='+(metrics.trc||'?')+' ATD='+(metrics.atd||'?')+' 行为='+(metrics.behavior_mode||'?')+' 通道='+(metrics.primary_channel||'?')+'<br><b>命中规则 ('+rules.length+'):</b><br>'+rules.map(function(r,i){return '&nbsp;&nbsp;'+(i+1)+'. <b>'+r.label+'</b> '+(r.traits||[]).join('·')+' '+(r.supports||[]).slice(0,2).join(' | ')}).join('<br>')+'<br><b>检索:</b> 洞察'+(debug.insights_count||0)+'条 · 表达'+(debug.narratives_count||0)+'条 · 方案'+(debug.interventions_count||0)+'条<br><b>OCR原文:</b> <span style="word-break:break-all">'+(state.ocrText||'').substring(0,300)+'...</span></div></details>';
+  var m = debug.metrics || {};
+  var s = debug.structure || {};
+  var trc = s.trc || {};
+  var atd = s.atd || {};
+  var ch = s.channel || {};
+  var bh = s.behavior || {};
+  var combos = s.combos || [];
+  var patterns = s.pattern_insights || [];
+  var rules = [];
+  if (trc.label) rules.push('TRC: '+trc.label+'(价值'+trc.value+') '+trc.capacity);
+  if (atd.label) rules.push('ATD: '+atd.label+'(价值'+atd.value+') '+atd.focus);
+  if (ch.label) rules.push('通道: '+ch.label);
+  if (bh.type) rules.push('行为: '+bh.type);
+  for (var i=0;i<combos.length;i++) rules.push('组合: '+combos[i].label);
+  var html = '<details style="margin-top:12px;font-size:.8em;color:var(--muted)"><summary style="cursor:pointer;padding:6px 0">🔍 引擎调试信息</summary><div style="padding:10px;background:#111;border-radius:8px;margin-top:6px;line-height:1.6;max-height:400px;overflow-y:auto"><b>指标提取:</b> TRC='+(m.trc||'?')+' ATD='+(m.atd||'?')+' 行为='+(m.behavior_mode||'?')+' 通道='+(m.primary_channel||'?')+'<br><b>命中规则 ('+rules.length+'):</b><br>'+rules.map(function(r,i){return '&nbsp;&nbsp;'+(i+1)+'. <b>'+r+'</b>'}).join('<br>')+'<br><b>纹型解读 ('+patterns.length+'):</b><br>'+patterns.map(function(p){return '&nbsp;&nbsp;'+p.area+'('+p.code+'): '+p.insight}).join('<br>')+'<br><b>检索:</b> 洞察'+(debug.insights_count||0)+'条 · 表达'+(debug.narratives_count||0)+'条 · 方案'+(debug.interventions_count||0)+'条<br><b>风格:</b> '+(debug.style||'?')+'<br><b>OCR原文:</b> <span style="word-break:break-all">'+(state.ocrText||'').substring(0,300)+'...</span></div></details>';
   var reportCard = document.getElementById('reportCard');
   var el = document.getElementById('debugPanel');
   if (!el) { el = document.createElement('div'); el.id = 'debugPanel'; reportCard.appendChild(el); }
