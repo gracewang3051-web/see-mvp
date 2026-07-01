@@ -167,14 +167,20 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
     <button class="btn btn-outline btn-sm" onclick="toggleManual()">✏️ 手动输入</button>
     <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
   </div>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-    <div style="flex:1;min-width:160px">
-      <label style="font-size:.75em;color:var(--muted)">🔗 大脑通道 <span style="color:var(--muted)">（选填）</span></label>
-      <input type="text" id="brainChannelInput" placeholder="听觉型 / 视觉型 / 体觉型" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
-    </div>
-    <div style="flex:1;min-width:160px">
-      <label style="font-size:.75em;color:var(--muted)">📡 大脑接收器 <span style="color:var(--muted)">（选填）</span></label>
-      <input type="text" id="brainReceiverInput" placeholder="听觉/视觉/体觉 + 百分比" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
+  <div style="margin-top:12px;padding:12px 14px;background:#1a1a35;border:1px solid #3a3a55;border-radius:10px">
+    <div style="font-size:.78em;color:var(--accent);margin-bottom:8px">📋 补充信息（选填，帮助 AI 更准确解读）</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+      <div style="min-width:160px">
+        <div style="font-size:.75em;color:#c0b898;margin-bottom:4px">🔗 大脑通道</div>
+        <label style="font-size:.8em;color:#e0dcd4;cursor:pointer;margin-right:12px"><input type="checkbox" id="bcDepth" value="深度" style="accent-color:var(--accent)"> 深度</label>
+        <label style="font-size:.8em;color:#e0dcd4;cursor:pointer"><input type="checkbox" id="bcBreadth" value="广度" style="accent-color:var(--accent)"> 广度</label>
+      </div>
+      <div style="min-width:200px">
+        <div style="font-size:.75em;color:#c0b898;margin-bottom:4px">📡 大脑接收器（可多选）</div>
+        <label style="font-size:.8em;color:#e0dcd4;cursor:pointer;margin-right:12px"><input type="checkbox" id="brPerceive" value="感知" style="accent-color:var(--accent)"> 感知</label>
+        <label style="font-size:.8em;color:#e0dcd4;cursor:pointer;margin-right:12px"><input type="checkbox" id="brAnalyze" value="分析" style="accent-color:var(--accent)"> 分析</label>
+        <label style="font-size:.8em;color:#e0dcd4;cursor:pointer"><input type="checkbox" id="brResult" value="结果" style="accent-color:var(--accent)"> 结果</label>
+      </div>
     </div>
   </div>
   <div class="hidden" id="savedReportsSection" style="margin-top:12px;padding:10px 14px;background:#1a1a38;border-radius:8px;font-size:.85em">
@@ -519,11 +525,16 @@ function applyManual() {
 
 // ============ REPORT ============
 function buildPortrait() {
-  // 从页面可见字段读取大脑通道/接收器
-  const bcInput = document.getElementById('brainChannelInput');
-  const brInput = document.getElementById('brainReceiverInput');
-  const brainChannel = (bcInput && bcInput.value.trim()) || (state.handwritten||{}).brain_channel || '';
-  const brainReceiver = (brInput && brInput.value.trim()) || (state.handwritten||{}).brain_receiver || '';
+  // 从页面 checkbox 读取大脑通道/接收器
+  const bcParts = [];
+  if (document.getElementById('bcDepth')?.checked) bcParts.push('深度');
+  if (document.getElementById('bcBreadth')?.checked) bcParts.push('广度');
+  const brainChannel = bcParts.join('、') || (state.handwritten||{}).brain_channel || '';
+  const brParts = [];
+  if (document.getElementById('brPerceive')?.checked) brParts.push('感知');
+  if (document.getElementById('brAnalyze')?.checked) brParts.push('分析');
+  if (document.getElementById('brResult')?.checked) brParts.push('结果');
+  const brainReceiver = brParts.join('、') || (state.handwritten||{}).brain_receiver || '';
   const p = {modules:[], handwritten:state.handwritten, traits:[], dominant:{},
     answers: state.answers,
     confidence: state.confidence,
