@@ -1,106 +1,114 @@
 """SEE 卡 25 题思维画像 — 轻量解释层 (纯代码, 零 LLM)
 
+规则来源: kb_portrait/SEE卡应用手册.md
 输入: index.html::buildPortrait() 的 portrait dict
 输出: {observed_data, rule_hits, evidence, missing, summary}
 """
 
-# 5 模块 × 4 选项 → 行为描述 (与 index.html MODULES 对齐)
+# ============================================================
+# A/B/C/D 标准定义 (来源: SEE卡应用手册 六、引导师速查表)
+# ============================================================
+ABCD_DEFINITIONS = {
+    'A': {'meaning': '左脑优势', 'desc': '逻辑、细节、执行面强',
+          'positive': '目标明确、逻辑清晰、执行力强', 'risk': '过度分析、钻牛角尖、太急太硬'},
+    'B': {'meaning': '右脑优势', 'desc': '直觉、整体、创意面强',
+          'positive': '有愿景、战略眼光、情感共鸣', 'risk': '忽略细节、不落地、光想不做'},
+    'C': {'meaning': '左右脑双启动', 'desc': '左右脑协同，该功能区极强、不费力',
+          'positive': '全面、高效、双强', 'risk': '精力分散、两头都想抓、容易过载'},
+    'D': {'meaning': '需要支持', 'desc': '该功能区相对薄弱，或策略性选择不在此处用力',
+          'positive': '借力、合作、聚焦天赋', 'risk': '容易卡顿、消耗大',
+          'note': 'D有两层含义：先天短板（天生不主场）或策略选择（有能力但选择不做）'},
+}
+
+# ============================================================
+# 5 模块规则 (来源: SEE卡应用手册 六、引导师速查表)
+# ============================================================
 MODULE_RULES = {
     'strategic': {
-        'A': {'style': '目标驱动型', 'traits': ['执行力强', '按计划推进'], 'risk': '缺乏灵活性', 'growth': '在计划中留探索空间'},
-        'B': {'style': '愿景驱动型', 'traits': ['使命感强', '有宏大愿景'], 'risk': '目标不具体', 'growth': '将愿景拆解为可执行步骤'},
-        'C': {'style': '双驱平衡型', 'traits': ['方向与动力兼备', '目标与愿景兼具'], 'risk': '双重压力', 'growth': '灵活切换模式'},
-        'D': {'style': '探索过渡型', 'traits': ['心态开放', '灵活适应'], 'risk': '缺乏持续动力', 'growth': '建立小目标+外部监督'},
+        'name': '精神功能',
+        'role': '目标、执行、内驱力',
+        'A': {'label': '左脑驱动', 'traits': ['目标明确', '执行力强'], 'risk': '太急太硬不顾感受', 'growth': '在计划中留弹性空间'},
+        'B': {'label': '右脑驱动', 'traits': ['有愿景', '画蓝图'], 'risk': '光想不做眼高手低', 'growth': '将愿景拆解为可执行步骤'},
+        'C': {'label': '双启动', 'traits': ['目标+愿景+执行全强'], 'risk': '什么都想抓容易累', 'growth': '学会优先级排序'},
+        'D': {'label': '需支持', 'traits': ['易没目标', '易放弃'], 'risk': '缺乏持续动力', 'growth': '建立小目标+外部监督', 'd_note': '追问：天生短板 VS 策略选择'},
     },
     'thinking': {
-        'A': {'style': '分析型', 'traits': ['逻辑严谨', '注重细节推理'], 'risk': '忽略大局', 'growth': '从细节跳出来看全局'},
-        'B': {'style': '统合型', 'traits': ['全局视野', '宏观把握'], 'risk': '忽略关键细节', 'growth': '培养细节意识'},
-        'C': {'style': '全维型', 'traits': ['深度广度兼备', '分析与统合俱佳'], 'risk': '思维负载大', 'growth': '合理分配精力'},
-        'D': {'style': '梳理型', 'traits': ['借助外力理清', '逐步建立框架'], 'risk': '独立迷失', 'growth': '建立思维框架'},
+        'name': '思维功能',
+        'role': '逻辑、分析、战略',
+        'A': {'label': '左脑驱动', 'traits': ['逻辑清晰', '擅长分析'], 'risk': '过度分析钻牛角尖', 'growth': '定时收束思维'},
+        'B': {'label': '右脑驱动', 'traits': ['战略眼光', '看整体'], 'risk': '忽略细节逻辑不严', 'growth': '培养细节意识'},
+        'C': {'label': '双启动', 'traits': ['深度分析+宏观战略'], 'risk': '想太多切换累', 'growth': '合理分配思考精力'},
+        'D': {'label': '需支持', 'traits': ['想问题乱', '易被带偏'], 'risk': '独立思考困难', 'growth': '建立思维框架', 'd_note': '追问：天生短板 VS 策略选择'},
     },
     'listening': {
-        'A': {'style': '内容型', 'traits': ['抓取关键信息', '关注事实内容'], 'risk': '忽略情绪需求', 'growth': '加入情感确认'},
-        'B': {'style': '情感型', 'traits': ['共情能力强', '听情绪听语气'], 'risk': '忽略事实层面', 'growth': '关注事实信息'},
-        'C': {'style': '全息型', 'traits': ['内容情感兼顾', '全面倾听'], 'risk': '精力消耗大', 'growth': '调整倾听深度'},
-        'D': {'style': '要点型', 'traits': ['快节奏沟通', '抓取要点'], 'risk': '复杂信息遗漏', 'growth': '重要对话做笔记'},
+        'name': '听觉功能',
+        'role': '语言理解、情感倾听',
+        'A': {'label': '左脑驱动', 'traits': ['抓取关键信息', '认真听仔细想'], 'risk': '忽略情绪需求', 'growth': '加入情感确认'},
+        'B': {'label': '右脑驱动', 'traits': ['共情倾听', '听情绪听心声'], 'risk': '忽略事实层面', 'growth': '关注事实信息'},
+        'C': {'label': '双启动', 'traits': ['内容情感兼顾'], 'risk': '精力消耗大', 'growth': '调整倾听深度'},
+        'D': {'label': '需支持', 'traits': ['复杂信息易漂移'], 'risk': '重要信息遗漏', 'growth': '重要对话做笔记', 'd_note': '追问：天生短板 VS 策略选择'},
     },
     'visual': {
-        'A': {'style': '细节型', 'traits': ['观察力强', '对视觉细节敏感'], 'risk': '因小失大', 'growth': '培养整体连接能力'},
-        'B': {'style': '审美型', 'traits': ['品位出众', '注重美感整体'], 'risk': '忽略功能性', 'growth': '关注实用性'},
-        'C': {'style': '全观型', 'traits': ['细节整体平衡', '审美与功能兼顾'], 'risk': '标准过高', 'growth': '降低完美要求'},
-        'D': {'style': '大局型', 'traits': ['不被细节困扰', '关注全局'], 'risk': '错过重要信息', 'growth': '培养视觉敏感度'},
+        'name': '视觉功能',
+        'role': '细节观察、整体审美',
+        'A': {'label': '左脑驱动', 'traits': ['观察力强', '细节敏感'], 'risk': '因小失大', 'growth': '培养整体连接能力'},
+        'B': {'label': '右脑驱动', 'traits': ['审美出众', '看整体美感'], 'risk': '忽略功能性', 'growth': '关注实用性'},
+        'C': {'label': '双启动', 'traits': ['细节整体平衡'], 'risk': '标准过高', 'growth': '降低完美要求'},
+        'D': {'label': '需支持', 'traits': ['易忽略视觉线索'], 'risk': '错过重要信息', 'growth': '培养视觉敏感度', 'd_note': '追问：天生短板 VS 策略选择'},
     },
     'kinesthetic': {
-        'A': {'style': '执行型', 'traits': ['行动力强', '效率高'], 'risk': '缺乏直觉信任', 'growth': '留出直觉空间'},
-        'B': {'style': '直觉型', 'traits': ['反应迅速', '身体先行'], 'risk': '缺乏规划', 'growth': '重要决定理性检查'},
-        'C': {'style': '掌控型', 'traits': ['力量精准兼备', '把握节奏'], 'risk': '完美主义', 'growth': '80%准备就行动'},
-        'D': {'style': '启动型', 'traits': ['启动后能坚持', '循序渐进'], 'risk': '启动困难', 'growth': '建立启动仪式'},
+        'name': '体觉功能',
+        'role': '行动力、动手能力、身体感知',
+        'A': {'label': '左脑驱动', 'traits': ['行动力强', '精细操作'], 'risk': '缺乏直觉信任', 'growth': '留出直觉空间'},
+        'B': {'label': '右脑驱动', 'traits': ['直觉反应', '身体先行'], 'risk': '缺乏规划', 'growth': '重要决定理性检查'},
+        'C': {'label': '双启动', 'traits': ['力量精准兼备'], 'risk': '完美主义', 'growth': '80%准备就行动'},
+        'D': {'label': '需支持', 'traits': ['启动困难'], 'risk': '行动力弱', 'growth': '建立启动仪式', 'd_note': '追问：天生短板 VS 策略选择'},
     },
 }
 
-# 跨模块组合规则 (简化版，基于 SEE 卡手册)
-COMBO_RULES = [
-    {
-        'label': '目标-分析联动型',
-        'condition': lambda d: d.get('strategic') == 'A' and d.get('thinking') == 'A',
-        'desc': '目标明确 + 逻辑分析强 → 适合需要精密规划的执行角色',
-    },
-    {
-        'label': '愿景-统合联动型',
-        'condition': lambda d: d.get('strategic') == 'B' and d.get('thinking') == 'B',
-        'desc': '有宏大愿景 + 整体把握 → 适合战略规划与方向引领',
-    },
-    {
-        'label': '情感-直觉联动型',
-        'condition': lambda d: d.get('listening') == 'B' and d.get('kinesthetic') == 'B',
-        'desc': '共情倾听 + 直觉行动 → 适合需要快速感知与响应的场景',
-    },
-    {
-        'label': '全维平衡型',
-        'condition': lambda d: sum(1 for v in d.values() if v == 'C') >= 3,
-        'desc': '多模块均衡 → 全面但需防止精力分散',
-    },
-    {
-        'label': '大脑通道-听觉优势',
-        'condition': lambda bc: '听觉' in str(bc) if bc else False,
-        'desc': '听觉为信息接收主通道 → 听讲、讨论、音频学习最有效',
-    },
-    {
-        'label': '大脑通道-视觉优势',
-        'condition': lambda bc: '视觉' in str(bc) if bc else False,
-        'desc': '视觉为信息接收主通道 → 图表、阅读、演示最有效',
-    },
-    {
-        'label': '大脑通道-体觉优势',
-        'condition': lambda bc: '体觉' in str(bc) if bc else False,
-        'desc': '体觉为信息接收主通道 → 动手实践、体验式学习最有效',
-    },
-]
+# ============================================================
+# 大脑通道 (来源: SEE卡应用手册 ③ 战略偏好)
+# ============================================================
+BRAIN_CHANNEL_RULES = {
+    '深度': {'label': '深度模式', 'desc': '喜欢把一个事做透、钻研到底',
+             'strength': '专注、深入、精通', 'risk': '容易钻牛角尖、忽略大局',
+             'fit': '研发、技术、学术、精致服务'},
+    '广度': {'label': '广度模式', 'desc': '喜欢多任务、新鲜感、整合资源',
+             'strength': '多元、灵活、跨界', 'risk': '容易分散、不够专注',
+             'fit': '管理、策划、销售、跨界'},
+}
+
+# ============================================================
+# 大脑接收器 / 接收通道 (来源: SEE卡应用手册 ① 接收通道)
+# ============================================================
+BRAIN_RECEIVER_RULES = {
+    '感知': {'label': '敏感型', 'desc': '优先关注感受、氛围、关系',
+             'strength': '共情强、善于维护关系', 'risk': '易被情绪影响、怕冲突',
+             'communication': '先给情绪回应，再谈事'},
+    '分析': {'label': '分析型', 'desc': '优先关注逻辑、数据、原因',
+             'strength': '理性、严谨、不易被骗', 'risk': '决策慢、容易陷入细节',
+             'communication': '先给逻辑框架，再给结论'},
+    '结果': {'label': '结果型', 'desc': '优先关注目标、行动、效率',
+             'strength': '行动快、目标感强', 'risk': '忽略过程和感受、急躁',
+             'communication': '先给结论和目标，再讲细节'},
+}
 
 
 def interpret_see_card(portrait):
-    """将 SEE 卡 25 题 portrait 转为结构化解释对象。
-
-    Args:
-        portrait: index.html::buildPortrait() 的输出
-
-    Returns:
-        dict: {observed_data, rule_hits, evidence, missing, summary}
-    """
+    """将 SEE 卡 25 题 portrait 转为结构化解释对象。"""
     modules = portrait.get('modules', [])
     dominant = portrait.get('dominant', {})
     handwritten = portrait.get('handwritten', {})
     brain_channel = portrait.get('brain_channel') or handwritten.get('brain_channel', '')
-    brain_mode = portrait.get('brain_mode') or handwritten.get('brain_mode', '')
     brain_receiver = portrait.get('brain_receiver') or handwritten.get('brain_receiver', '')
-
-    # --- observed_data: 原始输入 ---
     answers = portrait.get('answers', {})
     confidence = portrait.get('confidence', {})
+
+    # --- observed_data ---
     observed_data = {
-        'answers': answers,          # 25题原始答案 {q01:A, q02:B, ...}
+        'answers': answers,
         'answers_count': len(answers),
-        'confidence': confidence,    # {overall:0.9, uncertain_items:[...]}
+        'confidence': confidence,
         'module_choices': {},
         'handwritten': {
             'self_label': handwritten.get('self_label', ''),
@@ -110,84 +118,97 @@ def interpret_see_card(portrait):
         },
         'brain_fields': {
             'brain_channel': brain_channel,
-            'brain_mode': brain_mode,
             'brain_receiver': brain_receiver,
         },
     }
     for m in modules:
         observed_data['module_choices'][m['dimension']] = {
-            'name': m['name'],
-            'dominant': m['dominant'],
-            'counts': m.get('counts', {}),
-            'style': m['style'],
-            'strength': m.get('strength', ''),
-            'risk': m.get('risk', ''),
+            'name': m['name'], 'dominant': m['dominant'],
+            'counts': m.get('counts', {}), 'style': m['style'],
+            'strength': m.get('strength', ''), 'risk': m.get('risk', ''),
             'growth': m.get('growth', ''),
         }
 
-    # --- rule_hits: 规则命中 ---
+    # --- rule_hits ---
     rule_hits = []
+
+    # 模块规则命中
     for m in modules:
         dim = m['dimension']
         dom = m['dominant']
         if dim in MODULE_RULES and dom in MODULE_RULES[dim]:
-            rule_info = MODULE_RULES[dim][dom]
+            ri = MODULE_RULES[dim][dom]
+            hit = {
+                'source': 'SEE卡应用手册 六、引导师速查表',
+                'module': m['name'], 'dimension': dim, 'choice': dom,
+                'label': ri['label'],
+                'meaning': ABCD_DEFINITIONS.get(dom, {}).get('meaning', ''),
+                'traits': ri['traits'], 'risk': ri['risk'], 'growth': ri['growth'],
+            }
+            if 'd_note' in ri:
+                hit['note'] = ri['d_note']
+            rule_hits.append(hit)
+
+    # 大脑通道规则命中
+    bc_parts = [p.strip() for p in brain_channel.replace('、', ',').split(',') if p.strip()]
+    for bc in bc_parts:
+        if bc in BRAIN_CHANNEL_RULES:
+            bcr = BRAIN_CHANNEL_RULES[bc]
             rule_hits.append({
-                'module': m['name'],
-                'dimension': dim,
-                'choice': dom,
-                'style': rule_info['style'],
-                'traits': rule_info['traits'],
-                'risk': rule_info['risk'],
-                'growth': rule_info['growth'],
+                'source': 'SEE卡应用手册 ③ 战略偏好',
+                'type': 'brain_channel', 'value': bc,
+                'label': bcr['label'], 'desc': bcr['desc'],
+                'strength': bcr['strength'], 'risk': bcr['risk'],
+            })
+
+    # 大脑接收器规则命中
+    br_parts = [p.strip() for p in brain_receiver.replace('、', ',').split(',') if p.strip()]
+    for br in br_parts:
+        if br in BRAIN_RECEIVER_RULES:
+            brr = BRAIN_RECEIVER_RULES[br]
+            rule_hits.append({
+                'source': 'SEE卡应用手册 ① 接收通道',
+                'type': 'brain_receiver', 'value': br,
+                'label': brr['label'], 'desc': brr['desc'],
+                'strength': brr['strength'], 'risk': brr['risk'],
+                'communication': brr['communication'],
             })
 
     # 跨模块组合
     combo_matches = []
-    # 目标-分析联动型
     if dominant.get('strategic') == 'A' and dominant.get('thinking') == 'A':
-        combo_matches.append(COMBO_RULES[0]['label'])
-    # 愿景-统合联动型
+        combo_matches.append('目标-分析联动型：左脑精神+左脑思维 → 精密规划执行者')
     if dominant.get('strategic') == 'B' and dominant.get('thinking') == 'B':
-        combo_matches.append(COMBO_RULES[1]['label'])
-    # 情感-直觉联动型
+        combo_matches.append('愿景-统合联动型：右脑精神+右脑思维 → 战略方向引领者')
     if dominant.get('listening') == 'B' and dominant.get('kinesthetic') == 'B':
-        combo_matches.append(COMBO_RULES[2]['label'])
-    # 全维平衡型
+        combo_matches.append('情感-直觉联动型：右脑听觉+右脑体觉 → 快速感知响应者')
     c_count = sum(1 for v in dominant.values() if v == 'C')
     if c_count >= 3:
-        combo_matches.append(COMBO_RULES[3]['label'])
-
-    # 大脑通道组合
-    for i in [4, 5, 6]:
-        try:
-            if COMBO_RULES[i]['condition'](brain_channel):
-                combo_matches.append(COMBO_RULES[i]['label'])
-        except:
-            pass
+        combo_matches.append('全维平衡型：3个以上功能区双启动 → 全面但需防精力分散')
+    # 深度+广度 兼备
+    if '深度' in bc_parts and '广度' in bc_parts:
+        combo_matches.append('深度广度兼备：既能钻研又能跨界 → 完美搭档潜质（见手册：深度型+广度型=完美搭档）')
 
     for cm in combo_matches:
-        rule_hits.append({'type': 'combo', 'label': cm})
+        rule_hits.append({'source': 'SEE卡应用手册', 'type': 'combo', 'label': cm})
 
-    # --- evidence: 数据来源追踪 ---
+    # --- evidence ---
     evidence = {
-        'source': 'SEE卡25题手动/OCR识别',
+        'source': 'SEE卡25题 + SEE卡应用手册',
+        'rule_source': 'kb_portrait/SEE卡应用手册.md',
         'modules_found': [m['dimension'] for m in modules],
         'dominant_choices': {m['dimension']: m['dominant'] for m in modules},
-        'brain_channel_source': f"手动输入: {brain_channel}" if brain_channel else None,
-        'brain_mode_source': f"手动输入: {brain_mode}" if brain_mode else None,
-        'brain_receiver_source': f"手动输入: {brain_receiver}" if brain_receiver else None,
+        'brain_channel_source': f"手动勾选: {brain_channel}" if brain_channel else None,
+        'brain_receiver_source': f"手动勾选: {brain_receiver}" if brain_receiver else None,
         'handwritten_fields': [k for k, v in handwritten.items() if v and k not in ('brain_channel', 'brain_mode', 'brain_receiver')],
     }
 
-    # --- missing: 缺失字段 ---
+    # --- missing ---
     missing = []
     if not brain_channel:
-        missing.append('brain_channel')
-    if not brain_mode:
-        missing.append('brain_mode')
+        missing.append('brain_channel（大脑通道：深度/广度）')
     if not brain_receiver:
-        missing.append('brain_receiver')
+        missing.append('brain_receiver（大脑接收器：感知/分析/结果）')
     if not handwritten.get('self_label'):
         missing.append('self_label')
     if not handwritten.get('strategy_result'):
@@ -197,25 +218,21 @@ def interpret_see_card(portrait):
     if not handwritten.get('output_result'):
         missing.append('output_result')
 
-    # --- summary: 行为层面摘要 ---
+    # --- summary ---
     parts = []
     for m in modules:
-        parts.append(f"{m['name']}: {m['style']}（优势：{m.get('strength','')} | 成长方向：{m.get('growth','')}）")
+        parts.append(f"{m['name']}({m['dimension']}): {m['dominant']} {m['style']} | 优势={m.get('strength','')} | 成长={m.get('growth','')}")
     if brain_channel:
         parts.append(f"大脑通道: {brain_channel}")
-    if brain_mode:
-        parts.append(f"大脑模式: {brain_mode}")
     if brain_receiver:
         parts.append(f"大脑接收器: {brain_receiver}")
     if combo_matches:
-        parts.append(f"组合特征: {'、'.join(combo_matches)}")
-
-    summary = '\n'.join(parts)
+        parts.append(f"组合: {'; '.join(combo_matches)}")
 
     return {
         'observed_data': observed_data,
         'rule_hits': rule_hits,
         'evidence': evidence,
         'missing': missing,
-        'summary': summary,
+        'summary': '\n'.join(parts),
     }
