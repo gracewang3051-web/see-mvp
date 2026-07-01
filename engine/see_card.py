@@ -5,6 +5,80 @@
 输出: {observed_data, rule_hits, evidence, missing, summary}
 """
 
+import os
+
+
+# ============================================================
+# 知识库参考文本加载 (LLM prompt 上下文)
+# ============================================================
+_KB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'kb_portrait')
+_KB_CACHE = None
+
+
+def load_see_card_context():
+    """加载 SEE卡应用手册的关键参考段落，供 LLM prompt 使用。
+
+    只选取写作边界、咨询表达、场景指导，不加载全部手册。
+    返回字符串，约 2500-4000 中文。
+    """
+    global _KB_CACHE
+    if _KB_CACHE is not None:
+        return _KB_CACHE
+
+    kb_path = os.path.join(_KB_DIR, 'SEE卡应用手册.md')
+    try:
+        with open(kb_path, 'r') as f:
+            text = f.read()
+    except (FileNotFoundError, IOError):
+        _KB_CACHE = ''
+        return ''
+
+    # 选取关键段落
+    excerpts = []
+
+    # 核心原则：镜子不贴标签
+    for marker in ['SEE 卡不贴标签', '核心理念', '让思维看见，让理解发生',
+                   'SEE 卡是 SEE 生命印迹体系中的第一个工具', '它是"镜子"']:
+        idx = text.find(marker)
+        if idx >= 0:
+            excerpts.append(text[idx:idx+200].strip())
+
+    # 接收通道 - 沟通翻译器 (感知/分析/结果)
+    idx = text.find('沟通翻译器')
+    if idx >= 0:
+        excerpts.append(text[idx:idx+350].strip())
+
+    # 战略偏好 - 深度/广度 + 团队搭配
+    idx = text.find('③ 战略偏好')
+    if idx >= 0:
+        excerpts.append(text[idx:idx+300].strip())
+
+    # 五大功能区核心原则
+    idx = text.find('重要原则')
+    if idx >= 0:
+        excerpts.append(text[idx:idx+180].strip())
+
+    # D 的两层智慧
+    idx = text.find('D 的两层智慧')
+    if idx >= 0:
+        excerpts.append(text[idx:idx+250].strip() if text.find('D 的两层智慧') >= 0 else '')
+
+    # 场景解读 - 沟通通道
+    idx = text.find('② 沟通通道——你如何接收信息')
+    if idx >= 0:
+        excerpts.append(text[idx:idx+350].strip())
+
+    # 成长路径
+    idx = text.find('PART 1')
+    if idx >= 0:
+        excerpts.append(text[idx:idx+120].strip())
+
+    _KB_CACHE = '\n\n---\n\n'.join(e for e in excerpts if e)
+    # Cap at ~3500 chars
+    if len(_KB_CACHE) > 4000:
+        _KB_CACHE = _KB_CACHE[:4000] + '\n\n...（手册其余内容略）'
+    return _KB_CACHE
+
 # ============================================================
 # A/B/C/D 标准定义 (来源: SEE卡应用手册 六、引导师速查表)
 # ============================================================

@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 from socketserver import ThreadingMixIn
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from engine.orchestrator import CognitiveEngine
-from engine.see_card import interpret_see_card
+from engine.see_card import interpret_see_card, load_see_card_context
 
 # ===== API Keys（环境变量注入，不写入代码）=====
 BAOSI_KEY = os.environ.get('BAOSI_KEY', '')
@@ -196,7 +196,13 @@ class SEEHandler(SimpleHTTPRequestHandler):
         prompts = {}
         if t == 'portrait':
             interp = interpret_see_card(p)
+            manual_ctx = load_see_card_context()
             prompts['portrait'] = f"""你是思维特质分析师。基于以下 SEE 卡 25 题思维画像的结构化分析结果，生成"SEE思维画像报告：AI自动解读"（800-1200字，Markdown）。
+
+## SEE卡应用手册参考（写作边界与咨询表达）
+{manual_ctx}
+
+⚠️ 使用手册参考的方式：用其中的语言风格和咨询边界来写作，不要大段引用手册原文。不要引入 observed_data / rule_hits 中没有支撑的概念。
 
 ## 原始作答数据（25题结论 + 大脑字段）
 {json.dumps(interp['observed_data'], ensure_ascii=False)}
