@@ -167,6 +167,16 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
     <button class="btn btn-outline btn-sm" onclick="toggleManual()">✏️ 手动输入</button>
     <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
   </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+    <div style="flex:1;min-width:160px">
+      <label style="font-size:.75em;color:var(--muted)">🔗 大脑通道 <span style="color:var(--muted)">（选填）</span></label>
+      <input type="text" id="brainChannelInput" placeholder="听觉型 / 视觉型 / 体觉型" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
+    </div>
+    <div style="flex:1;min-width:160px">
+      <label style="font-size:.75em;color:var(--muted)">📡 大脑接收器 <span style="color:var(--muted)">（选填）</span></label>
+      <input type="text" id="brainReceiverInput" placeholder="听觉/视觉/体觉 + 百分比" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
+    </div>
+  </div>
   <div class="hidden" id="savedReportsSection" style="margin-top:12px;padding:10px 14px;background:#1a1a38;border-radius:8px;font-size:.85em">
     <div style="color:var(--accent);margin-bottom:6px">📂 已保存的报告</div>
     <div id="savedReportsList"></div>
@@ -176,20 +186,6 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 <!-- ====== Manual ====== -->
 <div class="card hidden" id="manualCard">
   <h2><span class="step-badge">✏</span> 手动输入答案</h2>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
-    <div style="flex:1;min-width:140px">
-      <label style="font-size:.75em;color:var(--muted)">🔗 大脑通道</label>
-      <input type="text" id="manBrainChannel" placeholder="听觉型 / 视觉型 / 体觉型" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
-    </div>
-    <div style="flex:1;min-width:140px">
-      <label style="font-size:.75em;color:var(--muted)">🧠 大脑模式</label>
-      <input type="text" id="manBrainMode" placeholder="左脑型 / 右脑型 / 均衡型" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
-    </div>
-    <div style="flex:1;min-width:140px">
-      <label style="font-size:.75em;color:var(--muted)">📡 大脑接收器</label>
-      <input type="text" id="manBrainReceiver" placeholder="听觉/视觉/体觉 + 百分比" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
-    </div>
-  </div>
   <div id="manualEntries"></div>
   <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">✅ 确认答案</button>
 </div>
@@ -514,12 +510,7 @@ function applyManual() {
     if (v) state.answers['q'+String(i).padStart(2,'0')] = v;
   }
   if (Object.keys(state.answers).length < 10) return;
-  // 读取手动的大脑字段
-  const bc = document.getElementById('manBrainChannel').value.trim();
-  const bm = document.getElementById('manBrainMode').value.trim();
-  const br = document.getElementById('manBrainReceiver').value.trim();
-  state.handwritten = {self_label:'我',strategy_result:'深度',receiver_result:'结果',output_result:'分析',
-    brain_channel: bc, brain_mode: bm, brain_receiver: br};
+  state.handwritten = {self_label:'我',strategy_result:'深度',receiver_result:'结果',output_result:'分析'};
   state.confidence = {overall:0.85,items:[]};
   state.recognitionDone = true;
   showResults();
@@ -528,12 +519,16 @@ function applyManual() {
 
 // ============ REPORT ============
 function buildPortrait() {
+  // 从页面可见字段读取大脑通道/接收器
+  const bcInput = document.getElementById('brainChannelInput');
+  const brInput = document.getElementById('brainReceiverInput');
+  const brainChannel = (bcInput && bcInput.value.trim()) || (state.handwritten||{}).brain_channel || '';
+  const brainReceiver = (brInput && brInput.value.trim()) || (state.handwritten||{}).brain_receiver || '';
   const p = {modules:[], handwritten:state.handwritten, traits:[], dominant:{},
-    answers: state.answers,    // 原始25题答案 {q01:A, q02:B, ...}
-    confidence: state.confidence,  // 置信度
-    brain_channel: state.handwritten.brain_channel||'',
-    brain_mode: state.handwritten.brain_mode||'',
-    brain_receiver: state.handwritten.brain_receiver||''};
+    answers: state.answers,
+    confidence: state.confidence,
+    brain_channel: brainChannel,
+    brain_receiver: brainReceiver};
   MODULES.forEach(m => {
     const counts = {A:0,B:0,C:0,D:0};
     for (let i=m.range[0];i<=m.range[1];i++) {
