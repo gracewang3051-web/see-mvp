@@ -403,11 +403,16 @@ def interpret_see_card(portrait):
         rule_hits.append({'source': 'SEE卡应用手册', 'type': 'combo', 'label': cm})
 
     # --- evidence ---
+    # 从 rule_hits 收集 matched_rule_key（不用 legacy dominant）
+    matched_keys = {}
+    for h in rule_hits:
+        if 'matched_rule_key' in h:
+            matched_keys[h['dimension']] = h['matched_rule_key']
     evidence = {
         'source': 'SEE卡25题 + SEE卡应用手册',
         'rule_source': 'kb_portrait/SEE卡应用手册.md',
         'modules_found': [m['dimension'] for m in modules],
-        'dominant_choices': {m['dimension']: m['dominant'] for m in modules},
+        'matched_choices': matched_keys,
         'brain_channel_source': f"手动勾选: {brain_channel}" if brain_channel else None,
         'brain_receiver_source': f"手动勾选: {brain_receiver}" if brain_receiver else None,
         'handwritten_fields': [k for k, v in handwritten.items() if v and k not in ('brain_channel', 'brain_mode', 'brain_receiver')],
@@ -424,10 +429,6 @@ def interpret_see_card(portrait):
 
     # --- summary ---
     parts = []
-    matched_keys = {}
-    for h in rule_hits:
-        if 'matched_rule_key' in h:
-            matched_keys[h['dimension']] = h['matched_rule_key']
     for m in modules:
         mk = matched_keys.get(m['dimension'], m['dominant'])
         parts.append(f"{m['name']}({m['dimension']}): counts={m.get('counts',{})} | matched={mk}")
