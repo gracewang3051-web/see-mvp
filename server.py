@@ -198,6 +198,9 @@ class SEEHandler(SimpleHTTPRequestHandler):
             interp = interpret_see_card(p)
             prompts['portrait'] = f"""你是思维特质分析师。基于以下 SEE 卡 25 题思维画像的结构化分析结果，生成"SEE思维画像报告：AI自动解读"（800-1200字，Markdown）。
 
+## 原始作答数据（25题结论 + 大脑字段）
+{json.dumps(interp['observed_data'], ensure_ascii=False)}
+
 ## 结构分析数据（必须基于此解释）
 规则命中：
 {json.dumps(interp['rule_hits'], ensure_ascii=False)}
