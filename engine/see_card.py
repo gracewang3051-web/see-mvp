@@ -251,7 +251,13 @@ def _match_combo(counts):
         return 'D', ['D'], []
 
     if not top_has_D:
-        # D 不在 top → ABC 按现有规则匹配，D 单独作为辅助信号
+        # D 不在 top → 但如果所有非零选项恰好构成支持的 D-combo，直接用它
+        all_nonzero = sorted([k for k in 'ABCD' if counts.get(k, 0) > 0])
+        d_combo_candidate = '+'.join(all_nonzero)
+        if d_combo_candidate in {'A+B+D'}:
+            return d_combo_candidate, all_nonzero, []
+
+        # 否则 ABC 按现有规则匹配，D 单独作为辅助信号
         abc_top = [k for k in top_opts if k != 'D']
         if len(abc_top) == 1:
             key = abc_top[0]
