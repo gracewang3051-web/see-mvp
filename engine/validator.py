@@ -42,11 +42,13 @@ def validate(report_text, structure, report_type='portrait'):
         if section not in report_text:
             warnings.append(f'结构不完整: 缺少「{section}」相关章节')
 
-    # 3b. portrait 模板专项检查
-    portrait_sections = ['解读依据', '智能分析过程', '核心特质', '成长建议', '数据说明']
-    for section in portrait_sections:
-        if section not in report_text:
-            warnings.append(f'Portrait模板缺失: 缺少「{section}」章节')
+    # 3b. portrait 模板专项检查（仅 portrait 类型）
+    is_portrait = report_type in ('portrait', 'portrait-see-ai')
+    if is_portrait:
+        portrait_sections = ['解读依据', '智能分析过程', '核心特质', '成长建议', '数据说明']
+        for section in portrait_sections:
+            if section not in report_text:
+                warnings.append(f'Portrait模板缺失: 缺少「{section}」章节')
 
     # 4. 低分区语言检查
     for phrase in DANGER_PHRASES:
@@ -70,14 +72,14 @@ def validate(report_text, structure, report_type='portrait'):
     # 8. 凭空编造检查 — 对缺失字段的编造
     _check_fabricated_metrics(report_text, structure, warnings)
 
-    # 9. 缺失数据降级检查
+    # 9. 缺失数据降级检查（仅核心指标，可选指标不阻塞）
     evidence = structure.get('evidence', {})
     missing = evidence.get('metrics_missing', [])
     if missing:
         has_degradation = any(phrase in report_text for phrase in
             ['资料不足', '不足以判断', '暂时无法', '数据不完整', '建议补充'])
         if not has_degradation:
-            warnings.append(f'数据降级: 缺失 {missing}，但报告中未标注「资料不足」')
+            warnings.append(f'数据降级: 核心指标缺失 {missing}，但报告中未标注「资料不足」')
 
     return {
         'passed': len(warnings) == 0,

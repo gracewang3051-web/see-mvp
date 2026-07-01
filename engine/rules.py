@@ -295,9 +295,11 @@ def apply_rules(metrics):
     if not primary_channel: evidence['metrics_missing'].append('learning_channels')
     if not behavior_mode: evidence['metrics_missing'].append('behavior_mode')
     if not patterns: evidence['metrics_missing'].append('function_patterns')
-    if not metrics.get('brain_balance'): evidence['metrics_missing'].append('brain_balance')
-    if not metrics.get('personality_type'): evidence['metrics_missing'].append('personality_type')
-    result['evidence'] = evidence
+    # 以下为可选指标，缺失不阻塞报告
+    optional_missing = []
+    if not metrics.get('brain_balance'): optional_missing.append('brain_balance')
+    if not metrics.get('personality_type'): optional_missing.append('personality_type')
+    evidence['metrics_missing_optional'] = optional_missing
 
     # --- 组合规则 ---
     if trc is not None and atd is not None:

@@ -292,5 +292,8 @@ def _build_evidence_section(evidence):
         lines.append(f"- 功能区得分: {evidence['function_scores_count']} 项")
     missing = evidence.get('metrics_missing', [])
     if missing:
-        lines.append(f"- ⚠️ 缺失指标: {', '.join(missing)}（报告中应标注「当前资料不足以判断」）")
+        lines.append(f"- ⚠️ 核心指标缺失: {', '.join(missing)}（报告中应标注「当前资料不足以判断」）")
+    optional_missing = evidence.get('metrics_missing_optional', [])
+    if optional_missing:
+        lines.append(f"- 可选指标缺失: {', '.join(optional_missing)}（若有可补充）")
     return '\n'.join(lines)
