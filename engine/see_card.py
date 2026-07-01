@@ -230,51 +230,51 @@ def load_see_card_context():
 
 def _match_combo(counts):
     """根据选项计数字典 {A:2, B:2, C:1, D:0} 匹配最佳组合规则。
-    返回 (rule_key, matched_options) 如 ("B+C", ["B","C"])。
-
-    匹配逻辑: 最高票数≥2且无并列 → 单选; 有并列 → 组合; D特殊处理。
+    返回 (rule_key, matched_options, secondary_signals)
+    D 始终作为辅助信号单独返回，不合并到主规则 key 中。
     """
     if not counts:
-        return None, []
+        return None, [], []
     total = sum(counts.get(k, 0) for k in 'ABCD')
     if total == 0:
-        return None, []
+        return None, [], []
 
-    # 按票数排序
     sorted_opts = sorted([k for k in 'ABCD' if counts.get(k, 0) > 0],
                          key=lambda k: -counts.get(k, 0))
     if not sorted_opts:
-        return None, []
+        return None, [], []
 
-    max_count = counts.get(sorted_opts[0], 0)
-    # 第二高票数
-    second_count = counts.get(sorted_opts[1], 0) if len(sorted_opts) > 1 else 0
+    # 分离 D：A/B/C 做核心匹配，D 作为辅助信号
+    d_count = counts.get('D', 0)
+    core_opts = [k for k in sorted_opts if k != 'D']
+    
+    # 只有 D → 纯 D
+    if not core_opts:
+        return 'D', ['D'], []
 
-    # 判断: 最高票有显著优势(≥2票差距 或绝对多数>50% 或D单独最高) → 单选
-    top_is_D = sorted_opts[0] == 'D'
-    clear_winner = (max_count - second_count >= 2) or (max_count > total / 2) or top_is_D
+    core_max = counts.get(core_opts[0], 0)
+    core_second = counts.get(core_opts[1], 0) if len(core_opts) > 1 else 0
+    core_total = sum(counts.get(k, 0) for k in 'ABC')
+
+    # 显著优势(≥2票差距 或 绝对多数>50%)
+    clear_winner = (core_max - core_second >= 2) or (core_max > core_total / 2)
 
     if clear_winner:
-        # 单选为主，但 D 如果有票且不是最高，加 D
-        winner = sorted_opts[0]
-        key_parts = [winner]
-        if 'D' in sorted_opts and 'D' != winner and counts.get('D', 0) > 0:
-            key_parts.append('D')
-        key = '+'.join(sorted(key_parts))
-        return key, sorted(key_parts)
+        key = core_opts[0]
+        matched = [key]
+    else:
+        # 并列：所有票数 ≥ threshold 的核心选项
+        threshold = max(core_second, 1)
+        matched = sorted([k for k in core_opts if counts.get(k, 0) >= threshold])
+        key = '+'.join(matched)
 
-    # 有并列 → 组合：所有票数 ≥ second_count 的选项
-    threshold = max(second_count, 1)
-    tied = sorted([k for k in sorted_opts if counts.get(k, 0) >= threshold and k != 'D'])
-    # D 单独判断
-    d_count = counts.get('D', 0)
-    if d_count > 0 and 'D' not in tied:
-        tied.append('D')
-    if not tied:
-        tied = sorted_opts[:1]
-    key = '+'.join(tied)
-    return key, tied
+    # D 辅助信号
+    secondary = []
+    if d_count > 0:
+        secondary.append({'type': 'D_support', 'count': d_count,
+            'note': 'D有两层含义：先天短板（天生不主场）或策略选择（有能力但选择不做）。建议追问：天生 VS 策略。'})
 
+    return key, matched, secondary
 
 def interpret_see_card(portrait):
     """将 SEE 卡 25 题 portrait 转为结构化解释对象。"""
@@ -313,7 +313,7 @@ def interpret_see_card(portrait):
         if not counts or dim not in AREA_COMBO_RULES:
             continue
 
-        combo_key, matched_opts = _match_combo(counts)
+        combo_key, matched_opts, secondary = _match_combo(counts)
         if not combo_key or combo_key not in AREA_COMBO_RULES[dim]:
             continue
 
@@ -330,8 +330,12 @@ def interpret_see_card(portrait):
             'overuse_or_risk': rule['risk'],
             'growth': rule['growth'],
         }
-        if rule.get('d_note'):
+        # D 辅助信号注入 d_note
+        has_D_in_secondary = any(s.get('type') == 'D_support' for s in secondary)
+        if rule.get('d_note') or 'D' in matched_opts or has_D_in_secondary:
             hit['d_note'] = 'D有两层含义：先天短板（天生不主场）或策略选择（有能力但选择不做）。遇到D必追问。'
+        if secondary:
+            hit['secondary_signals'] = secondary
         rule_hits.append(hit)
 
     # 大脑通道
