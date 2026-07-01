@@ -130,20 +130,35 @@ def _check_fabricated_patterns(report_text, structure, warnings):
 
 
 def _check_fabricated_metrics(report_text, structure, warnings):
-    """检查对缺失指标的具体数值/描述编造。"""
+    """检查对缺失指标的具体数值/描述编造，以及数值不匹配。"""
     trc = structure.get('trc')
     atd = structure.get('atd')
     channel = structure.get('channel')
 
-    # 如果 trc 为 None，报告中不应出现具体 TRC 数值
-    if trc is None or trc.get('value') is None:
+    # --- TRC 检查 ---
+    actual_trc = trc.get('value') if trc else None
+    if actual_trc is None:
         if re.search(r'TRC[=＝]?\s*\d+', report_text):
             warnings.append('凭空编造: TRC 数据缺失，但报告包含了 TRC 数值')
+    else:
+        # 报告中的 TRC 值与实际不匹配
+        report_trc_matches = re.findall(r'TRC[=＝]?\s*(\d+)', report_text)
+        for m in report_trc_matches:
+            report_val = int(m)
+            if report_val != actual_trc:
+                warnings.append(f'TRC数值不匹配: 引擎提取 TRC={actual_trc}，报告声称 TRC={report_val}')
 
-    # 如果 atd 为 None，报告中不应出现具体 ATD 数值
-    if atd is None or atd.get('value') is None:
+    # --- ATD 检查 ---
+    actual_atd = atd.get('value') if atd else None
+    if actual_atd is None:
         if re.search(r'ATD[=＝]?\s*\d+', report_text):
             warnings.append('凭空编造: ATD 数据缺失，但报告包含了 ATD 数值')
+    else:
+        report_atd_matches = re.findall(r'ATD[=＝]?\s*(\d+)', report_text)
+        for m in report_atd_matches:
+            report_val = int(m)
+            if report_val != actual_atd:
+                warnings.append(f'ATD数值不匹配: 引擎提取 ATD={actual_atd}，报告声称 ATD={report_val}')
 
     # 如果通道为空，不应声称主导通道
     if not channel or not channel.get('primary'):
