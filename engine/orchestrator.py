@@ -61,6 +61,7 @@ class CognitiveEngine:
                 'metrics': _clean_metrics(metrics),
                 'structure_summary': rule_summary(structure),
                 'structure': structure,
+                'evidence': structure.get('evidence', {}),
                 'insights_count': len(knowledge.get('insights', [])),
                 'narratives_count': len(knowledge.get('narratives', [])),
                 'interventions_count': len(knowledge.get('interventions', [])),

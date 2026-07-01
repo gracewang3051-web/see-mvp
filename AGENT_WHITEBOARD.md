@@ -107,22 +107,41 @@ External tmux watcher was tested, but disabled because direct tmux key injection
 
 Next expected Codex entry: detailed breakdown of the new report requirements once the user provides them.
 
+## 2026-07-01 Claude Implementation Complete
+
+Implementation of template 01 "SEE卡思维画像：AI自动解读报告" done.
+
+### Changed Files
+
+| File | Change | Impact |
+|---|---|---|
+| `engine/rules.py` | Added `evidence` field to `apply_rules()` output + `import json` | Tracks what was extracted, what rules matched, what's missing |
+| `engine/prompts.py` | New portrait prompt structure; added `PORTRAIT_TYPES` set + `_build_evidence_section()` | 5-section portrait: 解读依据/智能分析过程/核心特质画像/成长建议/数据说明 |
+| `engine/validator.py` | Full rewrite: +banned absolutes, +portrait section check, +fabricated pattern/metric detection, +degradation check | 9 validation rules with new `_check_fabricated_patterns()`, `_check_fabricated_metrics()`, `_has_data_reference()` |
+| `engine/orchestrator.py` | Added `evidence` to debug output | `debug.evidence` now accessible directly |
+| `server.py` | Updated `_report_prompt()` portrait template; updated validator call to pass `report_type`; version → `3.1` | Both `/api/report` and `/api/talent-v2` use new portrait structure |
+
+### Key Behavior Changes
+
+1. **Prompt**: Portrait no longer generic — requires 解读依据 (data trace), 智能分析过程 (rule logic chain), 数据说明 (integrity assessment)
+2. **Rules**: `evidence` field now documents per-metric extraction sources and missing indicators — used by prompts and validator
+3. **Validator**: Now detects fabricated patterns (report mentions Wsc but data has none), fabricated TRC/ATD values, missing channel claims, missing degradation markers
+4. **Missing data**: Prompt requires 「当前资料不足以判断」; validator flags absence of degradation language
+
+### Remaining Assumptions
+
+- SEE卡 input boundary: implemented for both OCR text flow (`/api/talent-v2`) and 25Q portrait flow (`/api/report`)
+- `portrait` and `portrait-see-ai` are aliases — both resolve to the new template
+- No UI changes needed — `/api/talent-v2` response format compatible with existing `talent.html`
+- Extractor accuracy depends on OCR format — current regex handles standard SEE report layout
+
+### Verification Notes
+
+- Tested: engine pipeline integration (extract → rules → retrieve → interpret → prompt → validate)
+- Tested: validator catches fabricated patterns, metrics, banned words, missing degradation
+- Not tested against live LLM (needs API key)
+
 ## 2026-07-01 Claude Ready
-
-Claude here. All engine files read and understood:
-
-| File | Status |
-|---|---|
-| `engine/extractor.py` — OCR → metrics (regex, zero LLM) | ✅ |
-| `engine/rules.py` — 14 pattern × 10 area matrix, TRC/ATD/channel/combos | ✅ |
-| `engine/retrieval.py` — keyword match kb_innate_v2/ | ✅ |
-| `engine/interpreter.py` — structure → behavior interpretation text | ✅ |
-| `engine/prompts.py` — 5 styles × 7 report types + age/target adaptation | ✅ |
-| `engine/validator.py` — banned words, channel consistency, structure check | ✅ |
-| `engine/orchestrator.py` — pipeline orchestrator | ✅ |
-| `server.py` — HTTP proxy, API endpoints | ✅ |
-
-Awaiting Codex requirement breakdown. Ready to implement.
 
 ## 2026-07-01 Monitor Active
 

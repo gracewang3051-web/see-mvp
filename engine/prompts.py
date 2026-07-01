@@ -71,7 +71,8 @@ STYLES = {
 # 报告类型映射
 # ============================================================
 REPORT_TYPES = {
-    'portrait':    '先天思维特质报告',
+    'portrait':    'SEE卡思维画像：AI自动解读报告',
+    'portrait-see-ai': 'SEE卡思维画像：AI自动解读报告',
     'learning':    '学习方式分析报告',
     'emotion':     '情绪模式洞察报告',
     'potential':   '潜能发展方向报告',
@@ -79,6 +80,9 @@ REPORT_TYPES = {
     'career':      '职业规划报告',
     'action':      '个人成长建议报告',
 }
+
+# portrait 类型兼容别名
+PORTRAIT_TYPES = {'portrait', 'portrait-see-ai'}
 
 
 def build_prompt(structure, meaning, knowledge, report_type='learning', style='gentle', age=None, target='self'):
@@ -145,6 +149,8 @@ def build_prompt(structure, meaning, knowledge, report_type='learning', style='g
 3. 低分区写成「成长提醒」或「支持需求」，不能写成缺陷
 4. 每个风险点必须匹配支持方案
 5. 用顾问语言：温和、解释性强、避免贴标签
+6. 缺失的指标必须显式说明「当前资料不足以判断」，禁止编造
+7. 报告中的纹型编码最多出现 1-2 次，其余全部用行为描述替代
 
 {(chr(10).join(['## 匹配的知识库'] + kb_sections)) if kb_sections else ''}
 
@@ -152,11 +158,77 @@ def build_prompt(structure, meaning, knowledge, report_type='learning', style='g
 {knowledge.get('frameworks', '')[:400]}
 """
 
-    user_prompt = f"""## 用户测评数据
+    # 构建证据区域
+    evidence = structure.get('evidence', {})
+    evidence_section = _build_evidence_section(evidence)
+
+    is_portrait = report_type in PORTRAIT_TYPES
+
+    if is_portrait:
+        user_prompt = f"""## 用户测评数据
 {meaning.get('raw_input', '')[:2000]}{age_context}{target_context}
 
 ## 结构分析
 {zone_sections}
+
+## 数据证据追踪
+{evidence_section}
+
+## 行为解释
+{meaning.get('behavior_decode', '')}
+
+## 任务
+你是一位{style_label}。请生成一份 **{rt_name}**（Markdown格式，800-1200字）。
+
+⚠️ 这是 SEE 卡的 AI 自动解读报告。你必须展示从原始数据到最终结论的完整推理链，让读者看到「AI 是怎么分析出来的」，而非收到一份泛泛的人格描述。
+
+## 必需章节结构
+
+### 一、解读依据
+- 列出本次分析所依据的**所有可用数据**（从数据证据追踪中获取）
+- 明确说明每一项数据是怎么来的（OCR 提取 / 规则匹配 / 关键字识别）
+- 如果某项关键指标缺失，必须写「⚠️ 当前资料不足，无法对 [xxx] 进行判断」
+
+### 二、智能分析过程
+- 用读者能理解的语言，逐步解释分析逻辑：
+  1. 核心指标解读（TRC/ATD 代表什么 → 你的数值意味着什么）
+  2. 纹型矩阵匹配（从功能区的分数和纹型编码，推导出的行为倾向）
+  3. 学习通道分析（你的主要感知通道及其影响）
+  4. 组合规则发现（多个指标交叉得出的综合判断）
+- 每步都要有「数据 → 规则 → 推论」的链接。例如：「因为 TRC=180（高容量）+ ATD=35（快速反应），结合规则判定为『快速探索型』——这意味着...」
+- 禁止把纹型编码当标签用（如「你是 Wc 型」），必须用行为描述解释
+
+### 三、核心特质画像
+- 基于以上分析，描绘你的核心思维特质
+- 用行为描述解释特质（如「在决策时容易在多个选项间权衡」而非「WC型」）
+- 全文最多出现 1-2 次纹型编码，且仅在解释行为模式来源时使用
+
+### 四、成长建议
+- 基于特质分析的具体行动建议
+- 建议需可执行、可衡量
+- 利用优势区辅助成长区
+
+### 五、数据说明
+- 列出本次分析的所有指标及其来源
+- 标注哪些是确定数据、哪些需要补充
+- 如果指标完整，说明「数据完整性良好」
+- 如果有指标缺失，说明「建议补充 xxx 数据以获得更全面的分析」
+
+## ⚠️ 严禁事项
+- ❌ 编造未被提取的数据（纹型、数值、年龄、家庭背景等）
+- ❌ 用纹型编码给读者贴标签
+- ❌ 使用「智商」「注定」「绝对是」「一定是」等绝对化断言
+- ❌ 低分区写成「缺陷」或「弱点」
+- ❌ 跳过推理直接给结论
+"""
+    else:
+        user_prompt = f"""## 用户测评数据
+{meaning.get('raw_input', '')[:2000]}{age_context}{target_context}
+
+## 结构分析
+{zone_sections}
+
+{_build_evidence_section(evidence) if evidence_section else ''}
 
 ## 行为解释
 {meaning.get('behavior_decode', '')}
@@ -170,6 +242,13 @@ def build_prompt(structure, meaning, knowledge, report_type='learning', style='g
 3. 优势发挥分析
 4. 成长提醒（不写缺陷）
 5. 支持方案（可执行建议）
+
+## ⚠️ 严禁事项
+- ❌ 编造未被提取的数据（纹型、数值、年龄、家庭背景等）
+- ❌ 用纹型编码给读者贴标签
+- ❌ 使用「智商」「注定」「绝对是」「一定是」等绝对化断言
+- ❌ 低分区写成「缺陷」或「弱点」
+- ❌ 跳过推理直接给结论
 """
     return system_prompt, user_prompt
 
@@ -189,3 +268,29 @@ def _build_zone_sections(structure):
     if pattern_lines:
         sections.append(f"## 纹型解读\n" + '\n'.join(pattern_lines))
     return '\n\n'.join(sections)
+
+
+def _build_evidence_section(evidence):
+    """构建数据证据追踪区域，供 prompt 和 validator 使用。"""
+    if not evidence:
+        return ''
+    lines = []
+    lines.append('## 数据证据追踪')
+    if evidence.get('trc_source'):
+        lines.append(f"- {evidence['trc_source']}")
+    if evidence.get('atd_source'):
+        lines.append(f"- {evidence['atd_source']}")
+    if evidence.get('channel_source'):
+        lines.append(f"- {evidence['channel_source']}")
+    if evidence.get('behavior_mode_source'):
+        lines.append(f"- {evidence['behavior_mode_source']}")
+    if evidence.get('brain_balance_source'):
+        lines.append(f"- {evidence['brain_balance_source']}")
+    if evidence.get('patterns_found'):
+        lines.append(f"- 纹型编码匹配: {', '.join(evidence['patterns_found'])}")
+    if evidence.get('function_scores_count'):
+        lines.append(f"- 功能区得分: {evidence['function_scores_count']} 项")
+    missing = evidence.get('metrics_missing', [])
+    if missing:
+        lines.append(f"- ⚠️ 缺失指标: {', '.join(missing)}（报告中应标注「当前资料不足以判断」）")
+    return '\n'.join(lines)

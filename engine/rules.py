@@ -1,5 +1,7 @@
 """Layer 1: 结构层 — 纯代码, 零 LLM (评分阈值来自培训手册 p11-12)"""
 
+import json
+
 # ============================================================
 # 纹型 × 功能区矩阵 (来自培训手册 p3-p12)
 # ============================================================
@@ -276,6 +278,26 @@ def apply_rules(metrics):
                         'code': code,
                         'insight': area_info,
                     })
+
+    # --- 证据追踪 (供 prompt 引用 & validator 校验) ---
+    evidence = {
+        'trc_source': f"OCR提取: TRC={trc}" if trc is not None else None,
+        'atd_source': f"OCR提取: ATD={atd}" if atd is not None else None,
+        'channel_source': f"学习通道: {json.dumps(metrics.get('learning_channels', {}), ensure_ascii=False)}, 主通道={primary_channel}" if primary_channel else None,
+        'behavior_mode_source': f"OCR关键词匹配: {behavior_mode}" if behavior_mode else None,
+        'brain_balance_source': f"OCR提取: {metrics.get('brain_balance', '')}" if metrics.get('brain_balance') else None,
+        'patterns_found': [f"{area}: {code}" for area, code in patterns.items()] if patterns else [],
+        'function_scores_count': len(func) if func else 0,
+        'metrics_missing': [],
+    }
+    if trc is None: evidence['metrics_missing'].append('TRC')
+    if atd is None: evidence['metrics_missing'].append('ATD')
+    if not primary_channel: evidence['metrics_missing'].append('learning_channels')
+    if not behavior_mode: evidence['metrics_missing'].append('behavior_mode')
+    if not patterns: evidence['metrics_missing'].append('function_patterns')
+    if not metrics.get('brain_balance'): evidence['metrics_missing'].append('brain_balance')
+    if not metrics.get('personality_type'): evidence['metrics_missing'].append('personality_type')
+    result['evidence'] = evidence
 
     # --- 组合规则 ---
     if trc is not None and atd is not None:

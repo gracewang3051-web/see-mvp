@@ -185,11 +185,21 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
     def _report_prompt(self, t, p, base):
         prompts = {
-            'portrait': f"""你是思维特质分析师。基于以下SEE思维画像数据，生成"基础思维画像报告"（800-1200字，Markdown）。
+            'portrait': f"""你是思维特质分析师。基于以下SEE思维画像数据，生成"SEE卡思维画像：AI自动解读报告"（800-1200字，Markdown）。
 
 数据：{json.dumps(p, ensure_ascii=False)}
 
-结构：## 基础思维画像报告\n### 一、核心思维模式\n### 二、各维度解读\n### 三、综合优势\n### 四、潜在盲区\n### 五、成长建议""",
+⚠️ 这是 AI 自动解读。必须有从数据到结论的推理链，让读者看懂「AI 是怎么分析的」。
+
+结构：
+## SEE卡思维画像：AI自动解读报告
+### 一、解读依据（列出所有可用数据及其来源）
+### 二、智能分析过程（指标 → 规则 → 推论，逐步解释）
+### 三、核心特质画像（用行为描述，不过度使用术语）
+### 四、成长建议（可执行、可衡量的行动建议）
+### 五、数据说明（数据完整性评估，缺失项标注「当前资料不足以判断」）
+
+⚠️ 严禁：编造数据、绝对化断言（一定/绝对/注定）、用纹型编码贴标签""",
 
             'communication': f"""你是关系沟通顾问。基于基础画像，生成"沟通与关系报告"（600-900字，Markdown）。
 
@@ -389,14 +399,14 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
             # 校验输出
             from engine.validator import validate
-            validation = validate(content, engine_result['debug']['structure'])
+            validation = validate(content, engine_result['debug']['structure'], report_type)
 
             self._json(200, {
                 "content": content,
                 "usage": usage,
                 "debug": engine_result['debug'],
                 "validation": validation,
-                "version": "v3",
+                "version": "3.1",
                 "style": style,
             })
         except Exception as e:
