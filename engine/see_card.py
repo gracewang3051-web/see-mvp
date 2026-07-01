@@ -95,7 +95,12 @@ def interpret_see_card(portrait):
     brain_receiver = portrait.get('brain_receiver') or handwritten.get('brain_receiver', '')
 
     # --- observed_data: 原始输入 ---
+    answers = portrait.get('answers', {})
+    confidence = portrait.get('confidence', {})
     observed_data = {
+        'answers': answers,          # 25题原始答案 {q01:A, q02:B, ...}
+        'answers_count': len(answers),
+        'confidence': confidence,    # {overall:0.9, uncertain_items:[...]}
         'module_choices': {},
         'handwritten': {
             'self_label': handwritten.get('self_label', ''),
@@ -113,6 +118,7 @@ def interpret_see_card(portrait):
         observed_data['module_choices'][m['dimension']] = {
             'name': m['name'],
             'dominant': m['dominant'],
+            'counts': m.get('counts', {}),
             'style': m['style'],
             'strength': m.get('strength', ''),
             'risk': m.get('risk', ''),
@@ -137,14 +143,6 @@ def interpret_see_card(portrait):
             })
 
     # 跨模块组合
-    for combo in COMBO_RULES:
-        try:
-            if combo['condition'](dominant) if 'dominant' not in str(combo['condition'].__code__.co_varnames[:1]) else True:
-                pass
-        except:
-            pass
-
-    # 重新实现组合检查
     combo_matches = []
     # 目标-分析联动型
     if dominant.get('strategic') == 'A' and dominant.get('thinking') == 'A':

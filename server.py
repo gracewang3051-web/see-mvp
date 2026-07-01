@@ -10,7 +10,7 @@ from engine.see_card import interpret_see_card
 
 # ===== API Keys（环境变量注入，不写入代码）=====
 BAOSI_KEY = os.environ.get('BAOSI_KEY', '')
-DEEPSEEK_KEY = os.environ.get('DEEPSEEK_KEY', 'SET_VIA_ENV')
+DEEPSEEK_KEY = os.environ.get('DEEPSEEK_KEY', '')
 
 def proxy_request(url, payload, headers, timeout=180):
     """直连 API"""
@@ -135,11 +135,23 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
             content = result["choices"][0]["message"]["content"]
             usage = result.get("usage", {})
-
             tokens = usage.get("total_tokens", 0)
             cost = (usage.get("prompt_tokens", 0) * 0.55 + usage.get("completion_tokens", 0) * 2.19) / 1000000
 
-            self._json(200, {"content": content, "usage": usage, "cost": round(cost, 6)})
+            # SEE卡 portrait 校验
+            response = {"content": content, "usage": usage, "cost": round(cost, 6)}
+            if report_type == 'portrait':
+                from engine.see_card import interpret_see_card
+                from engine.validator import validate
+                try:
+                    interp = interpret_see_card(portrait)
+                    structure = {'trc': None, 'atd': None, 'evidence': interp.get('evidence', {})}
+                    validation = validate(content, structure, 'portrait')
+                    response['validation'] = validation
+                except:
+                    pass
+
+            self._json(200, response)
 
         except Exception as e:
             self._json(500, {"error": str(e)})
