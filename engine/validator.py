@@ -36,16 +36,17 @@ def validate(report_text, structure, report_type='portrait'):
                 if f'{oc}主导' in report_text or f'{oc}型' in report_text:
                     warnings.append(f'通道不一致: 引擎判定 {primary}，报告提到 {oc}')
 
-    # 3. 结构完整性 — 基础检查
-    required_sections = ['行为解码', '特质', '优势', '建议']
-    for section in required_sections:
-        if section not in report_text:
-            warnings.append(f'结构不完整: 缺少「{section}」相关章节')
+    # 3. 结构完整性 — 基础检查（非 portrait 类型）
+    is_portrait = report_type in ('portrait', 'portrait-see-ai')
+    if not is_portrait:
+        required_sections = ['行为解码', '特质', '优势', '建议']
+        for section in required_sections:
+            if section not in report_text:
+                warnings.append(f'结构不完整: 缺少「{section}」相关章节')
 
     # 3b. portrait 模板专项检查（仅 portrait 类型）
-    is_portrait = report_type in ('portrait', 'portrait-see-ai')
     if is_portrait:
-        portrait_sections = ['解读依据', '智能分析过程', '核心特质', '成长建议', '数据说明']
+        portrait_sections = ['解读依据', '智能分析', '核心特质', '成长建议', '数据说明']
         for section in portrait_sections:
             if section not in report_text:
                 warnings.append(f'Portrait模板缺失: 缺少「{section}」章节')
@@ -71,6 +72,10 @@ def validate(report_text, structure, report_type='portrait'):
 
     # 8. 凭空编造检查 — 对缺失字段的编造
     _check_fabricated_metrics(report_text, structure, warnings)
+
+    # 8b. SEE卡专项: 禁止编造 TRC/ATD/纹型（这些数据25题画像没有）
+    if is_portrait:
+        _check_see_card_fabrication(report_text, structure, warnings)
 
     # 9. 缺失数据降级检查（仅核心指标，可选指标不阻塞）
     evidence = structure.get('evidence', {})
@@ -165,3 +170,28 @@ def _check_fabricated_metrics(report_text, structure, warnings):
         channel_claims = re.findall(r'(听觉|视觉|体觉)(?![一-鿿]*?左|[一-鿿]*?右)(?:主导|型|通道)', report_text)
         if channel_claims:
             warnings.append(f'凭空编造: 学习通道数据缺失，但报告声称 {channel_claims}')
+
+
+def _check_see_card_fabrication(report_text, structure, warnings):
+    """SEE卡25题专项: 检查报告是否编造了不存在的 TRC/ATD/纹型数据。"""
+    trc = structure.get('trc')
+    atd = structure.get('atd')
+    has_patterns = bool(structure.get('pattern_insights', []) or structure.get('evidence', {}).get('patterns_found', []))
+
+    # SEE卡25题没有TRC/ATD/纹型，如果structure中这些字段为空，报告不应提及
+    if trc is None:
+        if re.search(r'TRC\s*[=＝]?\s*\d{2,4}', report_text):
+            warnings.append('SEE卡编造: 报告中出现 TRC 数值，但25题思维画像不含此数据')
+        if re.search(r'(高TRC|低TRC|TRC.*容量|学习容量)', report_text):
+            warnings.append('SEE卡编造: 报告中提及 TRC/学习容量概念，但25题思维画像不含此数据')
+
+    if atd is None:
+        if re.search(r'ATD\s*[=＝]?\s*\d{1,3}', report_text):
+            warnings.append('SEE卡编造: 报告中出现 ATD 数值，但25题思维画像不含此数据')
+        if re.search(r'(反应灵敏度|ATD.*型|反应风格)', report_text):
+            warnings.append('SEE卡编造: 报告中提及 ATD/反应风格概念，但25题思维画像不含此数据')
+
+    if not has_patterns:
+        pattern_mentions = re.findall(r'\b(Wc|Wsc|Ws|We|Wi|Wpe|Wd|Wl|Lu|Wt|Lf|R|Xn|X)\b', report_text)
+        if pattern_mentions:
+            warnings.append(f'SEE卡编造: 报告中出现纹型编码 {set(pattern_mentions)}，但25题思维画像不含纹型数据')

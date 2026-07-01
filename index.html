@@ -176,6 +176,20 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 <!-- ====== Manual ====== -->
 <div class="card hidden" id="manualCard">
   <h2><span class="step-badge">✏</span> 手动输入答案</h2>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+    <div style="flex:1;min-width:140px">
+      <label style="font-size:.75em;color:var(--muted)">🔗 大脑通道</label>
+      <input type="text" id="manBrainChannel" placeholder="听觉型 / 视觉型 / 体觉型" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
+    </div>
+    <div style="flex:1;min-width:140px">
+      <label style="font-size:.75em;color:var(--muted)">🧠 大脑模式</label>
+      <input type="text" id="manBrainMode" placeholder="左脑型 / 右脑型 / 均衡型" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
+    </div>
+    <div style="flex:1;min-width:140px">
+      <label style="font-size:.75em;color:var(--muted)">📡 大脑接收器</label>
+      <input type="text" id="manBrainReceiver" placeholder="听觉/视觉/体觉 + 百分比" style="width:100%;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
+    </div>
+  </div>
   <div id="manualEntries"></div>
   <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">✅ 确认答案</button>
 </div>
@@ -500,7 +514,12 @@ function applyManual() {
     if (v) state.answers['q'+String(i).padStart(2,'0')] = v;
   }
   if (Object.keys(state.answers).length < 10) return;
-  state.handwritten = {self_label:'我',strategy_result:'深度',receiver_result:'结果',output_result:'分析'};
+  // 读取手动的大脑字段
+  const bc = document.getElementById('manBrainChannel').value.trim();
+  const bm = document.getElementById('manBrainMode').value.trim();
+  const br = document.getElementById('manBrainReceiver').value.trim();
+  state.handwritten = {self_label:'我',strategy_result:'深度',receiver_result:'结果',output_result:'分析',
+    brain_channel: bc, brain_mode: bm, brain_receiver: br};
   state.confidence = {overall:0.85,items:[]};
   state.recognitionDone = true;
   showResults();
@@ -509,7 +528,12 @@ function applyManual() {
 
 // ============ REPORT ============
 function buildPortrait() {
-  const p = {modules:[], handwritten:state.handwritten, traits:[], dominant:{}};
+  const p = {modules:[], handwritten:state.handwritten, traits:[], dominant:{},
+    answers: state.answers,    // 原始25题答案 {q01:A, q02:B, ...}
+    confidence: state.confidence,  // 置信度
+    brain_channel: state.handwritten.brain_channel||'',
+    brain_mode: state.handwritten.brain_mode||'',
+    brain_receiver: state.handwritten.brain_receiver||''};
   MODULES.forEach(m => {
     const counts = {A:0,B:0,C:0,D:0};
     for (let i=m.range[0];i<=m.range[1];i++) {
@@ -518,7 +542,7 @@ function buildPortrait() {
     }
     const dom = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
     const persona = m.p[dom];
-    p.modules.push({name:m.name,dimension:m.dimension,dominant:dom,style:persona.style,strength:persona.strength,risk:persona.risk,growth:persona.growth});
+    p.modules.push({name:m.name,dimension:m.dimension,dominant:dom,counts:counts,style:persona.style,strength:persona.strength,risk:persona.risk,growth:persona.growth});
     p.dominant[m.dimension] = dom;
     p.traits.push(`${m.name}: ${persona.style}`);
   });

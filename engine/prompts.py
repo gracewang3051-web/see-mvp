@@ -71,8 +71,8 @@ STYLES = {
 # 报告类型映射
 # ============================================================
 REPORT_TYPES = {
-    'portrait':    'SEE卡思维画像：AI自动解读报告',
-    'portrait-see-ai': 'SEE卡思维画像：AI自动解读报告',
+    'portrait':    'SEE思维画像报告：AI自动解读',
+    'portrait-see-ai': 'SEE思维画像报告：AI自动解读',
     'learning':    '学习方式分析报告',
     'emotion':     '情绪模式洞察报告',
     'potential':   '潜能发展方向报告',

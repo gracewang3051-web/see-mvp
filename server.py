@@ -6,20 +6,17 @@ from urllib.parse import urlparse
 from socketserver import ThreadingMixIn
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from engine.orchestrator import CognitiveEngine
+from engine.see_card import interpret_see_card
 
 # ===== API Keys（环境变量注入，不写入代码）=====
 BAOSI_KEY = os.environ.get('BAOSI_KEY', '')
-DEEPSEEK_KEY = os.environ.get('DEEPSEEK_KEY', '')
-
-# ===== 直连请求（服务器不需要代理）=====
+DEEPSEEK_KEY = os.environ.get('DEEPSEEK_KEY', 'SET_VIA_ENV')
 
 def proxy_request(url, payload, headers, timeout=180):
-    """直连 API（宝思/DeepSeek 国内直连通）"""
+    """直连 API"""
     parsed = urlparse(url)
     conn = HTTPSConnection(parsed.hostname, parsed.port or 443, timeout=timeout)
     ctx = ssl.create_default_context()
-    ctx.check_hostname = True
-    ctx.verify_mode = ssl.CERT_REQUIRED
     conn._context = ctx
     conn.connect()
     conn.request("POST", parsed.path + ("?" + parsed.query if parsed.query else ""),
@@ -184,22 +181,37 @@ class SEEHandler(SimpleHTTPRequestHandler):
 {"answers":{"q01":"A","q02":"B","q03":"C","q04":"D","q05":"A","q06":"A","q07":"B","q08":"C","q09":"D","q10":"B","q11":"A","q12":"C","q13":"B","q14":"D","q15":"A","q16":"A","q17":"B","q18":"C","q19":"D","q20":"A","q21":"A","q22":"B","q23":"C","q24":"D","q25":"A"},"handwritten_fields":{"self_label":"","strategy_result":"","receiver_result":"","output_result":""},"confidence":{"overall":0.9,"uncertain_items":[]}}"""
 
     def _report_prompt(self, t, p, base):
-        prompts = {
-            'portrait': f"""你是思维特质分析师。基于以下SEE思维画像数据，生成"SEE卡思维画像：AI自动解读报告"（800-1200字，Markdown）。
+        prompts = {}
+        if t == 'portrait':
+            interp = interpret_see_card(p)
+            prompts['portrait'] = f"""你是思维特质分析师。基于以下 SEE 卡 25 题思维画像的结构化分析结果，生成"SEE思维画像报告：AI自动解读"（800-1200字，Markdown）。
 
-数据：{json.dumps(p, ensure_ascii=False)}
+## 结构分析数据（必须基于此解释）
+规则命中：
+{json.dumps(interp['rule_hits'], ensure_ascii=False)}
+
+证据追踪：
+{json.dumps(interp['evidence'], ensure_ascii=False)}
+
+缺失字段：{json.dumps(interp.get('missing',[]), ensure_ascii=False)}
+
+行为摘要：
+{interp['summary']}
 
 ⚠️ 这是 AI 自动解读。必须有从数据到结论的推理链，让读者看懂「AI 是怎么分析的」。
+⚠️ 这是 SEE 卡 25 题思维画像，没有 TRC/ATD/纹型数据，禁止在报告中提及这些概念。
 
 结构：
-## SEE卡思维画像：AI自动解读报告
-### 一、解读依据（列出所有可用数据及其来源）
-### 二、智能分析过程（指标 → 规则 → 推论，逐步解释）
+## SEE思维画像报告：AI自动解读
+### 一、解读依据（列出 5 个模块的选择结果及来源：25题选择 + 手写字段 + 大脑字段）
+### 二、智能分析过程（每模块：选项 → 规则 → 行为含义 → 交叉组合推断）
 ### 三、核心特质画像（用行为描述，不过度使用术语）
-### 四、成长建议（可执行、可衡量的行动建议）
-### 五、数据说明（数据完整性评估，缺失项标注「当前资料不足以判断」）
+### 四、成长建议（基于每模块的 growth 方向，给出可执行建议）
+### 五、数据说明（标注缺失字段为「当前资料不足以判断」）
 
-⚠️ 严禁：编造数据、绝对化断言（一定/绝对/注定）、用纹型编码贴标签""",
+⚠️ 严禁：编造 TRC/ATD/纹型数据、绝对化断言（一定/绝对/注定）"""
+        else:
+            prompts = {
 
             'communication': f"""你是关系沟通顾问。基于基础画像，生成"沟通与关系报告"（600-900字，Markdown）。
 
@@ -390,7 +402,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 json.dumps({
                     "model": "deepseek-v4-pro",
                     "messages": messages,
-                    "max_tokens": 1600, "temperature": 0.5
+                    "max_tokens": 3000, "temperature": 0.5
                 }).encode(),
                 {"Content-Type":"application/json","Authorization":f"Bearer {DEEPSEEK_KEY}"}
             )
