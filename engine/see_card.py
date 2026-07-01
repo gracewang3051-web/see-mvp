@@ -249,6 +249,10 @@ def _match_combo(counts):
                 'note': 'D有两层含义：先天短板或策略选择。建议追问：天生 VS 策略。'})
         return 'A+B+C', ['A','B','C'], secondary
 
+    # A、B、D 全部存在且 C 不存在 → A+B+D
+    if a_cnt > 0 and b_cnt > 0 and d_cnt > 0 and c_cnt == 0:
+        return 'A+B+D', ['A','B','D'], []
+
     max_count = max(counts.get(k, 0) for k in 'ABCD')
     top_opts = sorted([k for k in 'ABCD' if counts.get(k, 0) == max_count])
     d_count = counts.get('D', 0)
@@ -260,13 +264,7 @@ def _match_combo(counts):
         return 'D', ['D'], []
 
     if not top_has_D:
-        # D 不在 top → 但如果 A和B并列且都有意义(≥2)，C=0，D>0 → A+B+D
-        if (counts.get('A',0) >= 2 and counts.get('B',0) >= 2
-                and counts.get('A') == counts.get('B')
-                and counts.get('C',0) == 0 and counts.get('D',0) > 0):
-            return 'A+B+D', ['A','B','D'], []
-
-        # 否则 ABC 按现有规则匹配，D 单独作为辅助信号
+        # ABC 按现有规则匹配，D 单独作为辅助信号
         abc_top = [k for k in top_opts if k != 'D']
         if len(abc_top) == 1:
             key = abc_top[0]
