@@ -229,9 +229,10 @@ def load_see_card_context():
 # ============================================================
 
 def _match_combo(counts):
-    """根据选项计数字典 {A:2, B:2, C:1, D:0} 匹配最佳组合规则。
+    """根据选项计数字典匹配最佳组合规则。
     返回 (rule_key, matched_options, secondary_signals)
-    D 始终作为辅助信号单独返回，不合并到主规则 key 中。
+    D 优先尝试与 top 选项合并为手动支持的主 key；
+    否则 D 作为辅助信号单独返回。
     """
     if not counts:
         return None, [], []
@@ -239,42 +240,47 @@ def _match_combo(counts):
     if total == 0:
         return None, [], []
 
-    sorted_opts = sorted([k for k in 'ABCD' if counts.get(k, 0) > 0],
-                         key=lambda k: -counts.get(k, 0))
-    if not sorted_opts:
-        return None, [], []
-
-    # 分离 D：A/B/C 做核心匹配，D 作为辅助信号
+    max_count = max(counts.get(k, 0) for k in 'ABCD')
+    top_opts = sorted([k for k in 'ABCD' if counts.get(k, 0) == max_count])
     d_count = counts.get('D', 0)
-    core_opts = [k for k in sorted_opts if k != 'D']
-    
-    # 只有 D → 纯 D
-    if not core_opts:
+    has_D = d_count > 0
+    top_has_D = has_D and 'D' in top_opts
+
+    # 只有 D
+    if top_opts == ['D']:
         return 'D', ['D'], []
 
-    core_max = counts.get(core_opts[0], 0)
-    core_second = counts.get(core_opts[1], 0) if len(core_opts) > 1 else 0
-    core_total = sum(counts.get(k, 0) for k in 'ABC')
+    if not top_has_D:
+        # D 不在 top → ABC 按现有规则匹配，D 单独作为辅助信号
+        abc_top = [k for k in top_opts if k != 'D']
+        if len(abc_top) == 1:
+            key = abc_top[0]
+            matched = abc_top
+        else:
+            key = '+'.join(sorted(abc_top))
+            matched = sorted(abc_top)
+        secondary = []
+        if has_D:
+            secondary.append({'type': 'D_support', 'count': d_count,
+                'note': 'D有两层含义：先天短板或策略选择。建议追问：天生 VS 策略。'})
+        return key, matched, secondary
 
-    # 显著优势(≥2票差距 或 绝对多数>50%)
-    clear_winner = (core_max - core_second >= 2) or (core_max > core_total / 2)
+    # D 在 top_opts 中 → 优先 D-combo 主 key
+    SUPPORTED_D_COMBOS = {'A+D', 'B+D', 'C+D', 'A+B+D'}
+    non_D_top = sorted([k for k in top_opts if k != 'D'])
+    # 用 top_opts 中的非 D 选项 + D 构成候选 key
+    candidate = '+'.join(sorted(non_D_top + ['D']))
+    if candidate in SUPPORTED_D_COMBOS:
+        return candidate, sorted(non_D_top + ['D']), []
 
-    if clear_winner:
-        key = core_opts[0]
-        matched = [key]
-    else:
-        # 并列：所有票数 ≥ threshold 的核心选项
-        threshold = max(core_second, 1)
-        matched = sorted([k for k in core_opts if counts.get(k, 0) >= threshold])
-        key = '+'.join(matched)
+    # 不支持的主 key (如 B+C+D / A+C+D / A+B+C+D) → ABC top 为主, D 为辅
+    abc_key = '+'.join(non_D_top) if non_D_top else None
+    if abc_key:
+        secondary = [{'type': 'D_support', 'count': d_count,
+            'note': 'D有两层含义：先天短板或策略选择。建议追问：天生 VS 策略。'}]
+        return abc_key, non_D_top, secondary
 
-    # D 辅助信号
-    secondary = []
-    if d_count > 0:
-        secondary.append({'type': 'D_support', 'count': d_count,
-            'note': 'D有两层含义：先天短板（天生不主场）或策略选择（有能力但选择不做）。建议追问：天生 VS 策略。'})
-
-    return key, matched, secondary
+    return 'D', ['D'], []
 
 def interpret_see_card(portrait):
     """将 SEE 卡 25 题 portrait 转为结构化解释对象。"""

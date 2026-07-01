@@ -204,6 +204,12 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
 ⚠️ 使用手册参考的方式：用其中的语言风格和咨询边界来写作，不要大段引用手册原文。不要引入 observed_data / rule_hits 中没有支撑的概念。
 
+## 组合规则使用指引（必须遵守）
+1. 以 rule_hits 中的 matched_rule_key、manual_interpretation、typical_behavior、overuse_or_risk、growth 为主要证据撰写各功能区解读。
+2. 若 matched_rule_key 含 +（如 B+C），写「组合呈现」或「并列主导」，不得简化为单一主导。
+3. 若 secondary_signals 含 D_support，描述为「需要支持/策略性选择信号」而非固定缺陷，并建议追问：天生短板还是主动选择。
+4. 不要使用前端旧标签 style/strength/risk/growth 当它们与 rule_hits 冲突时。
+
 ## 原始作答数据（25题结论 + 大脑字段）
 {json.dumps(interp['observed_data'], ensure_ascii=False)}
 
