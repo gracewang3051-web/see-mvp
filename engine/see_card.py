@@ -240,6 +240,15 @@ def _match_combo(counts):
     if total == 0:
         return None, [], []
 
+    # A、B、C 全部存在 → 立即返回 A+B+C，D 如有则作为辅助信号
+    a_cnt, b_cnt, c_cnt, d_cnt = (counts.get(k, 0) for k in 'ABCD')
+    if a_cnt > 0 and b_cnt > 0 and c_cnt > 0:
+        secondary = []
+        if d_cnt > 0:
+            secondary.append({'type': 'D_support', 'count': d_cnt,
+                'note': 'D有两层含义：先天短板或策略选择。建议追问：天生 VS 策略。'})
+        return 'A+B+C', ['A','B','C'], secondary
+
     max_count = max(counts.get(k, 0) for k in 'ABCD')
     top_opts = sorted([k for k in 'ABCD' if counts.get(k, 0) == max_count])
     d_count = counts.get('D', 0)
