@@ -375,15 +375,26 @@ def interpret_see_card(portrait):
                 'value': br, 'label': rr['label'], 'desc': rr['desc'],
                 'strength': rr['strength'], 'risk': rr['risk']})
 
-    # 跨模块组合
+    # 跨模块组合（基于 matched_rule_key，不使用 legacy dominant）
     combos = []
-    if dominant.get('strategic') == 'A' and dominant.get('thinking') == 'A':
+    # 收集各模块的匹配 key
+    matched_keys = {}
+    for h in rule_hits:
+        if 'matched_rule_key' in h:
+            matched_keys[h['dimension']] = h['matched_rule_key']
+
+    # 单键匹配才做跨模块联动（A+B+C 等组合不参与跨模块）
+    sk = matched_keys.get('strategic', '')
+    tk = matched_keys.get('thinking', '')
+    lk = matched_keys.get('listening', '')
+    kk = matched_keys.get('kinesthetic', '')
+    if sk == 'A' and tk == 'A':
         combos.append('目标-分析联动：左脑精神+左脑思维 → 精密规划执行者')
-    if dominant.get('strategic') == 'B' and dominant.get('thinking') == 'B':
+    if sk == 'B' and tk == 'B':
         combos.append('愿景-统合联动：右脑精神+右脑思维 → 战略方向引领者')
-    if dominant.get('listening') == 'B' and dominant.get('kinesthetic') == 'B':
+    if lk == 'B' and kk == 'B':
         combos.append('情感-直觉联动：右脑听觉+右脑体觉 → 快速感知响应者')
-    c_count = sum(1 for v in dominant.values() if v == 'C')
+    c_count = sum(1 for v in matched_keys.values() if v == 'C')
     if c_count >= 3:
         combos.append('全维平衡：3个以上功能区双启动 → 全面但需防精力分散')
     if '深度' in bc_parts and '广度' in bc_parts:
@@ -413,8 +424,13 @@ def interpret_see_card(portrait):
 
     # --- summary ---
     parts = []
+    matched_keys = {}
+    for h in rule_hits:
+        if 'matched_rule_key' in h:
+            matched_keys[h['dimension']] = h['matched_rule_key']
     for m in modules:
-        parts.append(f"{m['name']}({m['dimension']}): counts={m.get('counts',{})} | {m['dominant']} {m['style']}")
+        mk = matched_keys.get(m['dimension'], m['dominant'])
+        parts.append(f"{m['name']}({m['dimension']}): counts={m.get('counts',{})} | matched={mk}")
     if brain_channel: parts.append(f"大脑通道: {brain_channel}")
     if brain_receiver: parts.append(f"大脑接收器: {brain_receiver}")
     if combos: parts.append(f"组合: {'; '.join(combos)}")
