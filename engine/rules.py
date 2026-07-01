@@ -300,6 +300,7 @@ def apply_rules(metrics):
     if not metrics.get('brain_balance'): optional_missing.append('brain_balance')
     if not metrics.get('personality_type'): optional_missing.append('personality_type')
     evidence['metrics_missing_optional'] = optional_missing
+    result['evidence'] = evidence
 
     # --- 组合规则 ---
     if trc is not None and atd is not None:
