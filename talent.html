@@ -214,10 +214,10 @@ window.TESSERACT_CONFIG = {
 </div>
 <!-- ====== Chat ====== -->
 <div class="card" id="chatSection">
-  <h2>💬 进一步讨论</h2>
+  <h2>💬 个性化补充与报告整合</h2>
   <div id="chatMessages" style="max-height:350px;overflow-y:auto;margin-bottom:10px;font-size:.85em;line-height:1.6"></div>
   <div class="flex-row" style="gap:8px;margin-bottom:10px">
-    <input type="text" id="chatInput" placeholder="对这份报告有什么疑问？" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.85em" onkeydown="if(event.key==='Enter')sendChat()">
+    <input type="text" id="chatInput" placeholder="输入个性化补充或修正意见，将整合进最终报告" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.85em" onkeydown="if(event.key==='Enter')sendChat()">
     <button class="btn btn-primary btn-sm" onclick="sendChat()">发送</button>
   </div>
   <button class="btn btn-primary" onclick="summarizeChat()" id="btnSummarize" style="display:block;width:100%;padding:14px;font-size:1em">📝 生成整合报告</button>
@@ -451,12 +451,15 @@ async function sendChat() {
   var msg = input.value.trim();
   if (!msg) return;
   if (!state.conversation) state.conversation = [];
+  var btn = document.querySelector('#chatSection .btn-primary');
+  if (btn) btn.disabled = true;
 
   // 自动触发整合
   if (/可以整合|出报告|生成.*报告|整合/.test(msg)) {
     state.conversation.push({role:'user',content:msg});
     appendChat('user', msg + ' ✅');
     input.value = '';
+    if (btn) btn.disabled = false;
     document.getElementById('btnSummarize').click();
     return;
   }
@@ -465,6 +468,9 @@ async function sendChat() {
   input.value = '';
   var loadingId = 'loading_' + Date.now();
   appendChat('assistant', '⏳ 思考中...', loadingId);
+
+  var controller = new AbortController();
+  var timeout = setTimeout(function(){ controller.abort(); }, 90000);
 
   try {
     var resp = await fetch(API_BASE + '/api/talent-chat', {
@@ -480,20 +486,29 @@ async function sendChat() {
           target: document.getElementById('reportTarget').value,
           style: document.getElementById('reportStyle').value
         }
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeout);
     var data = await resp.json();
-    if (data.error) throw new Error(data.error);
-
     var loadingEl = document.getElementById(loadingId);
+    if (!resp.ok || data.error) {
+      var errMsg = data.error || ('HTTP ' + resp.status);
+      if (loadingEl) loadingEl.innerHTML = '❌ ' + errMsg + '<br><span style=\"font-size:.75em;color:var(--muted)\">本次讨论没有成功保存，请重试。</span>';
+      if (btn) btn.disabled = false;
+      return;
+    }
+
     if (loadingEl) loadingEl.innerHTML = '<b>顾问：</b>' + data.reply.replace(/\n/g,'<br>');
 
     state.conversation.push({role:'user',content:msg});
     state.conversation.push({role:'assistant',content:data.reply});
   } catch(e) {
+    clearTimeout(timeout);
     var loadingEl = document.getElementById(loadingId);
-    if (loadingEl) loadingEl.innerHTML = '❌ 发送失败: ' + e.message;
+    if (loadingEl) loadingEl.innerHTML = '❌ ' + (e.name === 'AbortError' ? '请求超时，请重试' : e.message) + '<br><span style=\"font-size:.75em;color:var(--muted)\">本次讨论没有成功保存，请重试。</span>';
   }
+  if (btn) btn.disabled = false;
 }
 
 function appendChat(role, text, id) {
@@ -522,8 +537,11 @@ async function summarizeChat() {
   }
   var btn = document.getElementById('btnSummarize');
   btn.disabled = true; btn.textContent = '⏳ 整合中...';
+
+  var controller = new AbortController();
+  var timeout = setTimeout(function(){ controller.abort(); }, 90000);
+
   try {
-    console.log('[summarize] sending - report:', hasReport, state.reports.portrait.length, 'conv:', convLen, 'ocr:', hasOcr);
     var resp = await fetch(API_BASE + '/api/talent-chat', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
@@ -536,11 +554,17 @@ async function summarizeChat() {
           target: document.getElementById('reportTarget').value,
           style: document.getElementById('reportStyle').value
         }
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeout);
     var data = await resp.json();
-    console.log('[summarize] response:', Object.keys(data), 'reply len:', data.reply?data.reply.length:0);
-    if (data.error) throw new Error(data.error);
+    if (!resp.ok || data.error) {
+      var errMsg = data.error || ('HTTP ' + resp.status);
+      alert('整合失败: ' + errMsg);
+      btn.disabled = false; btn.textContent = '📝 重新整合';
+      return;
+    }
 
     // 追加整合版（不覆盖原报告）
     var v = (state.reportOrder.filter(function(k){return k.startsWith('final')}).length) + 1;
@@ -557,8 +581,10 @@ async function summarizeChat() {
     setTimeout(function(){ content.scrollTop = content.scrollHeight; }, 300);
     alert('✅ 整合报告已生成！请向上滚动查看原报告，向下查看新报告。');
   } catch(e) {
+    clearTimeout(timeout);
     btn.disabled = false; btn.textContent = '📝 生成整合报告';
-    alert('整合失败: ' + e.message);
+    if (e.name === 'AbortError') alert('整合请求超时，请检查网络后重试');
+    else alert('整合失败: ' + e.message);
     return;
   }
   btn.disabled = false; btn.textContent = '📝 生成整合报告';

@@ -507,7 +507,10 @@ OCR文字内容：
             persona = data.get('persona', {})  # {style, target}
 
             if not report_text:
-                self._json(400, {"error": "缺少报告内容"})
+                self._json(400, {"error": "缺少报告内容", "stage": "validate"})
+                return
+            if not DEEPSEEK_KEY:
+                self._json(500, {"error": "服务未配置 API Key，请联系管理员", "stage": "config"})
                 return
 
             # 加载知识库上下文 + 纹型数据
@@ -546,36 +549,41 @@ OCR文字内容：
             }.get(target, '')
 
             if action == 'summarize':
-                prompt = f"""你是一个 SEE 报告整合专家。你的任务是基于原始报告和用户与你的全部讨论，生成一份用户完全认可的最终报告。
+                # 根据原始报告内容判断报告类型并使用对应结构
+                is_personal = any(kw in report_text[:500] for kw in ['能量引擎', '个人成长', '主性格画像'])
+                is_child = any(kw in report_text[:500] for kw in ['孩子', '学习力', '学习风格'])
+                if is_personal or (not is_child):
+                    structure = """## 一、能量引擎\n## 二、主性格画像\n## 三、核心驱动力\n## 四、能力结构\n## 五、最优通道\n## 六、各功能区左右脑特征\n## 七、警示提醒\n## 八、成长路径\n## 九、个性化补充（基于讨论中确认的个人背景与修正）"""
+                else:
+                    structure = """## 一、孩子的学习风格\n## 二、主性格画像\n## 三、最佳学习通道\n## 四、内驱方式\n## 五、行为特点\n## 六、沟通特点\n## 七、给家长的建议\n## 八、个性化补充（基于讨论中确认的补充信息）"""
+
+                prompt = f"""你是一个 SEE 报告整合专家。将用户的个性化补充和修正整合进原始报告。
 
 ## 你的身份
 {persona_guide}
 
-## 知识库参考（你回答的依据）
+## 知识库参考
 {kb_context}
 
 ## 原始报告
 {report_text[:3000]}
 
-## 全部讨论记录
+## 全部讨论记录（用户补充的个人背景与修正意见）
 {json.dumps(conversation, ensure_ascii=False)}
 
 ## 任务
-请直接输出一份最终的综合报告。只输出报告正文，不要任何前言、后记、解释或客气话。
+生成一份融合了用户个性化补充的最终报告。只输出报告正文，不要前言后记。
 
 要求：
-1. 将原始报告中用户提出修正的部分全部更新
-2. 将讨论中用户确认的理解融入
-3. 使用与报告对象年龄匹配的语言
-4. {persona_guide}
+1. 保留原始报告的数据和结论，更新用户修正的部分
+2. 将讨论中用户确认的个人背景、偏好、补充信息融入对应章节
+3. 新增「个性化补充」章节汇总用户的个人化内容
+4. 语言风格与原始报告保持一致
+5. {persona_guide}
 
 报告结构（必须严格遵循）：
 # {{报告标题}}
-## 一、行为解码
-## 二、先天特质地图（包含纹型解读）
-## 三、优势发挥分析
-## 四、成长提醒
-## 五、支持方案
+{structure}
 
 ⚠️ 直接以 # 开头输出报告，不要加「好的」「以下是」等前缀。"""
             else:
@@ -623,7 +631,14 @@ OCR文字内容：
             usage = result.get("usage", {})
             self._json(200, {"reply": reply, "action": action, "usage": usage})
         except Exception as e:
-            self._json(500, {"error": str(e)})
+            import traceback
+            err_msg = str(e)
+            stage = 'llm'
+            if 'timeout' in err_msg.lower() or 'timed out' in err_msg.lower():
+                stage = 'timeout'
+            elif 'auth' in err_msg.lower() or 'key' in err_msg.lower():
+                stage = 'auth'
+            self._json(500, {"error": err_msg, "stage": stage, "action": action})
 
     # ===== Growth Report（成长比对）=====
     def _proxy_growth(self, body):
