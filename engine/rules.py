@@ -346,3 +346,204 @@ def rule_summary(structure):
     for p in structure.get('pattern_insights', []):
         lines.append(f"纹型 {p['area']}({p['code']}): {p['insight']}")
     return '\n'.join(lines)
+
+
+# ============================================================
+# 新规：先天测评报告 AI 自动解读 — 四大预处理
+# 来源: see_report_spec.md
+# ============================================================
+
+# 纹型家族映射
+PATTERN_FAMILY = {
+    'Wt': '认知型', 'Ws': '认知型', 'We': '认知型', 'Wc': '认知型',
+    'Wd': '认知型', 'Wi': '认知型', 'Wpe': '认知型', 'Wl': '认知型',
+    'Wsc': '认知型',
+    'Lu': '模仿型', 'Ls': '模仿型', 'Lf': '模仿型',
+    'R': '逆思型', 'Rpe': '逆思型',
+    'X': '开放型', 'Xn': '开放型',
+}
+
+# 功能区定义
+FUNCTION_AREAS = {
+    'spirit': {'name': '精神功能', 'left': 'spirit_left', 'right': 'spirit_right'},
+    'thinking': {'name': '思维功能', 'left': 'thinking_left', 'right': 'thinking_right'},
+    'kinesthetic': {'name': '体觉功能', 'left': 'kinesthetic_left', 'right': 'kinesthetic_right'},
+    'auditory': {'name': '听觉功能', 'left': 'auditory_left', 'right': 'auditory_right'},
+    'visual': {'name': '视觉功能', 'left': 'visual_left', 'right': 'visual_right'},
+}
+
+# 学习通道
+LEARNING_CHANNELS = {
+    'auditory': {'name': '听觉通道', 'desc': '通过"听"和"说"学习最高效 → 听讲、讨论、朗读'},
+    'visual': {'name': '视觉通道', 'desc': '通过"看"学习最高效 → 图表、思维导图、视频教学'},
+    'kinesthetic': {'name': '体觉通道', 'desc': '通过"动手做"学习最高效 → 操作、实践、体验'},
+}
+
+# 偏侧化标签
+LATERAL_LABELS = {
+    'spirit': {'left': '左脑高（集体目标）', 'right': '右脑高（个人目标）', 'balanced': '均衡'},
+    'thinking': {'left': '左脑高（逻辑分析）', 'right': '右脑高（创意战略）', 'balanced': '均衡'},
+    'kinesthetic': {'left': '左脑高（精细操作）', 'right': '右脑高（大动作表达）', 'balanced': '均衡'},
+    'auditory': {'left': '左脑高（逻辑倾听）', 'right': '右脑高（情感倾听）', 'balanced': '均衡'},
+    'visual': {'left': '左脑高（细节观察）', 'right': '右脑高（整体审美）', 'balanced': '均衡'},
+}
+
+
+def classify_pattern_family(patterns):
+    """统计十指纹型频率，识别主性格+辅助性格+全脑性格。
+
+    Args:
+        patterns: dict like {area_key: code, ...} 或 list of codes
+
+    Returns:
+        dict: {main, auxiliary, full_brain, family_counts, all_codes}
+    """
+    codes = []
+    if isinstance(patterns, dict):
+        codes = list(patterns.values())
+    elif isinstance(patterns, list):
+        codes = patterns
+
+    if not codes:
+        return {'main': None, 'auxiliary': None, 'full_brain': None,
+                'family_counts': {}, 'all_codes': []}
+
+    # 计数
+    from collections import Counter
+    code_counts = Counter(codes)
+    sorted_codes = code_counts.most_common()
+
+    # 家族归类
+    family_counts = {}
+    for code, count in sorted_codes:
+        family = PATTERN_FAMILY.get(code, '其他')
+        family_counts[family] = family_counts.get(family, 0) + count
+
+    main_code, main_count = sorted_codes[0]
+    aux_code = sorted_codes[1][0] if len(sorted_codes) > 1 else None
+
+    # 主性格标签（含具体名称）
+    main_family = PATTERN_FAMILY.get(main_code, '')
+    if main_family == '认知型':
+        main_label = f'认知型-{main_code}'
+    elif main_code == 'Rpe':
+        main_label = '逆思型（逆思+完美）'
+    elif main_family == '模仿型':
+        main_label = '模仿型'
+    else:
+        main_label = main_family
+
+    # 辅助性格
+    if aux_code:
+        aux_family = PATTERN_FAMILY.get(aux_code, '')
+        if aux_family == '模仿型':
+            aux_label = '模仿型'
+        elif aux_code == 'Rpe':
+            aux_label = '逆思型（逆思+完美）'
+        else:
+            aux_label = aux_family
+
+    # 全脑性格（多种纹型占比接近时）
+    full_brain = None
+    if len(sorted_codes) >= 2 and sorted_codes[0][1] - sorted_codes[1][1] <= 1:
+        family_set = list(set(PATTERN_FAMILY.get(c, '') for c, _ in sorted_codes[:3]))
+        family_set = [f for f in family_set if f]
+        if len(family_set) >= 2:
+            full_brain = f'{family_set[0]}+{family_set[1]}混合型'
+
+    return {
+        'main': {'code': main_code, 'label': main_label, 'family': main_family, 'count': main_count},
+        'auxiliary': {'code': aux_code, 'label': aux_label if aux_code else None, 'family': PATTERN_FAMILY.get(aux_code, '') if aux_code else None} if aux_code else None,
+        'full_brain': full_brain,
+        'family_counts': dict((PATTERN_FAMILY.get(c, '其他'), cnt) for c, cnt in sorted_codes if PATTERN_FAMILY.get(c)),
+        'all_codes': [(c, cnt) for c, cnt in sorted_codes],
+    }
+
+
+def rank_function_areas(func_scores):
+    """五大功能区按总分从高到低排列。
+
+    Args:
+        func_scores: dict like {spirit_left: 70, spirit_right: 80, ...}
+
+    Returns:
+        dict: {ranked: [...], advantage: {...}, warning: {...}}
+    """
+    if not func_scores:
+        return {'ranked': [], 'advantage': None, 'warning': None}
+
+    area_totals = {}
+    for key, area in FUNCTION_AREAS.items():
+        left = func_scores.get(area['left'], 0) or 0
+        right = func_scores.get(area['right'], 0) or 0
+        area_totals[key] = {
+            'name': area['name'],
+            'left': left, 'right': right, 'total': left + right,
+        }
+
+    ranked = sorted(area_totals.values(), key=lambda x: -x['total'])
+    for i, a in enumerate(ranked):
+        a['rank'] = i + 1
+
+    return {
+        'ranked': ranked,
+        'advantage': ranked[0] if ranked else None,
+        'warning': ranked[-1] if ranked else None,
+    }
+
+
+def rank_learning_channels(channel_scores):
+    """学习通道按总分从高到低排列。
+
+    Args:
+        channel_scores: dict like {auditory: 45, visual: 30, kinesthetic: 25}
+
+    Returns:
+        dict: {ranked: [...], primary: {...}}
+    """
+    if not channel_scores:
+        return {'ranked': [], 'primary': None}
+
+    ranked = []
+    for key, info in LEARNING_CHANNELS.items():
+        score = channel_scores.get(key, 0) or 0
+        ranked.append({'key': key, 'name': info['name'], 'desc': info['desc'], 'score': score})
+
+    ranked.sort(key=lambda x: -x['score'])
+    for i, ch in enumerate(ranked):
+        ch['rank'] = i + 1
+
+    return {'ranked': ranked, 'primary': ranked[0] if ranked else None}
+
+
+def compute_lateralization(func_scores):
+    """每个功能区判断左脑主导/右脑主导/均衡。
+
+    Args:
+        func_scores: dict like {spirit_left: 70, spirit_right: 80, ...}
+
+    Returns:
+        list of dicts
+    """
+    results = []
+    for key, area in FUNCTION_AREAS.items():
+        left = func_scores.get(area['left'], 0) or 0
+        right = func_scores.get(area['right'], 0) or 0
+        diff = left - right
+        labels = LATERAL_LABELS.get(key, {})
+        if abs(diff) <= 3:
+            side = 'balanced'
+            side_label = labels.get('balanced', '均衡')
+        elif diff > 0:
+            side = 'left'
+            side_label = labels.get('left', '左脑高')
+        else:
+            side = 'right'
+            side_label = labels.get('right', '右脑高')
+
+        results.append({
+            'area_key': key, 'name': area['name'],
+            'left': left, 'right': right, 'diff': diff,
+            'side': side, 'label': side_label,
+        })
+    return results

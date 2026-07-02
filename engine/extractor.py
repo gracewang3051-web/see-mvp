@@ -86,7 +86,7 @@ def extract_metrics(ocr_text):
         m['lowest_area'] = sorted_areas[-1]
 
     # ---- 功能区得分 + 纹型编码 (从数字+纹型对提取) ----
-    PATTERN_CODES = r'(Lu|Ws|Wc|Wsc|Wl|We|Wi|Wpe|Wd|Xn|R|Lf|X|Wt)'
+    PATTERN_CODES = r'(Lu|Ws|Wc|Wsc|Wl|We|Wi|Wpe|Wd|Xn|R|Rpe|Lf|Ls|X|Wt)'
     raw_pairs = re.findall(rf'\b(\d+)\s+{PATTERN_CODES}\b', ocr_text)
     area_order = [en for _, en in area_map]
 

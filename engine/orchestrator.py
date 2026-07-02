@@ -37,6 +37,16 @@ class CognitiveEngine:
         # Layer 1: 规则
         structure = apply_rules(metrics)
 
+        # Layer 1.1: 新规四大预处理 (see_report_spec.md)
+        from engine.rules import (classify_pattern_family, rank_function_areas,
+                                   rank_learning_channels, compute_lateralization)
+        preprocessing = {
+            'pattern_family': classify_pattern_family(metrics.get('function_patterns', {})),
+            'function_areas': rank_function_areas(metrics.get('function_scores', {})),
+            'learning_channels': rank_learning_channels(metrics.get('learning_channels', {})),
+            'lateralization': compute_lateralization(metrics.get('function_scores', {})),
+        }
+
         # Layer 1.5: 检索
         knowledge = retrieve(structure, report_type)
 
@@ -52,6 +62,7 @@ class CognitiveEngine:
             style=style,
             age=age,
             target=target,
+            preprocessing=preprocessing,
         )
 
         return {
@@ -60,6 +71,7 @@ class CognitiveEngine:
             'debug': {
                 'metrics': _clean_metrics(metrics),
                 'structure_summary': rule_summary(structure),
+                'preprocessing': {k: v for k, v in preprocessing.items()},
                 'structure': structure,
                 'evidence': structure.get('evidence', {}),
                 'insights_count': len(knowledge.get('insights', [])),

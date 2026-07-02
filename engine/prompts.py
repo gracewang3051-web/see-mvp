@@ -71,8 +71,12 @@ STYLES = {
 # 报告类型映射
 # ============================================================
 REPORT_TYPES = {
-    'portrait':    'SEE思维画像报告：AI自动解读',
-    'portrait-see-ai': 'SEE思维画像报告：AI自动解读',
+    'portrait':    '个人成长解读',
+    'portrait-see-ai': '个人成长解读',
+    'personal':    '个人成长解读',
+    'child':       '孩子学习力解读',
+    'family':      '家庭合盘解读',
+    'team':        '团队合盘解读',
     'learning':    '学习方式分析报告',
     'emotion':     '情绪模式洞察报告',
     'potential':   '潜能发展方向报告',
@@ -81,11 +85,10 @@ REPORT_TYPES = {
     'action':      '个人成长建议报告',
 }
 
-# portrait 类型兼容别名
-PORTRAIT_TYPES = {'portrait', 'portrait-see-ai'}
+PORTRAIT_TYPES = {'portrait', 'portrait-see-ai', 'personal', 'child', 'family', 'team'}
 
 
-def build_prompt(structure, meaning, knowledge, report_type='learning', style='gentle', age=None, target='self'):
+def build_prompt(structure, meaning, knowledge, report_type='learning', style='gentle', age=None, target='self', preprocessing=None):
     """组装最终 prompt。
 
     Args:
@@ -99,6 +102,38 @@ def build_prompt(structure, meaning, knowledge, report_type='learning', style='g
     style_instruction = STYLES.get(style, STYLES['gentle'])
     style_label = style_instruction.split('\n')[0].replace('你是一位', '').strip()
     rt_name = REPORT_TYPES.get(report_type, '报告')
+    if preprocessing is None:
+        preprocessing = {}
+
+    # 新规预处理数据序列化
+    import json
+    prep_data = ''
+    if preprocessing:
+        prep_parts = []
+        pf = preprocessing.get('pattern_family', {})
+        if pf and pf.get('main'):
+            prep_parts.append(f"主性格: {pf['main']['label']}（{pf['main']['code']}）")
+            if pf.get('auxiliary'):
+                prep_parts.append(f"辅助性格: {pf['auxiliary']['label']}")
+            if pf.get('full_brain'):
+                prep_parts.append(f"全脑性格: {pf['full_brain']}")
+        fa = preprocessing.get('function_areas', {})
+        if fa and fa.get('ranked'):
+            rank_str = ' > '.join(f"{a['name']}({a['total']}分)" for a in fa['ranked'])
+            prep_parts.append(f"功能区排序: {rank_str}")
+            if fa.get('advantage'):
+                prep_parts.append(f"优势区: {fa['advantage']['name']}")
+            if fa.get('warning'):
+                prep_parts.append(f"警示区: {fa['warning']['name']}")
+        lc = preprocessing.get('learning_channels', {})
+        if lc and lc.get('ranked'):
+            ch_str = ' > '.join(f"{c['name']}({c['score']})" for c in lc['ranked'])
+            prep_parts.append(f"学习通道排序: {ch_str}")
+        lat = preprocessing.get('lateralization', [])
+        if lat:
+            lat_str = '; '.join(f"{l['name']}: {l['label']}(左{l['left']}/右{l['right']})" for l in lat)
+            prep_parts.append(f"偏侧化: {lat_str}")
+        prep_data = '\n'.join(prep_parts)
 
     # 年龄影响: 自动调整报告类型和语言
     age_context = ''
@@ -165,62 +200,14 @@ def build_prompt(structure, meaning, knowledge, report_type='learning', style='g
     is_portrait = report_type in PORTRAIT_TYPES
 
     if is_portrait:
-        user_prompt = f"""## 用户测评数据
-{meaning.get('raw_input', '')[:2000]}{age_context}{target_context}
-
-## 结构分析
-{zone_sections}
-
-## 数据证据追踪
-{evidence_section}
-
-## 行为解释
-{meaning.get('behavior_decode', '')}
-
-## 任务
-你是一位{style_label}。请生成一份 **{rt_name}**（Markdown格式，800-1200字）。
-
-⚠️ 这是 SEE 卡的 AI 自动解读报告。你必须展示从原始数据到最终结论的完整推理链，让读者看到「AI 是怎么分析出来的」，而非收到一份泛泛的人格描述。
-
-## 必需章节结构
-
-### 一、解读依据
-- 列出本次分析所依据的**所有可用数据**（从数据证据追踪中获取）
-- 明确说明每一项数据是怎么来的（OCR 提取 / 规则匹配 / 关键字识别）
-- 如果某项关键指标缺失，必须写「⚠️ 当前资料不足，无法对 [xxx] 进行判断」
-
-### 二、智能分析过程
-- 用读者能理解的语言，逐步解释分析逻辑：
-  1. 核心指标解读（TRC/ATD 代表什么 → 你的数值意味着什么）
-  2. 纹型矩阵匹配（从功能区的分数和纹型编码，推导出的行为倾向）
-  3. 学习通道分析（你的主要感知通道及其影响）
-  4. 组合规则发现（多个指标交叉得出的综合判断）
-- 每步都要有「数据 → 规则 → 推论」的链接。例如：「因为 TRC=180（高容量）+ ATD=35（快速反应），结合规则判定为『快速探索型』——这意味着...」
-- 禁止把纹型编码当标签用（如「你是 Wc 型」），必须用行为描述解释
-
-### 三、核心特质画像
-- 基于以上分析，描绘你的核心思维特质
-- 用行为描述解释特质（如「在决策时容易在多个选项间权衡」而非「WC型」）
-- 全文最多出现 1-2 次纹型编码，且仅在解释行为模式来源时使用
-
-### 四、成长建议
-- 基于特质分析的具体行动建议
-- 建议需可执行、可衡量
-- 利用优势区辅助成长区
-
-### 五、数据说明
-- 列出本次分析的所有指标及其来源
-- 标注哪些是确定数据、哪些需要补充
-- 如果指标完整，说明「数据完整性良好」
-- 如果有指标缺失，说明「建议补充 xxx 数据以获得更全面的分析」
-
-## ⚠️ 严禁事项
-- ❌ 编造未被提取的数据（纹型、数值、年龄、家庭背景等）
-- ❌ 用纹型编码给读者贴标签
-- ❌ 使用「智商」「注定」「绝对是」「一定是」等绝对化断言
-- ❌ 低分区写成「缺陷」或「弱点」
-- ❌ 跳过推理直接给结论
-"""
+        # 四份新报告模板选择
+        template_map = {
+            'portrait': 'personal', 'portrait-see-ai': 'personal',
+            'personal': 'personal', 'child': 'child', 'family': 'family', 'team': 'team'
+        }
+        tmpl = template_map.get(report_type, 'personal')
+        report_sections = _build_new_report_sections(tmpl, prep_data, structure, meaning, knowledge, style_label, rt_name, age_context, target_context)
+        user_prompt = report_sections
     else:
         user_prompt = f"""## 用户测评数据
 {meaning.get('raw_input', '')[:2000]}{age_context}{target_context}
@@ -297,3 +284,123 @@ def _build_evidence_section(evidence):
     if optional_missing:
         lines.append(f"- 可选指标缺失: {', '.join(optional_missing)}（若有可补充）")
     return '\n'.join(lines)
+
+
+def _build_new_report_sections(tmpl, prep_data, structure, meaning, knowledge, style_label, rt_name, age_context, target_context):
+    """构建四份新报告的 prompt 段落 (see_report_spec.md)"""
+    import json
+
+    metrics = structure.get('evidence', {})
+    trc = structure.get('trc', {})
+    atd = structure.get('atd', {})
+
+    trc_val = trc.get('value', '未知') if trc else '未知'
+    atd_val = atd.get('value', '未知') if atd else '未知'
+    trc_label = trc.get('label', '') if trc else ''
+    atd_label = atd.get('label', '') if atd else ''
+
+    common = f"""## 预处理数据
+{prep_data}
+
+TRC={trc_val}（{trc_label}） ATD={atd_val}（{atd_label}）
+
+## 任务
+你是一位{style_label}。请生成一份 **{rt_name}**（Markdown格式，800-1500字）。
+{age_context}{target_context}
+
+## ⚠️ 强制规则
+- 所有结论基于预处理数据，不编造
+- 纹型编码仅在最必要时出现1-2次
+- 低分区写「成长提醒/支持需求」，非缺陷
+- 禁止「智商/注定/绝对/一定是」
+- 每份报告结尾必须有一句「一句话看见」金句"""
+
+    report_templates = {
+        'personal': f"""{common}
+
+## 报告结构
+### 一、能量引擎
+TRC={trc_val}，属于___型（基于TRC区间自动判断）。ATD={atd_val}，属于___型。
+
+### 二、主性格画像
+基于预处理的主性格/辅助性格/全脑性格撰写。
+
+### 三、核心驱动力（精神功能）
+从功能区排序中提取精神功能区数据，解读左右脑分布。精神右脑高=自我实现者，精神左脑高=责任担当者。
+
+### 四、能力结构（思维功能）
+解读思维功能区，思维左脑高=逻辑架构师，思维右脑高=创意愿景师。
+
+### 五、最优通道（三感分析）
+从学习通道排序中提取最优通道及建议。
+
+### 六、各功能区左右脑特征
+基于偏侧化数据，逐功能区列表。
+
+### 七、警示提醒
+最低分区=警示区，给出针对性建议。
+
+### 八、成长路径
+天赋组合=主性格+优势区+最优通道。主场发挥/客场管理/一句话看见。""",
+
+        'child': f"""{common}
+
+## 报告结构（用温暖语气，面向家长）
+### 一、孩子的学习风格
+TRC={trc_val}，ATD={atd_val}。用家长能懂的语言解释。
+
+### 二、主性格画像
+孩子的主性格/辅助性格/全脑性格，翻译为家长语言。
+
+### 三、孩子的最佳学习通道
+从学习通道排序提取。第一通道及使用建议，第二第三通道作为辅助。
+
+### 四、孩子的内驱方式（精神功能）
+精神右脑高=被「我想做」驱动，精神左脑高=被「我应该做」驱动。
+
+### 五、孩子的行为特点（体觉功能）
+体觉高=需要动中学，体觉低=能安静但行动力偏弱。
+
+### 六、孩子的沟通特点（听觉功能）
+听觉左脑高=能听内容抓重点，听觉右脑高=对批评敏感。
+
+### 七、给家长的建议
+学习方式/节奏/动机/环境/沟通 五个维度 + 一句话看见。""",
+
+        'family': f"""{common}
+
+## 报告结构（用理解语气，面向家庭成员）
+### 一、家庭能量场
+TRC/ATD分布与家庭能量类型。
+
+### 二、家庭沟通频道匹配
+三感通道分布 + 沟通解码（视觉型/听觉型/体觉型的不同需求）。
+
+### 三、家庭节奏匹配
+ATD分布与冲突预警/解决策略。
+
+### 四、家庭角色分工建议
+基于精神功能特点分配CEO/CFO/创新官/COO角色。
+
+### 五、家庭共同成长建议
+家庭会议/轮流策划/翻译机制 + 一句话看见。""",
+
+        'team': f"""{common}
+
+## 报告结构（用专业语气，面向团队管理者）
+### 一、团队天赋画像总览
+按功能区分布统计创新引擎/执行铁军/逻辑架构/关系连接/品质守护占比。
+
+### 二、团队三感通道分布
+视觉/听觉/体觉占比 + 沟通建议。
+
+### 三、团队协作风险预警
+基于ATD/通道/偏侧化差异的冲突风险及建议。
+
+### 四、团队协作公约建议
+信息传递/会议效率/冲突解决/优势互补规则。
+
+### 五、团队发展建议
+招聘/培训/流程优化建议 + 一句话看见。""",
+    }
+    return report_templates.get(tmpl, report_templates['personal'])
