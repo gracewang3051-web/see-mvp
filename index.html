@@ -359,15 +359,17 @@ function loadUserReports() {
       const versions = data.versions || [];
       if (versions.length > 0) {
         const last = versions[versions.length-1];
-        state.reports = {portrait: last.portrait||''};
-        state.reportOrder = ['portrait'];
+        if (last.portrait) {
+          state.reports = {portrait: last.portrait};
+          state.reportOrder = ['portrait'];
+        }
         showSavedReports();
       }
     } catch(e) {}
   }
 }
 function showSavedReports() {
-  const keys = Object.keys(state.reports);
+  const keys = Object.keys(state.reports).filter(function(k){ return state.reports[k]; });
   if (keys.length === 0) { document.getElementById('savedReportsSection').classList.add('hidden'); return; }
   document.getElementById('savedReportsSection').classList.remove('hidden');
   document.getElementById('savedReportsList').innerHTML = keys.map(k =>
