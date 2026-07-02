@@ -461,32 +461,9 @@ async function startRecognition() {
     state.recognitionDone = true;
     showResults();
   } catch(e) {
-    // Fallback: try server-side vision API if OCR/parse failed
-    if (state.imageData && ocrDone) {
-      status.textContent = '⚠️ 本地解析失败，尝试云端识别...';
-      try {
-        var vResp = await fetch(API_BASE + '/api/vision', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({image: state.imageData})
-        });
-        var vData = await vResp.json();
-        if (!vResp.ok || vData.error) throw new Error(vData.error || ('vision HTTP ' + vResp.status));
-        state.answers = vData.answers || {};
-        state.handwritten = vData.handwritten_fields || {};
-        state.confidence = vData.confidence || {overall:0, items:[]};
-        state.recognitionDone = true;
-        status.textContent = '✅ 云端识别完成';
-        status.style.color = '';
-        showResults();
-        btn.disabled = false; btn.textContent = '🔍 重新识别';
-        return;
-      } catch(vErr) {
-        status.textContent = '❌ 云端识别也失败: ' + vErr.message;
-      }
-    }
+    status.textContent = '❌ 识别失败，请使用手动输入: ' + e.message;
     status.style.color = 'var(--danger)';
-    if (ocrDone) toggleManual();
-    else alert('识别失败: ' + e.message + '\n\n请尝试重新拍照上传，或点击「✏️ 手动输入」直接填写答案。');
+    toggleManual();
   }
   btn.disabled = false; btn.textContent = '🔍 重新识别';
 }
