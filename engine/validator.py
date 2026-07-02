@@ -37,22 +37,22 @@ def validate(report_text, structure, report_type='portrait'):
                     warnings.append(f'通道不一致: 引擎判定 {primary}，报告提到 {oc}')
 
     # 3. 结构完整性 — 基础检查（非 portrait 类型）
-    is_portrait = report_type in ('portrait', 'portrait-see-ai')
-    if not is_portrait:
+    is_innate_portrait = report_type in ('portrait', 'portrait-see-ai', 'personal', 'child', 'family', 'team')
+    is_see_card = report_type == 'see-card-portrait'
+    is_portrait_like = is_innate_portrait or is_see_card
+    if not is_portrait_like:
         required_sections = ['行为解码', '特质', '优势', '建议']
         for section in required_sections:
             if section not in report_text:
                 warnings.append(f'结构不完整: 缺少「{section}」相关章节')
 
     # 3b. portrait 模板专项检查
-    INNATE_PORTRAIT_TYPES = {'portrait', 'portrait-see-ai', 'personal', 'child', 'family', 'team'}
-    SEE_CARD_TYPES = {'see-card-portrait'}
-    if report_type in INNATE_PORTRAIT_TYPES:
+    if is_innate_portrait:
         portrait_sections = ['能量引擎', '主性格画像', '核心驱动力', '能力结构', '最优通道', '左右脑', '警示提醒', '成长路径']
         for section in portrait_sections:
             if section not in report_text:
                 warnings.append(f'Portrait模板缺失: 缺少「{section}」章节')
-    elif report_type in SEE_CARD_TYPES:
+    elif is_see_card:
         see_card_sections = ['核心特质', '功能区解读', '成长建议', '数据说明']
         for section in see_card_sections:
             if section not in report_text:
@@ -64,7 +64,7 @@ def validate(report_text, structure, report_type='portrait'):
             warnings.append(f'表述不当: 低分区使用了「{phrase}」')
 
     # 5. 数据根基检查 — 非 portrait 类型检查是否引用了至少一个具体指标
-    if not is_portrait and not _has_data_reference(report_text):
+    if not is_portrait_like and not _has_data_reference(report_text):
         warnings.append('数据根基: 报告未引用任何具体指标（TRC/ATD/通道/纹型/功能区）')
 
     # 6. 绝对化断言检查
