@@ -46,7 +46,7 @@ def validate(report_text, structure, report_type='portrait'):
 
     # 3b. portrait 模板专项检查（仅 portrait 类型）
     if is_portrait:
-        portrait_sections = ['核心特质', '功能区解读', '成长建议', '数据说明']
+        portrait_sections = ['能量引擎', '主性格画像', '核心驱动力', '能力结构', '最优通道', '左右脑', '警示提醒', '成长路径']
         for section in portrait_sections:
             if section not in report_text:
                 warnings.append(f'Portrait模板缺失: 缺少「{section}」章节')

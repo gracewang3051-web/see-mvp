@@ -413,11 +413,13 @@ def classify_pattern_family(patterns):
     code_counts = Counter(codes)
     sorted_codes = code_counts.most_common()
 
-    # 家族归类
-    family_counts = {}
+    # 家族归类（按家族聚合，同名家族累加）
+    from collections import defaultdict
+    family_counts_dict = defaultdict(int)
     for code, count in sorted_codes:
         family = PATTERN_FAMILY.get(code, '其他')
-        family_counts[family] = family_counts.get(family, 0) + count
+        family_counts_dict[family] += count
+    family_counts = dict(family_counts_dict)
 
     main_code, main_count = sorted_codes[0]
     aux_code = sorted_codes[1][0] if len(sorted_codes) > 1 else None
@@ -455,7 +457,7 @@ def classify_pattern_family(patterns):
         'main': {'code': main_code, 'label': main_label, 'family': main_family, 'count': main_count},
         'auxiliary': {'code': aux_code, 'label': aux_label if aux_code else None, 'family': PATTERN_FAMILY.get(aux_code, '') if aux_code else None} if aux_code else None,
         'full_brain': full_brain,
-        'family_counts': dict((PATTERN_FAMILY.get(c, '其他'), cnt) for c, cnt in sorted_codes if PATTERN_FAMILY.get(c)),
+        'family_counts': family_counts,
         'all_codes': [(c, cnt) for c, cnt in sorted_codes],
     }
 
