@@ -146,7 +146,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 try:
                     interp = interpret_see_card(portrait)
                     structure = {'trc': None, 'atd': None, 'evidence': interp.get('evidence', {})}
-                    validation = validate(content, structure, 'portrait')
+                    validation = validate(content, structure, 'see-card-portrait')
                     response['validation'] = validation
                 except:
                     pass

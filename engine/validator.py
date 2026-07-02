@@ -44,12 +44,19 @@ def validate(report_text, structure, report_type='portrait'):
             if section not in report_text:
                 warnings.append(f'结构不完整: 缺少「{section}」相关章节')
 
-    # 3b. portrait 模板专项检查（仅 portrait 类型）
-    if is_portrait:
+    # 3b. portrait 模板专项检查
+    INNATE_PORTRAIT_TYPES = {'portrait', 'portrait-see-ai', 'personal', 'child', 'family', 'team'}
+    SEE_CARD_TYPES = {'see-card-portrait'}
+    if report_type in INNATE_PORTRAIT_TYPES:
         portrait_sections = ['能量引擎', '主性格画像', '核心驱动力', '能力结构', '最优通道', '左右脑', '警示提醒', '成长路径']
         for section in portrait_sections:
             if section not in report_text:
                 warnings.append(f'Portrait模板缺失: 缺少「{section}」章节')
+    elif report_type in SEE_CARD_TYPES:
+        see_card_sections = ['核心特质', '功能区解读', '成长建议', '数据说明']
+        for section in see_card_sections:
+            if section not in report_text:
+                warnings.append(f'SEE卡模板缺失: 缺少「{section}」章节')
 
     # 4. 低分区语言检查
     for phrase in DANGER_PHRASES:
