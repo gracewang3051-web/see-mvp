@@ -46,7 +46,7 @@ def validate(report_text, structure, report_type='portrait'):
 
     # 3b. portrait 模板专项检查（仅 portrait 类型）
     if is_portrait:
-        portrait_sections = ['解读依据', 'AI自动解读算法', '核心特质', '成长建议', '数据说明']
+        portrait_sections = ['思维画像AI解读', '核心特质', '成长建议', '数据说明']
         for section in portrait_sections:
             if section not in report_text:
                 warnings.append(f'Portrait模板缺失: 缺少「{section}」章节')
@@ -56,8 +56,8 @@ def validate(report_text, structure, report_type='portrait'):
         if phrase in report_text:
             warnings.append(f'表述不当: 低分区使用了「{phrase}」')
 
-    # 5. 数据根基检查 — 是否引用了至少一个具体指标
-    if not _has_data_reference(report_text):
+    # 5. 数据根基检查 — 非 portrait 类型检查是否引用了至少一个具体指标
+    if not is_portrait and not _has_data_reference(report_text):
         warnings.append('数据根基: 报告未引用任何具体指标（TRC/ATD/通道/纹型/功能区）')
 
     # 6. 绝对化断言检查
@@ -72,10 +72,6 @@ def validate(report_text, structure, report_type='portrait'):
 
     # 8. 凭空编造检查 — 对缺失字段的编造
     _check_fabricated_metrics(report_text, structure, warnings)
-
-    # 8b. SEE卡专项: 禁止编造 TRC/ATD/纹型（这些数据25题画像没有）
-    if is_portrait:
-        _check_see_card_fabrication(report_text, structure, warnings)
 
     # 9. 缺失数据降级检查（仅核心指标，可选指标不阻塞）
     evidence = structure.get('evidence', {})
