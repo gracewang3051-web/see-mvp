@@ -219,6 +219,21 @@ def load_see_card_context():
     if idx >= 0:
         excerpts.append(text[idx:idx+200].strip())
     _KB_CACHE = '\n\n---\n\n'.join(e for e in excerpts if e)
+    # Filter out excerpts containing forbidden terms for SEE card reports
+    forbidden = ['纹型', 'TRC', 'ATD', '皮纹', '指纹']
+    if _KB_CACHE:
+        lines = _KB_CACHE.split('\n')
+        clean_lines = []
+        skip = False
+        for line in lines:
+            if '---' in line and len(line) < 10:
+                skip = False
+            if any(f in line for f in forbidden):
+                skip = True
+                continue
+            if not skip:
+                clean_lines.append(line)
+        _KB_CACHE = '\n'.join(clean_lines).strip()
     if len(_KB_CACHE) > 4000:
         _KB_CACHE = _KB_CACHE[:4000] + '\n\n...'
     return _KB_CACHE
