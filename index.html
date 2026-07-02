@@ -430,7 +430,10 @@ function handleFile(file) {
 // ============ RECOGNITION ============
 async function startRecognition() {
   const btn = document.getElementById('btnRecognize');
+  const status = document.getElementById('uploadStatus');
   btn.disabled = true; btn.textContent = '⏳ 加载OCR引擎...';
+  status.textContent = '';
+  var ocrDone = false;
   try {
     var cfg = window.TESSERACT_CONFIG || {};
     const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
@@ -443,20 +446,27 @@ async function startRecognition() {
     const { data: ocrData } = await worker.recognize(state.imageData);
     await worker.terminate();
     var ocrText = ocrData.text || '';
-    document.getElementById('uploadStatus').textContent = 'OCR: ' + ocrText.length + '字';
+    ocrDone = true;
+    status.textContent = '✅ OCR完成: ' + ocrText.length + '字';
     btn.textContent = '🧠 解析答案...';
     var resp = await fetch(API_BASE + '/api/parse-answers', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ocrText: ocrText})
     });
     var parsed = await resp.json();
-    if (parsed.error) throw new Error(parsed.error);
+    if (!resp.ok || parsed.error) throw new Error(parsed.error || ('HTTP ' + resp.status));
     state.answers = parsed.answers || {};
     state.handwritten = parsed.handwritten_fields || {};
     state.confidence = parsed.confidence || {overall:0, items:[]};
     state.recognitionDone = true;
     showResults();
-  } catch(e) { toggleManual(); }
+  } catch(e) {
+    status.textContent = '❌ ' + e.message;
+    status.style.color = 'var(--danger)';
+    // If OCR completed but parsing failed, still offer manual input
+    if (ocrDone) toggleManual();
+    else alert('识别失败: ' + e.message + '\n\n请尝试重新拍照上传，或点击「✏️ 手动输入」直接填写答案。');
+  }
   btn.disabled = false; btn.textContent = '🔍 重新识别';
 }
 
