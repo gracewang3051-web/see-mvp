@@ -331,7 +331,6 @@ function saveReports() {
     time: new Date().toLocaleDateString('zh-CN') + ' ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}),
     hasPortrait: !!state.reports.portrait,
     portrait: state.reports.portrait||'',
-    action: state.reports.action||'', communication: state.reports.communication||'', career: state.reports.career||''
   });
   if (versions.length > 20) versions = versions.slice(-20);
   localStorage.setItem('see_reports_v2_' + code, JSON.stringify({versions, time: new Date().toISOString()}));
@@ -347,8 +346,7 @@ function loadUserReports() {
       localStorage.setItem('see_reports_v2_' + code, JSON.stringify({versions: [{
         time: d.time ? new Date(d.time).toLocaleDateString('zh-CN') : '历史报告',
         hasPortrait: !!(d.reports||{}).portrait,
-        portrait: (d.reports||{}).portrait||'',
-        action: (d.reports||{}).action||'', communication: (d.reports||{}).communication||'', career: (d.reports||{}).career||''
+        portrait: (d.reports||{}).portrait||''
       }], time: d.time||new Date().toISOString()}));
     }
   } catch(e){}
@@ -361,8 +359,8 @@ function loadUserReports() {
       const versions = data.versions || [];
       if (versions.length > 0) {
         const last = versions[versions.length-1];
-        state.reports = {portrait: last.portrait||'', action: last.action||'', communication: last.communication||'', career: last.career||''};
-        state.reportOrder = Object.keys(state.reports).filter(k => state.reports[k]);
+        state.reports = {portrait: last.portrait||''};
+        state.reportOrder = ['portrait'];
         showSavedReports();
       }
     } catch(e) {}
@@ -381,7 +379,6 @@ function viewSavedReport(key) {
     document.getElementById('reportCard').classList.remove('hidden');
     document.getElementById('reportContent').classList.remove('loading');
     document.getElementById('reportContent').innerHTML = parseMD(state.reports[key]);
-    document.getElementById('extraCards').classList.remove('hidden');
   }
 }
 
@@ -634,7 +631,7 @@ function parseMD(md) {
     .replace(/\n\n/g,'</p><p>')
     .replace(/^(?!<)(.+)$/gm,'<p>$1</p>');
 }
-var REPORT_LABELS={portrait:'📋 思维画像报告',action:'🌱 个人成长建议',communication:'💞 关系洞察',career:'🚀 事业发展',composite:'💫 合盘报告'};
+var REPORT_LABELS={portrait:'📋 思维画像报告',composite:'💫 合盘报告'};
 function downloadReport(){
   var md='';
   for(var i=0;i<state.reportOrder.length;i++){
