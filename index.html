@@ -212,23 +212,6 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 <div class="card hidden" id="reportCard">
   <h2><span class="step-badge">3</span> 你的解读报告 <button class="btn btn-outline btn-sm" onclick="downloadReport()" style="float:right;font-size:.75em">📥 下载报告</button></h2>
   <div class="report-content loading" id="reportContent">正在生成...</div>
-  <div class="extra-cards hidden" id="extraCards">
-    <div class="extra-card" onclick="generateExtra('action')" id="extraAction">
-      <div class="icon">🌱</div>
-      <div class="title">个人成长建议</div>
-      <div class="desc">行动计划 · 练习建议 · 成长路径</div>
-    </div>
-    <div class="extra-card" onclick="generateExtra('communication')" id="extraComm">
-      <div class="icon">💞</div>
-      <div class="title">关系洞察</div>
-      <div class="desc">家庭关系 · 伴侣沟通 · 亲子互动</div>
-    </div>
-    <div class="extra-card" onclick="generateExtra('career')" id="extraCareer">
-      <div class="icon">🚀</div>
-      <div class="title">事业发展</div>
-      <div class="desc">职业方向 · 优势发挥 · 团队定位</div>
-    </div>
-  </div>
 </div>
 
 <!-- ====== 合盘入口 ====== -->
@@ -389,9 +372,8 @@ function showSavedReports() {
   const keys = Object.keys(state.reports);
   if (keys.length === 0) { document.getElementById('savedReportsSection').classList.add('hidden'); return; }
   document.getElementById('savedReportsSection').classList.remove('hidden');
-  const names = {portrait:'🧬 基础画像', action:'🌱 成长建议', communication:'💞 关系洞察', career:'🚀 事业发展'};
   document.getElementById('savedReportsList').innerHTML = keys.map(k =>
-    `<span style="cursor:pointer;margin-right:12px;color:var(--accent)" onclick="viewSavedReport('${k}')">${names[k]||k}</span>`
+    `<span style="cursor:pointer;margin-right:12px;color:var(--accent)" onclick="viewSavedReport('${k}')">📋 思维画像报告</span>`
   ).join('');
 }
 function viewSavedReport(key) {
@@ -569,8 +551,6 @@ async function generateReports() {
   document.getElementById('reportCard').classList.remove('hidden');
   document.getElementById('reportContent').classList.add('loading');
   document.getElementById('reportContent').textContent = '正在为你生成思维画像报告...';
-  document.getElementById('extraCards').classList.add('hidden');
-
   const portrait = buildPortrait();
   try {
     const r = await callAPI('portrait', portrait, '');
@@ -579,45 +559,12 @@ async function generateReports() {
     saveReports();
     document.getElementById('reportContent').classList.remove('loading');
     document.getElementById('reportContent').innerHTML = parseMD(r.content);
-    document.getElementById('extraCards').classList.remove('hidden');
-    // Reset extra cards
-    ['extraAction','extraComm','extraCareer'].forEach(id => {
-      const el = document.getElementById(id);
-      el.classList.remove('loading','done');
-      el.onclick = function(){ generateExtra(id==='extraAction'?'action':id==='extraComm'?'communication':'career'); };
-    });
   } catch(e) {
     document.getElementById('reportContent').textContent = '生成失败: '+e.message;
   }
   document.getElementById('btnGenerate').disabled = false;
 }
 
-async function generateExtra(type) {
-  const names = {action:'个人成长建议',communication:'关系洞察',career:'事业发展'};
-  const idMap = {action:'extraAction',communication:'extraComm',career:'extraCareer'};
-  const card = document.getElementById(idMap[type]);
-  if (state.reports[type]) {
-    document.getElementById('reportContent').innerHTML = parseMD(state.reports[type]);
-    return;
-  }
-  card.classList.add('loading');
-  card.querySelector('.icon').textContent = '⏳';
-  try {
-    const portrait = buildPortrait();
-    const r = await callAPI(type, portrait, state.reports.portrait||'');
-    state.reports[type] = r.content;
-    state.reportOrder.push(type);
-    document.getElementById('reportContent').innerHTML = parseMD(r.content);
-    card.classList.remove('loading');
-    card.classList.add('done');
-    card.querySelector('.icon').textContent = '✅';
-    card.querySelector('.desc').textContent = '已生成';
-  } catch(e) {
-    card.classList.remove('loading');
-    card.querySelector('.icon').textContent = '⚠️';
-    card.querySelector('.desc').textContent = '失败，请重试';
-  }
-}
 
 async function callAPI(type, portrait, baseReport) {
   const resp = await fetch(API_BASE + '/api/report', {
