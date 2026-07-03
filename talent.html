@@ -194,7 +194,7 @@ window.TESSERACT_CONFIG = {
     </select>
   </div>
   <div class="flex-row" style="margin-top:6px">
-    <button class="btn btn-primary" id="btnRecognize" disabled onclick="startFullFlow()">🔍 识别并生成报告</button>
+    <button class="btn btn-primary" id="btnRecognize" disabled onclick="startFullFlow()">🔍 识别文字草稿</button>
     <select id="reportStyle" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em;cursor:pointer">
       <option value="gentle">🌿 温和顾问</option>
       <option value="parent">💝 亲子顾问</option>
@@ -205,7 +205,7 @@ window.TESSERACT_CONFIG = {
     <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
   </div>
   <div style="margin-top:8px;padding:10px 14px;background:#1a1a35;border:1px solid #3a3a55;border-radius:10px">
-    <div style="font-size:.78em;color:var(--muted);margin-bottom:6px">📝 或直接粘贴报告文本生成（📱 手机端推荐：拍照识别可能超时，请优先使用此方式）</div>
+    <div style="font-size:.78em;color:var(--muted);margin-bottom:6px">📝 粘贴或核对报告文本后生成（📱 手机端推荐：拍照识别只作为草稿，请先校对）</div>
     <textarea id="directOcrInput" placeholder="在此粘贴先天测评报告的完整文字内容..." style="width:100%;min-height:80px;padding:8px 10px;border-radius:6px;border:1.5px solid #3a3a55;background:#161630;color:#e0dcd4;font-size:.8em;line-height:1.5;resize:vertical;font-family:monospace"></textarea>
     <button class="btn btn-outline btn-sm" onclick="generateFromText()" style="margin-top:6px;font-size:.75em">📄 用文本生成报告</button>
   </div>
@@ -486,46 +486,25 @@ async function startFullFlow() {
 
   // OCR 质量不足或失败 → 引导手动输入（无云端兜底）
   if (!ocrQualityOk) {
+    if (ocrText.length > 0) document.getElementById('directOcrInput').value = ocrText;
     var msg = ocrText.length > 0
-      ? '❌ OCR识别文字过少(' + ocrText.length + '字)，请重新拍照或使用手动输入。'
+      ? '❌ OCR识别文字过少(' + ocrText.length + '字)，已放入文本框，请校对补充后再生成。'
       : '❌ ' + (ocrError || '文字识别失败') + '，请重新拍照或使用手动输入。';
     document.getElementById('ocrProgress').textContent = msg;
     document.getElementById('reportContent').textContent = msg;
-    btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
+    btn.disabled = false; btn.textContent = '🔍 识别文字草稿';
     return;
   }
 
   state.ocrText = ocrText;
   state.recognitionDone = true;
-
-  // === Phase 2: Generate Report ===
-  btn.textContent = '📝 生成报告中...';
-  document.getElementById('reportContent').textContent = '正在结合知识库生成报告...';
-
-  try {
-    const resp = await fetch(API_BASE + '/api/talent-v2', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ocrText: state.ocrText, type: 'portrait', style: document.getElementById('reportStyle').value, age: parseInt(document.getElementById('reportAge').value), target: document.getElementById('reportTarget').value})
-    });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
-    state.reports = {portrait: data.content};
-    state.reportOrder = ['portrait'];
-    state.lastDebug = data.debug || null;
-    saveReports();
-    document.getElementById('reportContent').classList.remove('loading');
-    document.getElementById('reportContent').innerHTML = renderStack();
-    document.getElementById('reportCard').scrollIntoView({behavior:'smooth',block:'start'});
-    document.getElementById('chatSection').style.display='block';
-    state.conversation = [];
-    document.getElementById('chatMessages').innerHTML = '';
-    document.getElementById('chatInput').value = '';
-    document.getElementById('btnSummarize').style.display = 'block';
-    showDebug(data.debug);
-  } catch(e) { document.getElementById('reportContent').textContent = '生成失败: ' + e.message; }
-
+  document.getElementById('directOcrInput').value = ocrText;
+  document.getElementById('reportContent').classList.remove('loading');
+  document.getElementById('reportContent').textContent = '已识别出 ' + ocrText.length + ' 字文字草稿。请先在上方文本框核对、修正错字，再点击「用文本生成报告」。';
+  document.getElementById('ocrProgress').textContent = '✅ OCR草稿已生成: ' + ocrText.length + '字，请先校对';
+  document.getElementById('directOcrInput').focus();
   btn.disabled = false;
-  btn.textContent = '🔄 重新识别并生成';
+  btn.textContent = '🔄 重新识别文字草稿';
 }
 
 // ===== 对话式咨询 =====
