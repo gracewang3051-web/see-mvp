@@ -194,6 +194,7 @@ window.TESSERACT_CONFIG = {
     </select>
   </div>
   <div class="flex-row" style="margin-top:6px">
+    <button class="btn btn-primary" id="btnBaiduOcr" disabled onclick="startBaiduOcrDraft()">☁️ 百度云识别文字草稿</button>
     <button class="btn btn-primary" id="btnRecognize" disabled onclick="startFullFlow()">🔍 识别文字草稿</button>
     <select id="reportStyle" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em;cursor:pointer">
       <option value="gentle">🌿 温和顾问</option>
@@ -205,7 +206,7 @@ window.TESSERACT_CONFIG = {
     <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
   </div>
   <div style="margin-top:8px;padding:10px 14px;background:#1a1a35;border:1px solid #3a3a55;border-radius:10px">
-    <div style="font-size:.78em;color:var(--muted);margin-bottom:6px">📝 粘贴或核对报告文本后生成（📱 手机端推荐：拍照识别只作为草稿，请先校对）</div>
+    <div style="font-size:.78em;color:var(--muted);margin-bottom:6px">📝 粘贴或核对报告文本后生成（📱 手机端推荐：优先用百度云识别草稿，并先校对）</div>
     <textarea id="directOcrInput" placeholder="在此粘贴先天测评报告的完整文字内容..." style="width:100%;min-height:80px;padding:8px 10px;border-radius:6px;border:1.5px solid #3a3a55;background:#161630;color:#e0dcd4;font-size:.8em;line-height:1.5;resize:vertical;font-family:monospace"></textarea>
     <button class="btn btn-outline btn-sm" onclick="generateFromText()" style="margin-top:6px;font-size:.75em">📄 用文本生成报告</button>
   </div>
@@ -368,9 +369,57 @@ function handleFile(file) {
     pv.src = state.imageData;
     pv.style.display = 'block';
     document.getElementById('btnRecognize').disabled = false;
+    document.getElementById('btnBaiduOcr').disabled = false;
     document.getElementById('uploadStatus').textContent = file.name;
   };
   reader.readAsDataURL(file);
+}
+
+function fillOcrDraft(text, sourceLabel) {
+  var draft = (text || '').trim();
+  if (draft) document.getElementById('directOcrInput').value = draft;
+  document.getElementById('reportCard').classList.remove('hidden');
+  document.getElementById('reportContent').classList.remove('loading');
+  document.getElementById('reportContent').textContent = draft
+    ? sourceLabel + '已识别出 ' + draft.length + ' 字文字草稿。请先在上方文本框核对、修正错字，再点击「用文本生成报告」。'
+    : sourceLabel + '未识别到可用文字，请改用粘贴文本或重新拍摄。';
+  document.getElementById('ocrProgress').style.display = 'block';
+  document.getElementById('ocrProgress').textContent = draft
+    ? '✅ ' + sourceLabel + '草稿已生成: ' + draft.length + '字，请先校对'
+    : '❌ ' + sourceLabel + '未识别到可用文字';
+  if (draft) document.getElementById('directOcrInput').focus();
+}
+
+async function startBaiduOcrDraft() {
+  if (!state.imageData) return;
+  var btn = document.getElementById('btnBaiduOcr');
+  var localBtn = document.getElementById('btnRecognize');
+  btn.disabled = true;
+  localBtn.disabled = true;
+  btn.textContent = '☁️ 百度云识别中...';
+  document.getElementById('reportCard').classList.remove('hidden');
+  document.getElementById('reportContent').classList.add('loading');
+  document.getElementById('reportContent').textContent = '正在调用百度云识别图片文字...';
+  document.getElementById('ocrProgress').style.display = 'block';
+  document.getElementById('ocrProgress').textContent = '';
+  try {
+    var resp = await fetch(API_BASE + '/api/baidu-ocr', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({image: state.imageData})
+    });
+    var data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || ('HTTP ' + resp.status));
+    state.ocrText = data.text || '';
+    fillOcrDraft(state.ocrText, '百度云OCR');
+  } catch(e) {
+    document.getElementById('reportContent').classList.remove('loading');
+    document.getElementById('reportContent').textContent = '百度云识别失败: ' + e.message + '。请改用粘贴文本，或使用本地识别草稿。';
+    document.getElementById('ocrProgress').textContent = '❌ 百度云识别失败';
+  }
+  btn.disabled = false;
+  localBtn.disabled = false;
+  btn.textContent = '☁️ 百度云识别文字草稿';
 }
 
 async function runTesseractWithTimeout(imageData, onLog, timeoutMs) {
@@ -498,11 +547,7 @@ async function startFullFlow() {
 
   state.ocrText = ocrText;
   state.recognitionDone = true;
-  document.getElementById('directOcrInput').value = ocrText;
-  document.getElementById('reportContent').classList.remove('loading');
-  document.getElementById('reportContent').textContent = '已识别出 ' + ocrText.length + ' 字文字草稿。请先在上方文本框核对、修正错字，再点击「用文本生成报告」。';
-  document.getElementById('ocrProgress').textContent = '✅ OCR草稿已生成: ' + ocrText.length + '字，请先校对';
-  document.getElementById('directOcrInput').focus();
+  fillOcrDraft(ocrText, '本地OCR');
   btn.disabled = false;
   btn.textContent = '🔄 重新识别文字草稿';
 }

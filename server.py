@@ -2,7 +2,7 @@
 import json, base64, ssl, os, subprocess, tempfile, sys
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http.client import HTTPSConnection
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 from socketserver import ThreadingMixIn
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from engine.orchestrator import CognitiveEngine
@@ -11,6 +11,10 @@ from engine.see_card import interpret_see_card, load_see_card_context
 # ===== API Keys（环境变量注入，不写入代码）=====
 BAOSI_KEY = os.environ.get('BAOSI_KEY', '')
 DEEPSEEK_KEY = os.environ.get('DEEPSEEK_KEY', '')
+BAIDU_OCR_API_KEY = os.environ.get('BAIDU_OCR_API_KEY', '')
+BAIDU_OCR_SECRET_KEY = os.environ.get('BAIDU_OCR_SECRET_KEY', '')
+
+_BAIDU_OCR_TOKEN = ''
 
 def proxy_request(url, payload, headers, timeout=180):
     """直连 API"""
@@ -162,6 +166,8 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self._proxy_report(body)
         elif self.path == '/api/ocr':
             self._proxy_ocr(body)
+        elif self.path == '/api/baidu-ocr':
+            self._proxy_baidu_ocr(body)
         elif self.path == '/api/talent':
             self._proxy_talent(body)
         elif self.path == '/api/talent-v2':
@@ -294,6 +300,34 @@ class SEEHandler(SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode())
+
+    def _baidu_ocr_token(self):
+        global _BAIDU_OCR_TOKEN
+        if _BAIDU_OCR_TOKEN:
+            return _BAIDU_OCR_TOKEN
+        payload = urlencode({
+            'grant_type': 'client_credentials',
+            'client_id': BAIDU_OCR_API_KEY,
+            'client_secret': BAIDU_OCR_SECRET_KEY
+        }).encode()
+        conn = HTTPSConnection('aip.baidubce.com', 443, timeout=30)
+        conn.request(
+            'POST',
+            '/oauth/2.0/token',
+            body=payload,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+        )
+        resp = conn.getresponse()
+        raw = resp.read().decode()
+        conn.close()
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            raise Exception('百度OCR鉴权返回非JSON')
+        if resp.status != 200 or not data.get('access_token'):
+            raise Exception(data.get('error_description') or data.get('error') or '百度OCR鉴权失败')
+        _BAIDU_OCR_TOKEN = data['access_token']
+        return _BAIDU_OCR_TOKEN
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -451,6 +485,59 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self._json(200, {"text": text, "usage": usage, "cost": round(tokens/1000*0.003, 6)})
         except Exception as e:
             self._json(500, {"error": str(e)})
+
+    def _proxy_baidu_ocr(self, body):
+        """百度云 OCR：只返回文字草稿，前端必须让用户校对后再生成报告。"""
+        if not BAIDU_OCR_API_KEY or not BAIDU_OCR_SECRET_KEY:
+            self._json(503, {"error": "服务未配置 BAIDU_OCR_API_KEY / BAIDU_OCR_SECRET_KEY", "stage": "config"})
+            return
+        try:
+            data = json.loads(body)
+            image = data.get('image', '')
+            if not image:
+                self._json(400, {"error": "缺少图片", "stage": "validate"})
+                return
+            image_b64 = image.split(',', 1)[-1]
+            token = self._baidu_ocr_token()
+            payload = urlencode({
+                'image': image_b64,
+                'detect_direction': 'true',
+                'paragraph': 'true',
+                'probability': 'true'
+            }).encode()
+            conn = HTTPSConnection('aip.baidubce.com', 443, timeout=60)
+            conn.request(
+                'POST',
+                '/rest/2.0/ocr/v1/accurate_basic?access_token=' + token,
+                body=payload,
+                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            )
+            resp = conn.getresponse()
+            raw = resp.read().decode()
+            conn.close()
+            result = json.loads(raw)
+            if resp.status != 200 or result.get('error_code'):
+                # Token may expire or be revoked; retry once with a fresh token.
+                global _BAIDU_OCR_TOKEN
+                if result.get('error_code') in (110, 111):
+                    _BAIDU_OCR_TOKEN = ''
+                self._json(502, {
+                    "error": result.get('error_msg') or ('百度OCR HTTP ' + str(resp.status)),
+                    "stage": "baidu_ocr",
+                    "raw": {"error_code": result.get('error_code')}
+                })
+                return
+            lines = [x.get('words', '') for x in result.get('words_result', []) if x.get('words')]
+            text = '\n'.join(lines).strip()
+            self._json(200, {
+                "text": text,
+                "lines": lines,
+                "words_result_num": result.get('words_result_num', len(lines)),
+                "direction": result.get('direction'),
+                "stage": "baidu_ocr"
+            })
+        except Exception as e:
+            self._json(500, {"error": str(e), "stage": "baidu_ocr"})
 
     # ===== Talent Report（知识库 + 报告生成）=====
     KB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kb_talent')
