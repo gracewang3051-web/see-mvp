@@ -527,7 +527,13 @@ class SEEHandler(SimpleHTTPRequestHandler):
                     "raw": {"error_code": result.get('error_code')}
                 })
                 return
-            lines = [x.get('words', '') for x in result.get('words_result', []) if x.get('words')]
+            # 按位置排序：从上到下，同行从左到右
+            words_result = result.get('words_result', [])
+            sorted_words = sorted(words_result, key=lambda w: (
+                round(w.get('location', {}).get('top', 0) / 10) * 10,  # Y→10px容差同行
+                w.get('location', {}).get('left', 0)  # X→左到右
+            ))
+            lines = [w.get('words', '') for w in sorted_words if w.get('words')]
             text = '\n'.join(lines).strip()
             self._json(200, {
                 "text": text,
