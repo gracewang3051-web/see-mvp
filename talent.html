@@ -427,10 +427,13 @@ async function startFullFlow() {
 
   let ocrText = '';
   let ocrQualityOk = false;
-  var ocrTimeout = setTimeout(function() { document.getElementById('ocrProgress').textContent = '⚠️ OCR超时'; }, 20000);
+  var ocrWorker = null;
+  var ocrTimeout = new Promise(function(_, reject) {
+    setTimeout(function() { reject(new Error('OCR超时(20s)')); }, 20000);
+  });
   try {
     var cfg = window.TESSERACT_CONFIG || {};
-    const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
+    ocrWorker = await Tesseract.createWorker('chi_sim+eng', 1, {
       workerPath: cfg.workerPath,
       logger: m => {
         if (m.status === 'recognizing text') {
@@ -442,9 +445,10 @@ async function startFullFlow() {
         }
       }
     });
-    const { data } = await worker.recognize(state.imageData);
-    await worker.terminate();
-    clearTimeout(ocrTimeout);
+    var ocrPromise = ocrWorker.recognize(state.imageData);
+    const { data } = await Promise.race([ocrPromise, ocrTimeout]);
+    await ocrWorker.terminate();
+    ocrWorker = null;
     ocrText = data.text || '';
     ocrQualityOk = ocrText.length >= 50;
     if (ocrQualityOk) {
@@ -453,7 +457,7 @@ async function startFullFlow() {
       document.getElementById('ocrProgress').textContent = '⚠️ OCR文字过少(' + ocrText.length + '字)';
     }
   } catch(e) {
-    clearTimeout(ocrTimeout);
+    if (ocrWorker) { try { ocrWorker.terminate(); } catch(_) {} }
     document.getElementById('ocrProgress').textContent = '⚠️ 本地OCR失败';
   }
 
@@ -654,37 +658,52 @@ function startComposite(type) {
 }
 async function handleCompositeFile(file) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const ids = {parent:'compositeParent',partner:'compositePartner',family:'compositeFamily'};
-    const card = document.getElementById(ids[compositeType]);
-    const status = document.getElementById(ids[compositeType]+'Status');
-    status.classList.remove('hidden');
-    status.textContent = '⏳ 识别中...';
-    const resp = await fetch(API_BASE + '/api/vision', {
+  const result = await new Promise(function(resolve) {
+    var r = new FileReader();
+    r.onload = function(e) { resolve(e.target.result); };
+    r.readAsDataURL(file);
+  });
+  const ids = {parent:'compositeParent',partner:'compositePartner',family:'compositeFamily'};
+  const status = document.getElementById(ids[compositeType]+'Status');
+  status.classList.remove('hidden');
+  status.textContent = '⏳ OCR识别中...';
+  try {
+    // 本地 Tesseract OCR
+    var w = await Tesseract.createWorker('chi_sim+eng', 1, {workerPath: (window.TESSERACT_CONFIG||{}).workerPath});
+    var ocrPromise = w.recognize(result);
+    var timeoutPromise = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('OCR超时')); }, 20000); });
+    var ocrResult = await Promise.race([ocrPromise, timeoutPromise]);
+    await w.terminate();
+    var ocrText = ocrResult.data.text || '';
+    if (ocrText.length < 20) throw new Error('OCR文字不足');
+    // 解析答案
+    status.textContent = '⏳ 解析答案...';
+    var parseResp = await fetch(API_BASE + '/api/parse-answers', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({image: e.target.result})
+      body: JSON.stringify({ocrText: ocrText})
     });
-    const data = await resp.json();
-    if (data.error) { status.textContent = '❌'; return; }
+    var parsed = await parseResp.json();
+    if (parsed.error) throw new Error(parsed.error);
+    // 生成合盘
     status.textContent = '⏳ 生成合盘报告...';
-    const compResp = await fetch(API_BASE + '/api/composite', {
+    var compResp = await fetch(API_BASE + '/api/composite', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
         type: compositeType,
         myPortrait: state.reports.portrait||'',
-        partnerAnswers: data.answers||{},
-        partnerHandwritten: data.handwritten_fields||{}
+        partnerAnswers: parsed.answers||{},
+        partnerHandwritten: parsed.handwritten_fields||{}
       })
     });
-    const compData = await compResp.json();
-    if (compData.error) { status.textContent = '❌'; return; }
+    var compData = await compResp.json();
+    if (compData.error) throw new Error(compData.error);
     document.getElementById('reportContent').classList.remove('loading');
     document.getElementById('reportContent').innerHTML = parseMD(compData.content);
     document.getElementById('reportCard').classList.remove('hidden');
     status.textContent = '✅';
-  };
-  reader.readAsDataURL(file);
+  } catch(e) {
+    status.textContent = '❌ ' + e.message;
+  }
 }
 
 function parseMD(md) {
