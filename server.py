@@ -29,6 +29,24 @@ def proxy_request(url, payload, headers, timeout=180):
         raise Exception(result["error"].get("message", json.dumps(result["error"])))
     return result
 
+def _trim_incomplete(text):
+    """Remove trailing incomplete sentence/fragment from LLM output."""
+    import re
+    text = text.rstrip()
+    # Remove trailing partial sentence (no ending punctuation)
+    last_newline = text.rfind('\n')
+    if last_newline > 0:
+        last_line = text[last_newline+1:].strip()
+        if last_line and len(last_line) < 20:
+            if not re.search(r'[。！？.!?」』"）\)】]$', last_line):
+                text = text[:last_newline].rstrip()
+    # Remove trailing markdown heading fragment like '## ' with no content after
+    text = re.sub(r'\n+#+\s*$', '', text)
+    # Remove trailing junk characters
+    text = re.sub(r'[，,、\s]*$', '', text)
+    return text
+
+
 class SEEHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         body = self._read_body()
@@ -585,7 +603,7 @@ OCR文字内容：
 # {{报告标题}}
 {structure}
 
-⚠️ 直接以 # 开头输出报告，不要加「好的」「以下是」等前缀。"""
+⚠️ 如果接近字数上限，宁可压缩中间章节，也要保证最后一句完整收尾。"""
             else:
                 history = '\n'.join([f"{'用户' if m['role']=='user' else '顾问'}: {m['content'][:300]}" for m in conversation[-8:]])
                 prompt = f"""你是一个 SEE 报告顾问。你的目标是帮助用户最终获得一份他们完全认可的、准确的报告。
@@ -620,12 +638,15 @@ OCR文字内容：
                 json.dumps({
                     "model": "deepseek-v4-pro",
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 3000 if action == 'summarize' else 400,
+                    "max_tokens": 4000 if action == 'summarize' else 400,
                     "temperature": 0.5
                 }).encode(),
                 {"Content-Type": "application/json", "Authorization": f"Bearer {DEEPSEEK_KEY}"}
             )
             reply = result["choices"][0]["message"]["content"]
+            # Post-process: trim trailing fragments for summarize
+            if action == 'summarize':
+                reply = _trim_incomplete(reply)
             usage = result.get("usage", {})
             self._json(200, {"reply": reply, "action": action, "usage": usage})
         except Exception as e:
