@@ -210,7 +210,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 
 <!-- ====== STEP 3: Report ====== -->
 <div class="card hidden" id="reportCard">
-  <h2><span class="step-badge">3</span> 你的解读报告 <button class="btn btn-outline btn-sm" onclick="downloadReport()" style="float:right;font-size:.75em">📥 下载报告</button></h2>
+  <h2><span class="step-badge">3</span> 你的解读报告 <span style="float:right;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="downloadReport()" style="font-size:.65em;padding:3px 8px">📥 MD</button><button class="btn btn-outline btn-sm" onclick="downloadPDF()" style="font-size:.65em;padding:3px 8px">🖨️ PDF</button></span></h2>
   <div class="report-content loading" id="reportContent">正在生成...</div>
 </div>
 
@@ -634,6 +634,27 @@ function parseMD(md) {
     .replace(/^(?!<)(.+)$/gm,'<p>$1</p>');
 }
 var REPORT_LABELS={portrait:'📋 思维画像报告',composite:'💫 合盘报告'};
+async function downloadPDF(){
+  var md='';
+  for(var i=0;i<state.reportOrder.length;i++){
+    var k=state.reportOrder[i];
+    if(state.reports[k]) md+='# '+(REPORT_LABELS[k]||'报告')+'\n\n'+state.reports[k]+'\n\n---\n\n';
+  }
+  if(!md) return;
+  try {
+    var resp = await fetch(API_BASE + '/api/export-pdf', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({title: 'SEE_思维画像报告', markdown: md})
+    });
+    if (!resp.ok) { var err = await resp.json().catch(function(){ return {error:'HTTP '+resp.status}; }); alert('PDF导出失败: '+(err.error||'')); return; }
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'SEE_思维画像报告.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) { alert('PDF导出失败: '+e.message); }
+}
+
 function downloadReport(){
   var md='';
   for(var i=0;i<state.reportOrder.length;i++){
@@ -643,9 +664,32 @@ function downloadReport(){
   if(!md) return;
   var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
   var url=URL.createObjectURL(blob);
+  var name='SEE_报告_'+new Date().toISOString().slice(0,10)+'.md';
+  var isMobile=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+  if (isMobile) {
+    if (navigator.canShare && navigator.share && window.File) {
+      try {
+        var file=new File([blob], name, {type:'text/markdown;charset=utf-8'});
+        if (navigator.canShare({files:[file]})) {
+          navigator.share({files:[file], title:name}).catch(function(){});
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+          return;
+        }
+      } catch(e) {}
+    }
+    var mobileLink=document.createElement('a');
+    mobileLink.href=url;
+    mobileLink.target='_blank';
+    mobileLink.rel='noopener';
+    document.body.appendChild(mobileLink);
+    mobileLink.click();
+    document.body.removeChild(mobileLink);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    return;
+  }
   var a=document.createElement('a');
-  a.href=url; a.download='SEE_报告_'+new Date().toISOString().slice(0,10)+'.md';
-  a.click();
+  a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 </script>

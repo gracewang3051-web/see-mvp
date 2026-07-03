@@ -47,6 +47,61 @@ def _trim_incomplete(text):
     return text
 
 
+def _generate_pdf(title, markdown):
+    """Generate Chinese PDF from markdown using fpdf."""
+    import io, re
+    from fpdf import FPDF
+
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.set_left_margin(15)
+    pdf.set_right_margin(15)
+    # Use STHeiti for Chinese support
+    font_path = '/System/Library/Fonts/STHeiti Light.ttc'
+    if not os.path.exists(font_path):
+        font_path = '/Library/Fonts/Arial Unicode.ttf'
+    pdf.add_font('CJK', '', font_path)
+    pdf.add_page()
+    pdf.set_auto_page_break(True, 20)
+
+    lines = markdown.split('\n')
+    for line in lines:
+        line = line.rstrip()
+        if not line:
+            pdf.ln(2)
+            continue
+        clean = re.sub(r'\*\*(.+?)\*\*', r'\1', line)
+        clean = re.sub(r'`(.+?)`', r'\1', clean)
+        clean = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', clean)
+        clean = re.sub(r'^#+\s*', '', clean)
+        clean = re.sub(r'^- ', '  - ', clean)
+        if not clean.strip():
+            continue
+        if line.startswith('# '):
+            pdf.set_font('CJK', '', 14)
+            pdf.ln(2)
+            pdf.cell(0, 8, clean, new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(2)
+        elif line.startswith('## '):
+            pdf.set_font('CJK', '', 11)
+            pdf.ln(2)
+            pdf.cell(0, 7, clean, new_x="LMARGIN", new_y="NEXT")
+        elif line.startswith('### '):
+            pdf.set_font('CJK', '', 10)
+            pdf.cell(0, 6.5, clean, new_x="LMARGIN", new_y="NEXT")
+        elif line.startswith('```'):
+            continue
+        elif len(clean) < 80:
+            pdf.set_font('CJK', '', 9)
+            pdf.cell(0, 5.5, clean, new_x="LMARGIN", new_y="NEXT")
+        else:
+            pdf.set_font('CJK', '', 9)
+            pdf.multi_cell(0, 5.5, clean)
+
+    buf = io.BytesIO()
+    pdf.output(buf)
+    return buf.getvalue()
+
+
 class SEEHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         body = self._read_body()
@@ -71,6 +126,8 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self._proxy_growth(body)
         elif self.path == '/api/composite':
             self._proxy_composite(body)
+        elif self.path == '/api/export-pdf':
+            self._export_pdf(body)
         else:
             self.send_error(404)
 
@@ -513,6 +570,27 @@ OCR文字内容：
             self._json(500, {"error": str(e)})
 
     # ===== Talent Chat（报告对话 + 整合）=====
+    def _export_pdf(self, body):
+        """服务端 PDF 导出（移动端 Safari 兼容）"""
+        try:
+            data = json.loads(body)
+            title = data.get('title', 'SEE报告')
+            markdown = data.get('markdown', '')
+            if not markdown:
+                self._json(400, {"error": "缺少报告内容"})
+                return
+
+            pdf_bytes = _generate_pdf(title, markdown)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/pdf')
+            self.send_header('Content-Disposition', f'attachment; filename="{title}.pdf"')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Length', str(len(pdf_bytes)))
+            self.end_headers()
+            self.wfile.write(pdf_bytes)
+        except Exception as e:
+            self._json(500, {"error": str(e), "stage": "pdf"})
+
     def _proxy_talent_chat(self, body):
         """对话式报告咨询。基于知识库 + 画像身份，帮助用户产出认可的最终报告。"""
         try:
