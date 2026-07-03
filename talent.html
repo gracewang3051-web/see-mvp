@@ -415,7 +415,15 @@ async function startFullFlow() {
     document.getElementById('ocrProgress').textContent = '⚠️ 本地OCR失败，尝试云端识别...';
   }
 
-  // 兜底：本地OCR质量不足/失败 → 云端 /api/ocr
+  // 兜底：本地OCR质量不足/失败 → 云端 /api/ocr（桌面端）
+  var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  if (!ocrQualityOk && state.imageData && isMobile) {
+    // 手机端云端OCR目前不可用，直接提示
+    document.getElementById('ocrProgress').textContent = '📱 手机端暂不支持自动OCR，请使用手动输入';
+    document.getElementById('reportContent').textContent = '📱 手机端暂不支持拍照识别，请点击下方「✏️ 手动输入」填写报告内容。';
+    btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
+    return;
+  }
   if (!ocrQualityOk && state.imageData) {
     try {
       btn.textContent = '☁️ 云端OCR...';

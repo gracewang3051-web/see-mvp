@@ -445,6 +445,15 @@ async function startRecognition() {
     state.recognitionDone = true;
     showResults();
   } catch(e) {
+    var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+    // 手机端云端OCR目前不可用，直接引导手动输入
+    if (isMobile) {
+      status.textContent = '📱 手机端暂不支持自动识别，请使用下方手动输入填写答案';
+      status.style.color = 'var(--accent)';
+      toggleManual();
+      btn.disabled = false; btn.textContent = '🔍 重新识别';
+      return;
+    }
     status.textContent = '⚠️ 本地识别不足，尝试云端识别...';
     // 兜底：调用 /api/vision 云端识别
     if (state.imageData) {
