@@ -709,10 +709,16 @@ async function downloadServerPDF(md, filename) {
     }
     var blob = await resp.blob();
     var url = URL.createObjectURL(blob);
+    var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+    if (isMobile) {
+      window.open(url, '_blank');
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+      return;
+    }
     var a = document.createElement('a');
     a.href = url; a.download = filename + '.pdf';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
   } catch(e) {
     alert('PDF导出失败: ' + e.message);
   }

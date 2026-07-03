@@ -649,9 +649,15 @@ async function downloadPDF(){
     if (!resp.ok) { var err = await resp.json().catch(function(){ return {error:'HTTP '+resp.status}; }); alert('PDF导出失败: '+(err.error||'')); return; }
     var blob = await resp.blob();
     var url = URL.createObjectURL(blob);
+    var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+    if (isMobile) {
+      window.open(url, '_blank');
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+      return;
+    }
     var a = document.createElement('a'); a.href = url; a.download = 'SEE_思维画像报告.pdf';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
   } catch(e) { alert('PDF导出失败: '+e.message); }
 }
 
