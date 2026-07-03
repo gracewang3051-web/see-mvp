@@ -533,8 +533,22 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 round(w.get('location', {}).get('top', 0) / 10) * 10,  # Y→10px容差同行
                 w.get('location', {}).get('left', 0)  # X→左到右
             ))
+            import re
             lines = [w.get('words', '') for w in sorted_words if w.get('words')]
-            text = '\n'.join(lines).strip()
+            # 合并：中文标签行后紧跟数字/纹型行 → 合并为一行
+            merged = []
+            i = 0
+            while i < len(lines):
+                cur = lines[i].strip()
+                nxt = lines[i+1].strip() if i+1 < len(lines) else ''
+                # 下一行是纯数字/纹型（含Ws/Wt/Ls等）→ 合并
+                if nxt and re.search(r'[\d]', nxt) and re.match(r'^[\d\sWwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUu+-]+$', nxt):
+                    merged.append(cur + '  ' + nxt)
+                    i += 2
+                else:
+                    merged.append(cur)
+                    i += 1
+            text = '\n'.join(merged).strip()
             self._json(200, {
                 "text": text,
                 "lines": lines,
