@@ -55,19 +55,21 @@ def _generate_pdf(title, markdown):
     pdf = FPDF(orientation='P', unit='mm', format='A4')
     pdf.set_left_margin(15)
     pdf.set_right_margin(15)
-    # Chinese font: env var → macOS common paths → Linux common paths → bundled
-    font_path = os.environ.get('SEE_FONT_PATH', '')
-    if not font_path or not os.path.exists(font_path):
-        candidates = [
-            '/System/Library/Fonts/STHeiti Light.ttc',
-            '/Library/Fonts/Arial Unicode.ttf',
-            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-            '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf',
-            '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-        ]
-        font_path = next((p for p in candidates if os.path.exists(p)), '')
+    # Chinese font: bundled → env var → system paths
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(project_root, 'fonts', 'CJK.ttf'),
+        os.path.join(project_root, 'fonts', 'CJK.ttc'),
+        os.environ.get('SEE_FONT_PATH', ''),
+        '/System/Library/Fonts/STHeiti Light.ttc',
+        '/Library/Fonts/Arial Unicode.ttf',
+        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+        '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    ]
+    font_path = next((p for p in candidates if p and os.path.exists(p)), '')
     if not font_path:
-        raise RuntimeError('No Chinese font found. Set SEE_FONT_PATH env var or install a CJK font.')
+        raise RuntimeError('No CJK font found. Place a Chinese font at fonts/CJK.ttf, or set SEE_FONT_PATH, or install a system CJK font.')
     pdf.add_font('CJK', '', font_path)
     pdf.add_page()
     pdf.set_auto_page_break(True, 20)
