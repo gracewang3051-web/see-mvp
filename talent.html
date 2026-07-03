@@ -162,7 +162,7 @@ window.TESSERACT_CONFIG = {
     <label style="font-size:.85em;color:var(--muted);white-space:nowrap">🔑 用户码</label>
     <input type="text" id="userCode" placeholder="输入你的用户码" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.85em;background:#1a1a38;color:#e0dcd4;flex:1;max-width:240px" onchange="loadUserReports()">
     <button class="btn btn-outline btn-sm" onclick="loadUserReports()">加载</button>
-    <span style="font-size:.75em;color:var(--muted)">输入后报告自动保存，刷新不丢失</span>
+    <span style="font-size:.75em;color:var(--muted)">报告保存在当前设备浏览器，刷新不丢失；跨设备请重新生成或下载保存</span>
   </div>
   <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" style="flex:1;min-width:200px;position:relative;overflow:hidden">
@@ -205,7 +205,7 @@ window.TESSERACT_CONFIG = {
     <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
   </div>
   <div style="margin-top:8px;padding:10px 14px;background:#1a1a35;border:1px solid #3a3a55;border-radius:10px">
-    <div style="font-size:.78em;color:var(--muted);margin-bottom:6px">📝 或直接粘贴报告文本生成（无需拍照）</div>
+    <div style="font-size:.78em;color:var(--muted);margin-bottom:6px">📝 或直接粘贴报告文本生成（📱 手机端推荐：拍照识别可能超时，请优先使用此方式）</div>
     <textarea id="directOcrInput" placeholder="在此粘贴先天测评报告的完整文字内容..." style="width:100%;min-height:80px;padding:8px 10px;border-radius:6px;border:1.5px solid #3a3a55;background:#161630;color:#e0dcd4;font-size:.8em;line-height:1.5;resize:vertical;font-family:monospace"></textarea>
     <button class="btn btn-outline btn-sm" onclick="generateFromText()" style="margin-top:6px;font-size:.75em">📄 用文本生成报告</button>
   </div>
@@ -213,7 +213,7 @@ window.TESSERACT_CONFIG = {
 
 <!-- ====== STEP 2: Report ====== -->
 <div class="card hidden" id="reportCard">
-  <h2><span class="step-badge">2</span> 你的解读报告 <span style="float:right;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="downloadReport(null,'doc')" style="font-size:.65em;padding:3px 8px">📥 Word</button><button class="btn btn-outline btn-sm" onclick="downloadReport(null,'pdf')" style="font-size:.65em;padding:3px 8px">🖨️ PDF</button></span></h2>
+  <h2><span class="step-badge">2</span> 你的解读报告 <span style="float:right;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="downloadReport(null,'doc')" style="font-size:.65em;padding:3px 8px">📥 Word</button><button class="btn btn-outline btn-sm" onclick="downloadReport(null,'pdf')" style="font-size:.65em;padding:3px 8px">🖨️ PDF</button><span style="font-size:.6em;color:var(--muted)">📱推荐</span></span></h2>
   <div id="ocrProgress" style="font-size:.8em;color:var(--muted);margin-bottom:8px"></div>
   <div class="report-content loading" id="reportContent">正在生成...</div>
 </div>
@@ -373,6 +373,40 @@ function handleFile(file) {
   reader.readAsDataURL(file);
 }
 
+async function runTesseractWithTimeout(imageData, onLog, timeoutMs) {
+  var cfg = window.TESSERACT_CONFIG || {};
+  var worker = null;
+  var timedOut = false;
+  var timer = null;
+  var task = (async function() {
+    var options = {
+      workerPath: cfg.workerPath,
+      langPath: cfg.langPath
+    };
+    if (onLog) options.logger = onLog;
+    worker = await Tesseract.createWorker('chi_sim+eng', 1, options);
+    if (timedOut) {
+      try { await worker.terminate(); } catch(_) {}
+      throw new Error('OCR超时(20s)');
+    }
+    return await worker.recognize(imageData);
+  })();
+  var timeout = new Promise(function(_, reject) {
+    timer = setTimeout(function() {
+      timedOut = true;
+      if (worker) { try { worker.terminate(); } catch(_) {} }
+      reject(new Error('OCR超时(20s)'));
+    }, timeoutMs || 20000);
+  });
+  try {
+    return await Promise.race([task, timeout]);
+  } finally {
+    clearTimeout(timer);
+    if (worker) { try { await worker.terminate(); } catch(_) {} }
+    task.catch(function(){});
+  }
+}
+
 async function generateFromText() {
   var text = document.getElementById('directOcrInput').value.trim();
   if (!text) { alert('请先粘贴报告文本'); return; }
@@ -427,28 +461,17 @@ async function startFullFlow() {
 
   let ocrText = '';
   let ocrQualityOk = false;
-  var ocrWorker = null;
-  var ocrTimeout = new Promise(function(_, reject) {
-    setTimeout(function() { reject(new Error('OCR超时(20s)')); }, 20000);
-  });
+  var ocrError = '';
   try {
-    var cfg = window.TESSERACT_CONFIG || {};
-    ocrWorker = await Tesseract.createWorker('chi_sim+eng', 1, {
-      workerPath: cfg.workerPath,
-      logger: m => {
-        if (m.status === 'recognizing text') {
-          btn.textContent = '🔍 识别 ' + Math.round(m.progress * 100) + '%';
-        } else if (m.status === 'loading tesseract core' || m.status === 'loading language traineddata') {
-          btn.textContent = '⏳ 加载引擎...';
-        } else {
-          btn.textContent = '⏳ ' + m.status;
-        }
+    const { data } = await runTesseractWithTimeout(state.imageData, m => {
+      if (m.status === 'recognizing text') {
+        btn.textContent = '🔍 识别 ' + Math.round(m.progress * 100) + '%';
+      } else if (m.status === 'loading tesseract core' || m.status === 'loading language traineddata') {
+        btn.textContent = '⏳ 加载引擎...';
+      } else {
+        btn.textContent = '⏳ ' + m.status;
       }
     });
-    var ocrPromise = ocrWorker.recognize(state.imageData);
-    const { data } = await Promise.race([ocrPromise, ocrTimeout]);
-    await ocrWorker.terminate();
-    ocrWorker = null;
     ocrText = data.text || '';
     ocrQualityOk = ocrText.length >= 50;
     if (ocrQualityOk) {
@@ -457,15 +480,15 @@ async function startFullFlow() {
       document.getElementById('ocrProgress').textContent = '⚠️ OCR文字过少(' + ocrText.length + '字)';
     }
   } catch(e) {
-    if (ocrWorker) { try { ocrWorker.terminate(); } catch(_) {} }
-    document.getElementById('ocrProgress').textContent = '⚠️ 本地OCR失败';
+    ocrError = e.message || '本地OCR失败';
+    document.getElementById('ocrProgress').textContent = '⚠️ ' + ocrError;
   }
 
   // OCR 质量不足或失败 → 引导手动输入（无云端兜底）
   if (!ocrQualityOk) {
     var msg = ocrText.length > 0
       ? '❌ OCR识别文字过少(' + ocrText.length + '字)，请重新拍照或使用手动输入。'
-      : '❌ 文字识别失败，请重新拍照或使用手动输入。';
+      : '❌ ' + (ocrError || '文字识别失败') + '，请重新拍照或使用手动输入。';
     document.getElementById('ocrProgress').textContent = msg;
     document.getElementById('reportContent').textContent = msg;
     btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
@@ -668,12 +691,7 @@ async function handleCompositeFile(file) {
   status.classList.remove('hidden');
   status.textContent = '⏳ OCR识别中...';
   try {
-    // 本地 Tesseract OCR
-    var w = await Tesseract.createWorker('chi_sim+eng', 1, {workerPath: (window.TESSERACT_CONFIG||{}).workerPath});
-    var ocrPromise = w.recognize(result);
-    var timeoutPromise = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('OCR超时')); }, 20000); });
-    var ocrResult = await Promise.race([ocrPromise, timeoutPromise]);
-    await w.terminate();
+    var ocrResult = await runTesseractWithTimeout(result, null);
     var ocrText = ocrResult.data.text || '';
     if (ocrText.length < 20) throw new Error('OCR文字不足');
     // 解析答案

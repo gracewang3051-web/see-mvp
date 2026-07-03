@@ -153,7 +153,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
     <label style="font-size:.85em;color:var(--muted);white-space:nowrap">🔑 用户码</label>
     <input type="text" id="userCode" placeholder="输入你的用户码" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.85em;background:#1a1a38;color:#e0dcd4;flex:1;max-width:240px" onchange="loadUserReports()">
     <button class="btn btn-outline btn-sm" onclick="loadUserReports()">加载</button>
-    <span style="font-size:.75em;color:var(--muted)">报告自动保存，刷新不丢失</span>
+    <span style="font-size:.75em;color:var(--muted)">报告保存在当前设备浏览器，刷新不丢失；跨设备请重新生成或下载</span>
   </div>
   <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
     <div class="icon">📸</div>
@@ -409,31 +409,48 @@ function handleFile(file) {
 }
 
 // ============ RECOGNITION ============
+async function runTesseractWithTimeout(imageData, onLog, timeoutMs) {
+  var cfg = window.TESSERACT_CONFIG || {};
+  var worker = null;
+  var timedOut = false;
+  var timer = null;
+  var task = (async function() {
+    var options = { workerPath: cfg.workerPath };
+    if (onLog) options.logger = onLog;
+    worker = await Tesseract.createWorker('chi_sim+eng', 1, options);
+    if (timedOut) {
+      try { await worker.terminate(); } catch(_) {}
+      throw new Error('OCR超时(20s)');
+    }
+    return await worker.recognize(imageData);
+  })();
+  var timeout = new Promise(function(_, reject) {
+    timer = setTimeout(function() {
+      timedOut = true;
+      if (worker) { try { worker.terminate(); } catch(_) {} }
+      reject(new Error('OCR超时(20s)'));
+    }, timeoutMs || 20000);
+  });
+  try {
+    return await Promise.race([task, timeout]);
+  } finally {
+    clearTimeout(timer);
+    if (worker) { try { await worker.terminate(); } catch(_) {} }
+    task.catch(function(){});
+  }
+}
+
 async function startRecognition() {
   const btn = document.getElementById('btnRecognize');
   const status = document.getElementById('uploadStatus');
   btn.disabled = true; btn.textContent = '⏳ 加载OCR引擎...';
   status.textContent = '';
-  var ocrDone = false;
-  var worker = null;
-  var ocrTimeout = new Promise(function(_, reject) {
-    setTimeout(function() { reject(new Error('OCR超时(20s)')); }, 20000);
-  });
   try {
-    var cfg = window.TESSERACT_CONFIG || {};
-    worker = await Tesseract.createWorker('chi_sim+eng', 1, {
-      workerPath: cfg.workerPath,
-      logger: m => {
-        if (m.status === 'recognizing text') btn.textContent = '🔍 识别 ' + Math.round(m.progress*100) + '%';
-        else if (m.status && m.status.includes('loading')) btn.textContent = '⏳ 加载引擎...';
-      }
+    const { data: ocrData } = await runTesseractWithTimeout(state.imageData, m => {
+      if (m.status === 'recognizing text') btn.textContent = '🔍 识别 ' + Math.round(m.progress*100) + '%';
+      else if (m.status && m.status.includes('loading')) btn.textContent = '⏳ 加载引擎...';
     });
-    var ocrPromise = worker.recognize(state.imageData);
-    const { data: ocrData } = await Promise.race([ocrPromise, ocrTimeout]);
-    await worker.terminate();
-    worker = null;
     var ocrText = ocrData.text || '';
-    ocrDone = true;
     status.textContent = '✅ OCR完成: ' + ocrText.length + '字';
     btn.textContent = '🧠 解析答案...';
     var resp = await fetch(API_BASE + '/api/parse-answers', {
@@ -451,7 +468,6 @@ async function startRecognition() {
     state.recognitionDone = true;
     showResults();
   } catch(e) {
-    if (worker) { try { worker.terminate(); } catch(_) {} }
     // 识别失败 → 引导手动输入（无云端兜底）
     status.textContent = '❌ 自动识别失败，请使用手动输入: ' + e.message;
     status.style.color = 'var(--danger)';

@@ -938,8 +938,17 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     ThreadingHTTPServer.allow_reuse_address = True
+    import socket
+    lan_ip = ''
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        lan_ip = s.getsockname()[0]
+        s.close()
+    except: pass
     server = ThreadingHTTPServer(('0.0.0.0', 8088), SEEHandler)
-    print('🔒 SEE 服务端启动 (多线程): http://0.0.0.0:8088')
+    print('🔒 SEE 服务端启动 (多线程): http://127.0.0.1:8088')
+    if lan_ip: print(f'   📱 手机访问: http://{lan_ip}:8088')
     print('   API Key 仅在服务端，前端不可见')
     try:
         server.serve_forever()
