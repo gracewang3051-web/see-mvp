@@ -634,31 +634,23 @@ function parseMD(md) {
     .replace(/^(?!<)(.+)$/gm,'<p>$1</p>');
 }
 var REPORT_LABELS={portrait:'📋 思维画像报告',composite:'💫 合盘报告'};
-async function downloadPDF(){
+function downloadPDF(){
   var md='';
   for(var i=0;i<state.reportOrder.length;i++){
     var k=state.reportOrder[i];
     if(state.reports[k]) md+='# '+(REPORT_LABELS[k]||'报告')+'\n\n'+state.reports[k]+'\n\n---\n\n';
   }
   if(!md) return;
-  try {
-    var resp = await fetch(API_BASE + '/api/export-pdf', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({title: 'SEE_思维画像报告', markdown: md})
-    });
-    if (!resp.ok) { var err = await resp.json().catch(function(){ return {error:'HTTP '+resp.status}; }); alert('PDF导出失败: '+(err.error||'')); return; }
-    var blob = await resp.blob();
-    var url = URL.createObjectURL(blob);
-    var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-    if (isMobile) {
-      window.open(url, '_blank');
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
-      return;
-    }
-    var a = document.createElement('a'); a.href = url; a.download = 'SEE_思维画像报告.pdf';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
-  } catch(e) { alert('PDF导出失败: '+e.message); }
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = API_BASE + '/api/export-pdf';
+  form.target = '_blank';
+  form.style.display = 'none';
+  var t = document.createElement('input'); t.name='title'; t.value='SEE_思维画像报告'; form.appendChild(t);
+  var m = document.createElement('input'); m.name='markdown'; m.value=md; form.appendChild(m);
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
 }
 
 function downloadReport(){

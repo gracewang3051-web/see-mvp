@@ -580,9 +580,15 @@ OCR文字内容：
 
     # ===== Talent Chat（报告对话 + 整合）=====
     def _export_pdf(self, body):
-        """服务端 PDF 导出（移动端 Safari 兼容）"""
+        """服务端 PDF 导出（移动端 Safari 兼容，支持 JSON + form POST）"""
         try:
-            data = json.loads(body)
+            # Support both JSON and form-encoded POST
+            if body and body[0:1] == b'{':
+                data = json.loads(body)
+            else:
+                from urllib.parse import parse_qs
+                params = parse_qs(body.decode('utf-8') if isinstance(body, bytes) else body)
+                data = {k: v[0] if isinstance(v, list) else v for k, v in params.items()}
             title = data.get('title', 'SEE报告')
             markdown = data.get('markdown', '')
             if not markdown:
