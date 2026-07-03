@@ -455,18 +455,19 @@ async function startRecognition() {
         });
         var vData = await vResp.json();
         var vAnswers = vData.answers || {};
-        if (vResp.ok && !vData.error && Object.keys(vAnswers).length >= 20) {
+        var vValidKeys = Object.keys(vAnswers).filter(function(k){ return /^[ABCD]$/.test(vAnswers[k]); });
+        if (vResp.ok && !vData.error && vValidKeys.length >= 20) {
           state.answers = vAnswers;
           state.handwritten = vData.handwritten_fields || {};
           state.confidence = vData.confidence || {overall:0, items:[]};
           state.recognitionDone = true;
-          status.textContent = '✅ 云端识别完成(' + Object.keys(vAnswers).length + '/25题)';
+          status.textContent = '✅ 云端识别完成(' + vValidKeys.length + '/25题)';
           status.style.color = '';
           showResults();
           btn.disabled = false; btn.textContent = '🔍 重新识别';
           return;
         }
-        throw new Error(vData.error || ('答案不足(' + Object.keys(vAnswers).length + '/25)'));
+        throw new Error(vData.error || ('有效答案不足(' + vValidKeys.length + '/25)'));
       } catch(vErr) {
         status.textContent = '❌ 云端识别也失败: ' + vErr.message;
       }
