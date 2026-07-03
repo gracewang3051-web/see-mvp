@@ -439,8 +439,9 @@ async function startRecognition() {
     state.answers = parsed.answers || {};
     state.handwritten = parsed.handwritten_fields || {};
     state.confidence = parsed.confidence || {overall:0, items:[]};
-    // 答案不足 20 题 → 触发兜底
-    if (Object.keys(state.answers).length < 20) throw new Error('答案不足(' + Object.keys(state.answers).length + '/25)');
+    // 答案值合法性校验
+    var validKeys = Object.keys(state.answers).filter(function(k){ return /^[ABCD]$/.test(state.answers[k]); });
+    if (validKeys.length < 20) throw new Error('有效答案不足(' + validKeys.length + '/25)');
     state.recognitionDone = true;
     showResults();
   } catch(e) {
