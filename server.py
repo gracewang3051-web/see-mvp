@@ -783,15 +783,14 @@ OCR文字内容：
                 json.dumps({
                     "model": "deepseek-v4-pro",
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 4000 if action == 'summarize' else 400,
+                    "max_tokens": 4000 if action == 'summarize' else 800,
                     "temperature": 0.5
                 }).encode(),
                 {"Content-Type": "application/json", "Authorization": f"Bearer {DEEPSEEK_KEY}"}
             )
             reply = result["choices"][0]["message"]["content"]
-            # Post-process: trim trailing fragments for summarize
-            if action == 'summarize':
-                reply = _trim_incomplete(reply)
+            # Post-process: trim trailing fragments
+            reply = _trim_incomplete(reply)
             usage = result.get("usage", {})
             self._json(200, {"reply": reply, "action": action, "usage": usage})
         except Exception as e:
