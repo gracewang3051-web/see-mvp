@@ -439,10 +439,12 @@ async function startRecognition() {
     state.answers = parsed.answers || {};
     state.handwritten = parsed.handwritten_fields || {};
     state.confidence = parsed.confidence || {overall:0, items:[]};
+    // 答案不足 20 题 → 触发兜底
+    if (Object.keys(state.answers).length < 20) throw new Error('答案不足(' + Object.keys(state.answers).length + '/25)');
     state.recognitionDone = true;
     showResults();
   } catch(e) {
-    status.textContent = '⚠️ 本地识别失败，尝试云端识别...';
+    status.textContent = '⚠️ 本地识别不足，尝试云端识别...';
     // 兜底：调用 /api/vision 云端识别
     if (state.imageData) {
       try {
@@ -451,18 +453,19 @@ async function startRecognition() {
           body: JSON.stringify({image: state.imageData})
         });
         var vData = await vResp.json();
-        if (vResp.ok && !vData.error && vData.answers) {
-          state.answers = vData.answers || {};
+        var vAnswers = vData.answers || {};
+        if (vResp.ok && !vData.error && Object.keys(vAnswers).length >= 20) {
+          state.answers = vAnswers;
           state.handwritten = vData.handwritten_fields || {};
           state.confidence = vData.confidence || {overall:0, items:[]};
           state.recognitionDone = true;
-          status.textContent = '✅ 云端识别完成';
+          status.textContent = '✅ 云端识别完成(' + Object.keys(vAnswers).length + '/25题)';
           status.style.color = '';
           showResults();
           btn.disabled = false; btn.textContent = '🔍 重新识别';
           return;
         }
-        throw new Error(vData.error || '云端识别失败');
+        throw new Error(vData.error || ('答案不足(' + Object.keys(vAnswers).length + '/25)'));
       } catch(vErr) {
         status.textContent = '❌ 云端识别也失败: ' + vErr.message;
       }

@@ -424,8 +424,9 @@ async function startFullFlow() {
         body: JSON.stringify({image: state.imageData})
       });
       var ocrData = await ocrResp.json();
-      if (ocrResp.ok && !ocrData.error && ocrData.text) {
-        ocrText = ocrData.text;
+      var rawText = (ocrData.text || '').trim();
+      if (ocrResp.ok && !ocrData.error && rawText.length >= 50) {
+        ocrText = rawText;
         document.getElementById('ocrProgress').textContent = '✅ 云端OCR: ' + ocrText.length + '字';
       } else {
         document.getElementById('ocrProgress').textContent = '❌ 云端OCR也失败: ' + (ocrData.error || '无文字');
