@@ -24,7 +24,16 @@ def proxy_request(url, payload, headers, timeout=180):
     resp = conn.getresponse()
     data = resp.read().decode()
     conn.close()
-    result = json.loads(data)
+    if resp.status != 200:
+        snippet = data.strip().replace('\n', ' ')[:300]
+        raise Exception(f"upstream HTTP {resp.status} {resp.reason}: {snippet or 'empty response'}")
+    if not data.strip():
+        raise Exception("upstream returned empty response")
+    try:
+        result = json.loads(data)
+    except json.JSONDecodeError as e:
+        snippet = data.strip().replace('\n', ' ')[:300]
+        raise Exception(f"upstream returned non-JSON response: {snippet or str(e)}")
     if "error" in result:
         raise Exception(result["error"].get("message", json.dumps(result["error"])))
     return result
@@ -33,16 +42,46 @@ def _trim_incomplete(text):
     """Remove trailing incomplete sentence/fragment from LLM output."""
     import re
     text = text.rstrip()
-    # Remove trailing partial sentence (no ending punctuation)
-    last_newline = text.rfind('\n')
-    if last_newline > 0:
-        last_line = text[last_newline+1:].strip()
-        if last_line and len(last_line) < 20:
-            if not re.search(r'[。！？.!?」』"）\)】]$', last_line):
-                text = text[:last_newline].rstrip()
-    # Remove trailing markdown heading fragment like '## ' with no content after
+    if not text:
+        return text
+
+    # Remove dangling markdown markers at the end.
+    text = re.sub(r'(?:\n\s*)+(?:#+\s*|[-*]\s*)$', '', text)
     text = re.sub(r'\n+#+\s*$', '', text)
-    # Remove trailing junk characters
+
+    # If the final line looks like a fragment, drop it.
+    lines = text.split('\n')
+    while len(lines) > 1:
+        last = lines[-1].strip()
+        if not last:
+            lines.pop()
+            continue
+        if len(last) <= 60 and not re.search(r'[。！？.!?；;：:」』"）\)】]$', last):
+            lines.pop()
+            continue
+        break
+    text = '\n'.join(lines).rstrip()
+
+    # If the text still ends without a terminal mark, trim back to the last
+    # complete sentence boundary near the end.
+    if text and not re.search(r'[。！？.!?；;：:」』"）\)】]$', text):
+        tail = text[-240:]
+        boundary = max(
+            tail.rfind('。'),
+            tail.rfind('！'),
+            tail.rfind('？'),
+            tail.rfind('.'),
+            tail.rfind('!'),
+            tail.rfind('?'),
+            tail.rfind('；'),
+            tail.rfind(';'),
+            tail.rfind('：'),
+            tail.rfind(':'),
+        )
+        if boundary >= 0:
+            text = text[:-len(tail) + boundary + 1].rstrip()
+
+    # Remove trailing junk characters.
     text = re.sub(r'[，,、\s]*$', '', text)
     return text
 
@@ -153,6 +192,9 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
     def _proxy_vision(self, body):
         """代理智谱 GLM-4V-Flash 识图"""
+        if not BAOSI_KEY:
+            self._json(503, {"error": "服务未配置 BAOSI_KEY，请联系管理员", "stage": "config"})
+            return
         try:
             data = json.loads(body)
             image_b64 = data.get('image', '').split(',')[-1]  # strip data: prefix
@@ -375,6 +417,9 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
     # ===== OCR（文字识别）=====
     def _proxy_ocr(self, body):
+        if not BAOSI_KEY:
+            self._json(503, {"error": "服务未配置 BAOSI_KEY，请联系管理员", "stage": "config"})
+            return
         try:
             data = json.loads(body)
             image_b64 = data.get('image', '').split(',')[-1]
@@ -670,7 +715,7 @@ OCR文字内容：
                 else:
                     structure = """## 一、孩子的学习风格\n## 二、主性格画像\n## 三、最佳学习通道\n## 四、内驱方式\n## 五、行为特点\n## 六、沟通特点\n## 七、给家长的建议\n## 八、个性化补充（基于讨论中确认的补充信息）"""
 
-                prompt = f"""你是一个 SEE 报告整合专家。将用户的个性化补充和修正整合进原始报告。
+                prompt = f"""你是一个 SEE 报告整合专家。你的任务不是重新写一份泛化报告，而是把「进一步讨论」里已经确认的补充信息、修正意见和个人背景，稳稳地并入原始报告。
 
 ## 你的身份
 {persona_guide}
@@ -685,23 +730,25 @@ OCR文字内容：
 {json.dumps(conversation, ensure_ascii=False)}
 
 ## 任务
-生成一份融合了用户个性化补充的最终报告。只输出报告正文，不要前言后记。
+生成一份融合了用户个性化补充的最终报告。只输出报告正文，不要前言后记、不要解释过程、不要额外点评。
 
 要求：
-1. 保留原始报告的数据和结论，更新用户修正的部分
-2. 将讨论中用户确认的个人背景、偏好、补充信息融入对应章节
-3. 新增「个性化补充」章节汇总用户的个人化内容
-4. 语言风格与原始报告保持一致
-5. {persona_guide}
+1. 保留原始报告的核心结论和章节顺序，只更新用户明确修正过的部分
+2. 只吸收讨论中已经确认的内容；不确定的信息要保守表达，不要补编
+3. 将用户的年龄、对象、偏好、补充背景、修正意见融入对应章节，不要堆在一个段落里
+4. 新增「个性化补充」章节时，写成归纳总结，不要复述对话
+5. 如果原始报告是孩子/家长视角，就沿用该视角；如果是本人视角，就沿用本人视角
+6. 语言风格与原始报告保持一致，句子短一些，段落清楚，避免收尾被拉成长尾句
+7. {persona_guide}
 
 报告结构（必须严格遵循）：
 # {{报告标题}}
 {structure}
 
-⚠️ 如果接近字数上限，宁可压缩中间章节，也要保证最后一句完整收尾。"""
+⚠️ 如果内容较多，优先压缩重复说明和例子，保留结论完整收尾，不要在末尾留下半句话。"""
             else:
                 history = '\n'.join([f"{'用户' if m['role']=='user' else '顾问'}: {m['content'][:300]}" for m in conversation[-8:]])
-                prompt = f"""你是一个 SEE 报告顾问。你的目标是帮助用户最终获得一份他们完全认可的、准确的报告。
+                prompt = f"""你是一个 SEE 报告顾问。当前这轮对话不是闲聊，而是「进一步讨论」：用户通常在这里补充背景、修正结论、确认表述，目标是把这些信息整合回最终报告。
 
 ## 你的身份
 {persona_guide}
@@ -720,13 +767,15 @@ OCR文字内容：
 {user_message}
 
 ## 你的回应规则
-1. 自然对话，先理解用户，再给出有实质内容的回应
-2. 如果用户指出报告中有不准确的地方，认真考虑并给出修正
-3. 每次回复 100-250 字，聚焦、自然，像顾问对话而非机器人
-4. 不要堆砌术语。除非上方纹型数据或当前报告明确列出，否则不要提具体纹型编码；优先用行为语言解释，不用编码堆砌。
-5. 对「报什么班」类问题：给出能力方向建议而非具体机构，使用「可优先考虑/可以尝试」而非「一定/必须」
-6. 当用户说「可以整合」「出报告」「生成」时，回复「好的，正在整合...」并停止
-7. ⚠️ 不要在回复末尾添加「💡 如果满意...」等固定广告语。前端已有按钮。"""
+1. 先判断用户这句话属于哪类：补充信息、修正错误、追问解释、还是请求整合
+2. 如果是补充或修正，先简短确认你接收到了什么，再说明会把它并入最终报告的哪个部分
+3. 如果是追问解释，直接用当前报告和知识库回答，不要绕远，也不要发散成长篇
+4. 每次回复 80-220 字，尽量一两段，像顾问对话，不像模板答案
+5. 不要堆砌术语。除非上方纹型数据或当前报告明确列出，否则不要提具体纹型编码；优先用行为语言解释，不用编码堆砌
+6. 对「报什么班」类问题：给出能力方向建议而非具体机构，使用「可优先考虑/可以尝试」而非「一定/必须」
+7. 如果用户说「可以整合」「出报告」「生成」，直接回复「好的，正在整合...」，不要继续展开
+8. 不要在回复末尾添加「💡 如果满意...」等固定广告语。前端已有按钮
+9. 结尾必须是完整句子，不要留下半截句、未完成列表或无意义尾巴"""
 
             result = proxy_request(
                 "https://api.deepseek.com/v1/chat/completions",

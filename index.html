@@ -442,7 +442,31 @@ async function startRecognition() {
     state.recognitionDone = true;
     showResults();
   } catch(e) {
-    status.textContent = '❌ 识别失败，请使用手动输入: ' + e.message;
+    status.textContent = '⚠️ 本地识别失败，尝试云端识别...';
+    // 兜底：调用 /api/vision 云端识别
+    if (state.imageData) {
+      try {
+        var vResp = await fetch(API_BASE + '/api/vision', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({image: state.imageData})
+        });
+        var vData = await vResp.json();
+        if (vResp.ok && !vData.error && vData.answers) {
+          state.answers = vData.answers || {};
+          state.handwritten = vData.handwritten_fields || {};
+          state.confidence = vData.confidence || {overall:0, items:[]};
+          state.recognitionDone = true;
+          status.textContent = '✅ 云端识别完成';
+          status.style.color = '';
+          showResults();
+          btn.disabled = false; btn.textContent = '🔍 重新识别';
+          return;
+        }
+        throw new Error(vData.error || '云端识别失败');
+      } catch(vErr) {
+        status.textContent = '❌ 云端识别也失败: ' + vErr.message;
+      }
+    }
     status.style.color = 'var(--danger)';
     toggleManual();
   }
@@ -645,12 +669,13 @@ function downloadPDF(){
   form.method = 'POST';
   form.action = API_BASE + '/api/export-pdf';
   form.target = '_blank';
+  form.acceptCharset = 'UTF-8';
   form.style.display = 'none';
   var t = document.createElement('input'); t.name='title'; t.value='SEE_思维画像报告'; form.appendChild(t);
   var m = document.createElement('input'); m.name='markdown'; m.value=md; form.appendChild(m);
   document.body.appendChild(form);
   form.submit();
-  document.body.removeChild(form);
+  setTimeout(function(){ if (form.parentNode) form.parentNode.removeChild(form); }, 1500);
 }
 
 function downloadReport(){

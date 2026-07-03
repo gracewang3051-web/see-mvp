@@ -387,6 +387,7 @@ async function startFullFlow() {
   document.getElementById('ocrProgress').textContent = '';
 
   let ocrText = '';
+  let ocrQualityOk = false;
   try {
     var cfg = window.TESSERACT_CONFIG || {};
     const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
@@ -404,11 +405,43 @@ async function startFullFlow() {
     const { data } = await worker.recognize(state.imageData);
     await worker.terminate();
     ocrText = data.text || '';
-    document.getElementById('ocrProgress').textContent = '✅ OCR: ' + ocrText.length + '字';
+    ocrQualityOk = ocrText.length >= 50;
+    if (ocrQualityOk) {
+      document.getElementById('ocrProgress').textContent = '✅ OCR: ' + ocrText.length + '字';
+    } else {
+      document.getElementById('ocrProgress').textContent = '⚠️ OCR文字过少(' + ocrText.length + '字)，尝试云端识别...';
+    }
   } catch(e) {
+    document.getElementById('ocrProgress').textContent = '⚠️ 本地OCR失败，尝试云端识别...';
+  }
+
+  // 兜底：本地OCR质量不足/失败 → 云端 /api/ocr
+  if (!ocrQualityOk && state.imageData) {
+    try {
+      btn.textContent = '☁️ 云端OCR...';
+      var ocrResp = await fetch(API_BASE + '/api/ocr', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({image: state.imageData})
+      });
+      var ocrData = await ocrResp.json();
+      if (ocrResp.ok && !ocrData.error && ocrData.text) {
+        ocrText = ocrData.text;
+        document.getElementById('ocrProgress').textContent = '✅ 云端OCR: ' + ocrText.length + '字';
+      } else {
+        document.getElementById('ocrProgress').textContent = '❌ 云端OCR也失败: ' + (ocrData.error || '无文字');
+        btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
+        document.getElementById('reportContent').textContent = '❌ 文字识别失败，请重新拍照上传或使用手动输入。错误: ' + (ocrData.error || '');
+        return;
+      }
+    } catch(ocrErr) {
+      document.getElementById('ocrProgress').textContent = '❌ 云端OCR失败: ' + ocrErr.message;
+      btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
+      document.getElementById('reportContent').textContent = '❌ 文字识别失败，请重新拍照或使用手动输入。';
+      return;
+    }
+  } else if (!ocrQualityOk) {
     btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
-    document.getElementById('reportContent').textContent = '❌ OCR失败: ' + e.message;
-    document.getElementById('ocrProgress').textContent = '❌ 识别失败，请重试';
+    document.getElementById('reportContent').textContent = '❌ 文字识别失败，请重新拍照上传或使用手动输入。';
     return;
   }
 
@@ -702,6 +735,7 @@ function downloadServerPDF(md, filename) {
   form.method = 'POST';
   form.action = API_BASE + '/api/export-pdf';
   form.target = '_blank';
+  form.acceptCharset = 'UTF-8';
   form.style.display = 'none';
   var titleInput = document.createElement('input');
   titleInput.name = 'title'; titleInput.value = filename;
@@ -711,7 +745,7 @@ function downloadServerPDF(md, filename) {
   form.appendChild(mdInput);
   document.body.appendChild(form);
   form.submit();
-  document.body.removeChild(form);
+  setTimeout(function(){ if (form.parentNode) form.parentNode.removeChild(form); }, 1500);
 }
 
 function downloadReport(key, format) {
