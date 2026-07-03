@@ -415,6 +415,7 @@ async function startRecognition() {
   btn.disabled = true; btn.textContent = '⏳ 加载OCR引擎...';
   status.textContent = '';
   var ocrDone = false;
+  var ocrTimeout = setTimeout(function() { throw new Error('OCR超时(20s)'); }, 20000);
   try {
     var cfg = window.TESSERACT_CONFIG || {};
     const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
@@ -426,6 +427,7 @@ async function startRecognition() {
     });
     const { data: ocrData } = await worker.recognize(state.imageData);
     await worker.terminate();
+    clearTimeout(ocrTimeout);
     var ocrText = ocrData.text || '';
     ocrDone = true;
     status.textContent = '✅ OCR完成: ' + ocrText.length + '字';
@@ -445,6 +447,7 @@ async function startRecognition() {
     state.recognitionDone = true;
     showResults();
   } catch(e) {
+    clearTimeout(ocrTimeout);
     // 识别失败 → 引导手动输入（无云端兜底）
     status.textContent = '❌ 自动识别失败，请使用手动输入: ' + e.message;
     status.style.color = 'var(--danger)';

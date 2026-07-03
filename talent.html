@@ -204,6 +204,11 @@ window.TESSERACT_CONFIG = {
     </select>
     <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
   </div>
+  <div style="margin-top:8px;padding:10px 14px;background:#1a1a35;border:1px solid #3a3a55;border-radius:10px">
+    <div style="font-size:.78em;color:var(--muted);margin-bottom:6px">📝 或直接粘贴报告文本生成（无需拍照）</div>
+    <textarea id="directOcrInput" placeholder="在此粘贴先天测评报告的完整文字内容..." style="width:100%;min-height:80px;padding:8px 10px;border-radius:6px;border:1.5px solid #3a3a55;background:#161630;color:#e0dcd4;font-size:.8em;line-height:1.5;resize:vertical;font-family:monospace"></textarea>
+    <button class="btn btn-outline btn-sm" onclick="generateFromText()" style="margin-top:6px;font-size:.75em">📄 用文本生成报告</button>
+  </div>
 </div>
 
 <!-- ====== STEP 2: Report ====== -->
@@ -368,6 +373,40 @@ function handleFile(file) {
   reader.readAsDataURL(file);
 }
 
+async function generateFromText() {
+  var text = document.getElementById('directOcrInput').value.trim();
+  if (!text) { alert('请先粘贴报告文本'); return; }
+  var btn = document.getElementById('btnRecognize');
+  document.getElementById('reportCard').classList.remove('hidden');
+  document.getElementById('reportContent').classList.add('loading');
+  document.getElementById('reportContent').textContent = '正在生成报告...';
+  document.getElementById('ocrProgress').textContent = '📄 文本输入: ' + text.length + '字';
+  state.ocrText = text;
+  try {
+    var resp = await fetch(API_BASE + '/api/talent-v2', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ocrText: text, type: 'portrait', style: document.getElementById('reportStyle').value, age: parseInt(document.getElementById('reportAge').value), target: document.getElementById('reportTarget').value})
+    });
+    var data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    state.reports = {portrait: data.content};
+    state.reportOrder = ['portrait'];
+    state.lastDebug = data.debug || null;
+    saveReports();
+    document.getElementById('reportContent').classList.remove('loading');
+    document.getElementById('reportContent').innerHTML = renderStack();
+    document.getElementById('reportCard').scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('chatSection').style.display = 'block';
+    state.conversation = [];
+    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('chatInput').value = '';
+    document.getElementById('btnSummarize').style.display = 'block';
+    showDebug(data.debug);
+  } catch(e) {
+    document.getElementById('reportContent').textContent = '生成失败: ' + e.message;
+  }
+}
+
 async function startFullFlow() {
   var age = parseInt(document.getElementById('reportAge').value);
   if (!age || age < 0) {
@@ -388,6 +427,7 @@ async function startFullFlow() {
 
   let ocrText = '';
   let ocrQualityOk = false;
+  var ocrTimeout = setTimeout(function() { document.getElementById('ocrProgress').textContent = '⚠️ OCR超时'; }, 20000);
   try {
     var cfg = window.TESSERACT_CONFIG || {};
     const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
@@ -404,15 +444,17 @@ async function startFullFlow() {
     });
     const { data } = await worker.recognize(state.imageData);
     await worker.terminate();
+    clearTimeout(ocrTimeout);
     ocrText = data.text || '';
     ocrQualityOk = ocrText.length >= 50;
     if (ocrQualityOk) {
       document.getElementById('ocrProgress').textContent = '✅ OCR: ' + ocrText.length + '字';
     } else {
-      document.getElementById('ocrProgress').textContent = '⚠️ OCR文字过少(' + ocrText.length + '字)，尝试云端识别...';
+      document.getElementById('ocrProgress').textContent = '⚠️ OCR文字过少(' + ocrText.length + '字)';
     }
   } catch(e) {
-    document.getElementById('ocrProgress').textContent = '⚠️ 本地OCR失败，尝试云端识别...';
+    clearTimeout(ocrTimeout);
+    document.getElementById('ocrProgress').textContent = '⚠️ 本地OCR失败';
   }
 
   // OCR 质量不足或失败 → 引导手动输入（无云端兜底）

@@ -191,10 +191,10 @@ class SEEHandler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def _proxy_vision(self, body):
-        """代理智谱 GLM-4V-Flash 识图"""
-        if not BAOSI_KEY:
-            self._json(503, {"error": "服务未配置 BAOSI_KEY，请联系管理员", "stage": "config"})
-            return
+        """云端识图已停用"""
+        self._json(503, {"error": "云端OCR已停用，请手动输入或粘贴文本", "stage": "disabled"})
+        return
+    def _proxy_vision_legacy(self, body):
         try:
             data = json.loads(body)
             image_b64 = data.get('image', '').split(',')[-1]  # strip data: prefix
@@ -417,9 +417,10 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
     # ===== OCR（文字识别）=====
     def _proxy_ocr(self, body):
-        if not BAOSI_KEY:
-            self._json(503, {"error": "服务未配置 BAOSI_KEY，请联系管理员", "stage": "config"})
-            return
+        """云端OCR已停用"""
+        self._json(503, {"error": "云端OCR已停用，请手动输入或粘贴文本", "stage": "disabled"})
+        return
+    def _proxy_ocr_legacy(self, body):
         try:
             data = json.loads(body)
             image_b64 = data.get('image', '').split(',')[-1]
