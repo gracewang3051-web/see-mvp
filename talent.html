@@ -415,42 +415,14 @@ async function startFullFlow() {
     document.getElementById('ocrProgress').textContent = '⚠️ 本地OCR失败，尝试云端识别...';
   }
 
-  // 兜底：本地OCR质量不足/失败 → 云端 /api/ocr（桌面端）
-  var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-  if (!ocrQualityOk && state.imageData && isMobile) {
-    // 手机端云端OCR目前不可用，直接提示
-    document.getElementById('ocrProgress').textContent = '📱 手机端暂不支持自动OCR，请使用手动输入';
-    document.getElementById('reportContent').textContent = '📱 手机端暂不支持拍照识别，请点击下方「✏️ 手动输入」填写报告内容。';
+  // OCR 质量不足或失败 → 引导手动输入（无云端兜底）
+  if (!ocrQualityOk) {
+    var msg = ocrText.length > 0
+      ? '❌ OCR识别文字过少(' + ocrText.length + '字)，请重新拍照或使用手动输入。'
+      : '❌ 文字识别失败，请重新拍照或使用手动输入。';
+    document.getElementById('ocrProgress').textContent = msg;
+    document.getElementById('reportContent').textContent = msg;
     btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
-    return;
-  }
-  if (!ocrQualityOk && state.imageData) {
-    try {
-      btn.textContent = '☁️ 云端OCR...';
-      var ocrResp = await fetch(API_BASE + '/api/ocr', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({image: state.imageData})
-      });
-      var ocrData = await ocrResp.json();
-      var rawText = (ocrData.text || '').trim();
-      if (ocrResp.ok && !ocrData.error && rawText.length >= 50) {
-        ocrText = rawText;
-        document.getElementById('ocrProgress').textContent = '✅ 云端OCR: ' + ocrText.length + '字';
-      } else {
-        document.getElementById('ocrProgress').textContent = '❌ 云端OCR也失败: ' + (ocrData.error || '无文字');
-        btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
-        document.getElementById('reportContent').textContent = '❌ 文字识别失败，请重新拍照上传或使用手动输入。错误: ' + (ocrData.error || '');
-        return;
-      }
-    } catch(ocrErr) {
-      document.getElementById('ocrProgress').textContent = '❌ 云端OCR失败: ' + ocrErr.message;
-      btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
-      document.getElementById('reportContent').textContent = '❌ 文字识别失败，请重新拍照或使用手动输入。';
-      return;
-    }
-  } else if (!ocrQualityOk) {
-    btn.disabled = false; btn.textContent = '🔍 识别并生成报告';
-    document.getElementById('reportContent').textContent = '❌ 文字识别失败，请重新拍照上传或使用手动输入。';
     return;
   }
 
