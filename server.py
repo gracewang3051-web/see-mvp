@@ -508,7 +508,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
             conn = HTTPSConnection('aip.baidubce.com', 443, timeout=60)
             conn.request(
                 'POST',
-                '/rest/2.0/ocr/v1/accurate_basic?access_token=' + token,
+                '/rest/2.0/ocr/v1/accurate?access_token=' + token,
                 body=payload,
                 headers={'Content-Type': 'application/x-www-form-urlencoded'}
             )
