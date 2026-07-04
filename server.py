@@ -534,54 +534,49 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 w.get('location', {}).get('left', 0)  # X→左到右
             ))
             import re
-            lines = [w.get('words', '') for w in sorted_words if w.get('words')]
-            # 利用位置合并：中文标签上方 → 数字/纹型下方 → 合并为一行
+            # 文字锁定：中文标签 + 正下方值块（X轴对齐，Y轴近距）
+            words = [(w.get('words', '').strip(), w.get('location', {})) for w in sorted_words]
+            words = [(t, l) for t, l in words if t]
             merged = []
             used = set()
-            for i, w in enumerate(sorted_words):
+            for i, (cur, loc) in enumerate(words):
                 if i in used:
                     continue
-                cur = w.get('words', '').strip()
-                if not cur:
-                    continue
-                loc = w.get('location', {})
+                used.add(i)
                 cx, cy = loc.get('left', 0), loc.get('top', 0)
-                # 找正下方最接近的数字/纹型块（Y差在1.5倍行高内，X接近）
-                best_j, best_dist = None, 99999
-                for j, w2 in enumerate(sorted_words):
-                    if i == j or j in used:
+                cur_has_cjk = bool(re.search(r'[一-鿿]', cur))
+                # 找正下方X对齐最近的值块
+                best_j, best_dy = None, 999
+                for j, (nxt, loc2) in enumerate(words):
+                    if j in used:
                         continue
-                    nxt = w2.get('words', '').strip()
-                    if not nxt:
-                        continue
-                    loc2 = w2.get('location', {})
-                    nx, ny = loc2.get('left', 0), loc2.get('top', 0)
-                    # 下方块，不是同行
+                    ny = loc2.get('top', 0)
                     if ny <= cy + 5:
                         continue
-                    # 数字/纹型特征
-                    if not re.search(r'[\d]', nxt):
-                        continue
                     dy = ny - cy
-                    dx = abs(nx - cx)
-                    # X偏差不太大，Y在1.5倍行高内
-                    if dx < 200 and dy < 60:
-                        if dy < best_dist:
-                            best_dist = dy
-                            best_j = j
+                    if dy > 80:
+                        continue
+                    nxt_is_value = bool(re.match(r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh+-]+$', nxt))
+                    if not nxt_is_value:
+                        continue
+                    # X对齐：值块left在文字块left±60px内
+                    nx = loc2.get('left', 0)
+                    if abs(nx - cx) > 60:
+                        continue
+                    if dy < best_dy:
+                        best_dy = dy
+                        best_j = j
                 if best_j is not None:
-                    nxt_word = sorted_words[best_j].get('words', '').strip()
+                    nxt_word, _ = words[best_j]
                     merged.append(cur + '  ' + nxt_word)
-                    used.add(i)
                     used.add(best_j)
                 else:
                     merged.append(cur)
-                    used.add(i)
             text = '\n'.join(merged).strip()
             self._json(200, {
                 "text": text,
-                "lines": lines,
-                "words_result_num": result.get('words_result_num', len(lines)),
+                "lines": merged,
+                "words_result_num": result.get('words_result_num', len(merged)),
                 "direction": result.get('direction'),
                 "stage": "baidu_ocr"
             })
