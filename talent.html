@@ -399,22 +399,28 @@ async function startBaiduOcrDraft() {
   btn.textContent = '☁️ 百度云识别中...';
   document.getElementById('reportCard').classList.remove('hidden');
   document.getElementById('reportContent').classList.add('loading');
-  document.getElementById('reportContent').textContent = '正在调用百度云识别图片文字...';
+  document.getElementById('reportContent').textContent = '正在调用百度云识别图片文字（手机端约需10-30秒）...';
   document.getElementById('ocrProgress').style.display = 'block';
   document.getElementById('ocrProgress').textContent = '';
+  var controller = new AbortController();
+  var timer = setTimeout(function(){ controller.abort(); }, 90000);
   try {
     var resp = await fetch(API_BASE + '/api/baidu-ocr', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({image: state.imageData})
+      body: JSON.stringify({image: state.imageData}),
+      signal: controller.signal
     });
+    clearTimeout(timer);
     var data = await resp.json();
     if (!resp.ok || data.error) throw new Error(data.error || ('HTTP ' + resp.status));
     state.ocrText = data.text || '';
     fillOcrDraft(state.ocrText, '百度云OCR');
   } catch(e) {
+    clearTimeout(timer);
     document.getElementById('reportContent').classList.remove('loading');
-    document.getElementById('reportContent').textContent = '百度云识别失败: ' + e.message + '。请改用粘贴文本，或使用本地识别草稿。';
+    var errMsg = e.name === 'AbortError' ? '请求超时(90s)，图片可能过大，请尝试压缩后重试' : e.message;
+    document.getElementById('reportContent').textContent = '百度云识别失败: ' + errMsg + '。请改用粘贴文本，或使用本地识别草稿。';
     document.getElementById('ocrProgress').textContent = '❌ 百度云识别失败';
   }
   btn.disabled = false;
