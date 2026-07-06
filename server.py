@@ -806,8 +806,12 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 if action == 'delete':
                     conn.execute("DELETE FROM qr_codes WHERE id=?", (data.get('id',''),))
                 else:
-                    conn.execute("INSERT OR REPLACE INTO qr_codes (id,name,url,max_users,max_reports,used_users,used_reports,status,expires) VALUES (?,?,?,?,?,?,?,?,?)",
-                        (data.get('id',''), data.get('name',''), data.get('url',''), data.get('maxUsers',10), data.get('maxReports',20), data.get('usedUsers',0), data.get('usedReports',0), data.get('status','active'), data.get('expires','')))
+                    qid = data.get('id','')
+                    cur = conn.execute("UPDATE qr_codes SET name=?,url=?,max_users=?,max_reports=?,used_users=?,used_reports=?,status=?,expires=? WHERE id=?",
+                        (data.get('name',''), data.get('url',''), data.get('maxUsers',10), data.get('maxReports',20), data.get('usedUsers',0), data.get('usedReports',0), data.get('status','active'), data.get('expires',''), qid))
+                    if cur.rowcount == 0:
+                        conn.execute("INSERT INTO qr_codes (id,name,url,max_users,max_reports,used_users,used_reports,status,expires) VALUES (?,?,?,?,?,?,?,?,?)",
+                            (qid, data.get('name',''), data.get('url',''), data.get('maxUsers',10), data.get('maxReports',20), data.get('usedUsers',0), data.get('usedReports',0), data.get('status','active'), data.get('expires','')))
                 conn.commit()
                 conn.close()
             self._json(200, {"success": True})
@@ -835,8 +839,12 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 if action == 'delete':
                     conn.execute("DELETE FROM activation_codes WHERE code=?", (data.get('code',''),))
                 else:
-                    conn.execute("INSERT OR REPLACE INTO activation_codes (code,bonus_type,extra_reports,used,used_at) VALUES (?,?,?,?,?)",
-                        (data.get('code',''), data.get('bonusType',''), data.get('extraReports',10), 1 if data.get('used') else 0, data.get('usedAt','')))
+                    acode = data.get('code','')
+                    cur = conn.execute("UPDATE activation_codes SET bonus_type=?,extra_reports=?,used=?,used_at=? WHERE code=?",
+                        (data.get('bonusType',''), data.get('extraReports',10), 1 if data.get('used') else 0, data.get('usedAt',''), acode))
+                    if cur.rowcount == 0:
+                        conn.execute("INSERT INTO activation_codes (code,bonus_type,extra_reports,used,used_at) VALUES (?,?,?,?,?)",
+                            (acode, data.get('bonusType',''), data.get('extraReports',10), 1 if data.get('used') else 0, data.get('usedAt','')))
                 conn.commit()
                 conn.close()
             self._json(200, {"success": True})
