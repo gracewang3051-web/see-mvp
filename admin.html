@@ -193,11 +193,16 @@ td .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-s
         <input type="text" id="newUserName" placeholder="如 张三">
       </div>
       <div class="form-row">
+        <label>报告上限</label>
+        <input type="number" id="newMaxReports" value="20" min="1" max="100" style="width:70px;flex:0 0 70px">
+      </div>
+      <div class="form-row">
         <label>绑定激活码</label>
         <select id="bindActCode"><option value="">无</option></select>
       </div>
       <button class="btn btn-primary" onclick="addUserCode()">➕ 添加用户</button>
       <button class="btn btn-outline btn-sm" style="margin-left:8px" onclick="scanLocalReports()">🔍 扫描本地报告</button>
+      <button class="btn btn-outline btn-sm" style="margin-left:8px" onclick="initTestCodes()">⚡ 初始化测试码</button>
     </div>
     <div style="font-size:.82em;color:var(--muted)">
       <p>用户在前端输入用户码后，报告自动关联保存。</p>
@@ -205,7 +210,7 @@ td .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-s
     </div>
   </div>
   <table style="margin-top:12px">
-    <thead><tr><th>用户码</th><th>姓名</th><th>绑定激活码</th><th>报告数</th><th>最后活跃</th><th>操作</th></tr></thead>
+    <thead><tr><th>用户码</th><th>姓名</th><th>绑定激活码</th><th>报告数（已用/上限）</th><th>最后活跃</th><th>操作</th></tr></thead>
     <tbody id="userTableBody">
       <tr><td colspan="6" style="text-align:center;color:var(--muted)">暂无用户</td></tr>
     </tbody>
@@ -258,69 +263,77 @@ function getRecords() { return JSON.parse(localStorage.getItem('see_admin_record
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('qrExpires').value = new Date(Date.now()+90*86400000).toISOString().slice(0,10);
-  refreshAll();
+  fetchUsers();
 });
 
 function randomStr(n) { return Math.random().toString(36).substring(2,2+n).toUpperCase(); }
 
-// ===== User Codes =====
-function getUserCodes() { return JSON.parse(localStorage.getItem('see_user_codes') || '[]'); }
-function saveUserCodes(data) { localStorage.setItem('see_user_codes', JSON.stringify(data)); }
+// ===== User Codes（数据源：服务端 SQLite）=====
+function getUserCodes() {
+  // 由 fetchUsers 异步填充 _userCache，同步方法返回缓存
+  return _userCache;
+}
+var _userCache = [];
+function fetchUsers() {
+  fetch('/api/db/users').then(function(r){ return r.json(); }).then(function(d){
+    _userCache = (d.users || []).map(function(u){ return {
+      code: u.code||'', name: u.name||'', actCode: u.actCode||'',
+      maxReports: u.maxReports||20, reports: u.reports||0,
+      lastActive: u.lastActive||'', createdAt: u.createdAt||''
+    };});
+    refreshAll();
+  }).catch(function(e){ console.error(e); });
+}
+function saveUser(data) {
+  fetch('/api/db/users', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  }).then(function(){ fetchUsers(); }).catch(function(e){ console.error(e); });
+}
 
 function addUserCode() {
   const code = document.getElementById('newUserCode').value.trim().toUpperCase();
   const name = document.getElementById('newUserName').value.trim();
-  const actCode = document.getElementById('bindActCode').value;
+  const maxReports = parseInt(document.getElementById('newMaxReports').value) || 20;
   if (!code) { toast('请输入用户码', true); return; }
   const users = getUserCodes();
   if (users.find(u => u.code === code)) { toast('用户码已存在', true); return; }
-  users.push({ code, name: name || code, actCode, reports: 0, lastActive: '', createdAt: new Date().toISOString() });
-  saveUserCodes(users);
+  saveUser({code: code, name: name || code, maxReports: maxReports});
   document.getElementById('newUserCode').value = '';
   document.getElementById('newUserName').value = '';
-  refreshAll();
-  toast('用户 ' + code + ' 已添加');
+  toast('用户 ' + code + ' 已添加（上限' + maxReports + '份）');
+}
+
+function initTestCodes() {
+  if (!confirm('将初始化 PX001-PX010 共 10 个测试码，每人上限 20 份。确认？')) return;
+  for (let i = 1; i <= 10; i++) {
+    const code = 'PX' + String(i).padStart(3, '0');
+    saveUser({code: code, name: '测试用户' + i, maxReports: 20});
+  }
+  setTimeout(function(){ fetchUsers(); toast('已初始化 PX001-PX010'); }, 500);
 }
 
 function scanLocalReports() {
-  const users = getUserCodes();
-  let found = 0;
-  // Scan localStorage for reports matching known user codes
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key.startsWith('see_reports_') || key.startsWith('see_talent_reports_')) {
-      const code = key.replace('see_reports_', '').replace('see_talent_reports_', '');
-      try {
-        const data = JSON.parse(localStorage.getItem(key));
-        let user = users.find(u => u.code === code);
-        if (!user) {
-          user = { code, name: code, actCode: '', reports: 0, lastActive: '', createdAt: new Date().toISOString() };
-          users.push(user);
-        }
-        user.lastActive = data.time || '';
-        user.reports = Object.keys(data.reports || {}).length;
-        found++;
-      } catch(e) {}
-    }
-  }
-  saveUserCodes(users);
-  refreshAll();
-  toast('扫描完成，发现 ' + found + ' 条报告记录');
+  fetchUsers();
+  toast('已从服务端同步最新数据');
 }
 
 function renderUserTable() {
   const users = getUserCodes();
   if (users.length === 0) {
-    document.getElementById('userTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">暂无用户</td></tr>';
+    document.getElementById('userTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">暂无用户 — <a href="#" onclick="initTestCodes();return false" style="color:var(--accent)">一键初始化 PX001-PX010</a></td></tr>';
     return;
   }
   let html = '';
   users.sort((a,b) => (b.lastActive||'').localeCompare(a.lastActive||'')).forEach(u => {
+    const max = u.maxReports || 20;
+    const pct = Math.round(u.reports / max * 100);
+    const badge = u.reports >= max ? 'badge-full' : 'badge-active';
     html += `<tr>
       <td><code>${esc(u.code)}</code></td>
       <td>${esc(u.name)}</td>
       <td>${u.actCode ? '<code>'+esc(u.actCode)+'</code>' : '-'}</td>
-      <td>${u.reports}</td>
+      <td><span class="badge ${badge}">${u.reports}/${max}</span> ${pct >= 80 ? '⚠️' : ''}</td>
       <td style="font-size:.8em">${u.lastActive ? new Date(u.lastActive).toLocaleString('zh-CN') : '-'}</td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="copyToClipboard('${u.code}');toast('已复制')">📋</button>
@@ -336,9 +349,8 @@ function renderUserTable() {
 }
 
 function delUserCode(code) {
-  if (!confirm('确定删除用户 ' + code + '？')) return;
-  saveUserCodes(getUserCodes().filter(u => u.code !== code));
-  refreshAll();
+  if (!confirm('确定删除用户 ' + code + '？此操作不可恢复。')) return;
+  saveUser({code: code, action: 'delete'});
   toast('已删除');
 }
 
@@ -474,7 +486,8 @@ function renderCodeTable() {
       <td>
         <button class="btn btn-outline btn-sm" onclick="viewQR('${c.id}')">🔍</button>
         <button class="btn btn-outline btn-sm" onclick="copyQR('${c.id}')">📋</button>
-        <button class="btn btn-danger btn-sm" onclick="deactivateCode('${c.id}')" ${c.status!=='active'?'disabled':''}>✕</button>
+        <button class="btn btn-outline btn-sm" onclick="deactivateCode('${c.id}')" ${c.status!=='active'?'disabled':''}>⏸</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCode('${c.id}')">🗑</button>
       </td>
     </tr>`;
   });
@@ -544,13 +557,21 @@ function downloadQR() {
 }
 
 function deactivateCode(id) {
-  if (!confirm('确定停用此二维码？已使用的额度不受影响。')) return;
+  if (!confirm('确定停用此二维码？停用后用户仍可查看已有报告。')) return;
   const codes = getCodes();
   const c = codes.find(x => x.id === id);
   if (c) c.status = 'expired';
   saveCodes(codes);
   refreshAll();
   toast('已停用');
+}
+
+function deleteCode(id) {
+  if (!confirm('确定删除此二维码？将从列表中彻底移除，不可恢复。')) return;
+  const codes = getCodes().filter(c => c.id !== id);
+  saveCodes(codes);
+  refreshAll();
+  toast('已删除');
 }
 
 function exportRecords() {

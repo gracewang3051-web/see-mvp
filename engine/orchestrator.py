@@ -15,7 +15,8 @@ from engine.validator import validate
 class CognitiveEngine:
     """认知系统编排器"""
 
-    def run(self, ocr_text, report_type='learning', style='gentle', age=None, target='self'):
+    def run(self, ocr_text, report_type='learning', style='gentle', age=None, target='self',
+            pre_extracted_metrics=None):
         """完整认知 pipeline。
 
         Args:
@@ -24,6 +25,7 @@ class CognitiveEngine:
             style: 咨询师风格 (gentle/direct/parent/educator/coach)
             age: 年龄(必填)
             target: 报告对象 (self/parent/other/global)
+            pre_extracted_metrics: 可选，前端编辑后的结构化指标，跳过 extract_metrics()
 
         Returns:
             dict: {
@@ -32,7 +34,10 @@ class CognitiveEngine:
             }
         """
         # Layer 0: 提取
-        metrics = extract_metrics(ocr_text)
+        if pre_extracted_metrics is not None:
+            metrics = pre_extracted_metrics
+        else:
+            metrics = extract_metrics(ocr_text)
 
         # Layer 1: 规则
         structure = apply_rules(metrics)

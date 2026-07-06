@@ -83,8 +83,9 @@ input { padding: 8px 12px; border:1px solid var(--border); border-radius:8px; fo
   <h2>🔑 查看我的报告</h2>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <label style="font-size:.85em;color:var(--muted)">用户码</label>
-    <input type="text" id="userCode" placeholder="输入你的用户码" onchange="loadAll()" style="flex:1;max-width:240px">
+    <input type="text" id="userCode" placeholder="输入你的用户码" onchange="loadAll()" onblur="loadAll()" style="flex:1;max-width:240px">
     <button class="btn btn-primary" onclick="loadAll()">加载报告</button>
+    <span id="quotaDisplay" style="font-size:.78em;color:var(--muted);white-space:nowrap"></span>
   </div>
 </div>
 
@@ -118,11 +119,40 @@ input { padding: 8px 12px; border:1px solid var(--border); border-radius:8px; fo
   <h2 id="viewTitle"></h2>
   <div class="report-view" id="viewContent"></div>
   <button class="btn btn-outline" style="margin-top:12px" onclick="document.getElementById('viewCard').classList.add('hidden');document.getElementById('dashboard').classList.remove('hidden')">◀ 返回总览</button>
+  <button class="btn btn-primary" style="margin-top:12px;margin-left:8px" id="btnDownload" onclick="downloadReport()">📥 下载报告</button>
 </div>
 
 </div>
 
 <script>
+// ===== 用户码管理（数据源：服务端 SQLite，localStorage 兜底）=====
+var _userCache = [];
+function _fetchUsers() {
+  fetch('/api/db/users').then(function(r){ return r.json(); }).then(function(d){
+    _userCache = (d.users || []).map(function(u){ u.code = u.code || ''; return u; });
+    var code = document.getElementById('userCode').value.trim();
+    if (code) updateQuotaDisplay(code);
+  }).catch(function(){});
+}
+function getUserCodes() {
+  if (_userCache.length > 0) return _userCache;
+  try { return JSON.parse(localStorage.getItem('see_user_codes') || '[]'); } catch(e) { return []; }
+}
+function isValidCode(code) { return getUserCodes().some(function(u){ return u.code === code; }); }
+function getMaxReports(code) { var u = getUserCodes().find(function(x){ return x.code === code; }); return u ? (u.maxReports || 20) : 20; }
+function getPortraitCount(code) { try { var s = localStorage.getItem('see_reports_v2_' + code); return s ? (JSON.parse(s).versions||[]).length : 0; } catch(e) { return 0; } }
+function getTalentCount(code) { try { var s = localStorage.getItem('see_talent_reports_v2_' + code); return s ? (JSON.parse(s).versions||[]).length : 0; } catch(e) { return 0; } }
+function updateQuotaDisplay(code) {
+  var el = document.getElementById('quotaDisplay');
+  if (!el) return;
+  if (!code) { el.textContent = ''; return; }
+  var pc = getPortraitCount(code);
+  var tc = getTalentCount(code);
+  var total = pc + tc;
+  var max = getMaxReports(code);
+  el.textContent = '已用 ' + total + '/' + max + ' 份（画像' + pc + '+特质' + tc + '）';
+  el.style.color = total >= max ? 'var(--danger)' : 'var(--muted)';
+}
 const ALL_REPORTS = { portrait:'🧬 基础思维画像', action:'🌱 个人成长建议', communication:'💞 关系洞察', career:'🚀 事业发展' };
 const ALL_TALENT = { portrait:'🧬 先天特质画像', learning:'📖 学习风格', emotion:'💫 情绪模式', potential:'🎯 潜能发展' };
 let allReports = { portraitVersions:[], talentVersions:[], growthVersions:[] };
@@ -141,8 +171,9 @@ function migrateOld(key, newKey, versionBuilder) {
 
 function loadAll() {
   const code = document.getElementById('userCode').value.trim();
-  if (!code) return;
+  if (!code || !isValidCode(code)) { updateQuotaDisplay(code); if (code) alert('无效的用户码，请联系管理员获取'); return; }
   sessionStorage.setItem('see_code_shared', code);
+  updateQuotaDisplay(code);
 
   // Migrate old data
   migrateOld('see_reports_'+code, 'see_reports_v2_'+code, d => ({
@@ -265,6 +296,8 @@ async function generateGrowth() {
   btn.disabled = false; btn.textContent = '📈 生成成长比对报告';
 }
 
+let currentView = null; // {src, idx} — 当前查看的报告
+
 function viewR(src, idx) {
   const version = src==='portrait' ? allReports.portraitVersions[idx]
     : src==='talent' ? allReports.talentVersions[idx]
@@ -272,6 +305,7 @@ function viewR(src, idx) {
   if (!version) return;
   const content = version.content || version.portrait || '';
   if (!content) return;
+  currentView = {src: src, idx: idx};
   document.getElementById('dashboard').classList.add('hidden');
   document.getElementById('viewCard').classList.remove('hidden');
   document.getElementById('viewTitle').textContent = version.time || ('报告 #'+(idx+1));
@@ -281,9 +315,51 @@ function viewR(src, idx) {
     .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>').replace(/\n\n/g,'</p><p>');
 }
 
+function downloadReport(srcOverride, idxOverride) {
+  var src = srcOverride || (currentView ? currentView.src : null);
+  var idx = idxOverride != null ? idxOverride : (currentView ? currentView.idx : null);
+  if (src == null || idx == null) return;
+
+  var version;
+  if (src === 'portrait') version = allReports.portraitVersions[idx];
+  else if (src === 'talent') version = allReports.talentVersions[idx];
+  else version = allReports.growthVersions[idx];
+  if (!version) return;
+
+  // 拼接完整 Markdown 内容
+  var md = '';
+  var typeLabel = src === 'portrait' ? '思维画像' : src === 'talent' ? '先天特质' : '成长比对';
+  var timeStr = (version.time || '第' + (idx+1) + '次').replace(/[\\/:*?"<>|]/g, '_');
+
+  if (src === 'portrait') {
+    if (version.portrait) md += '# 思维画像报告\n\n' + version.portrait + '\n\n';
+    if (version.action) md += '---\n\n# 个人成长建议\n\n' + version.action + '\n\n';
+    if (version.communication) md += '---\n\n# 关系洞察\n\n' + version.communication + '\n\n';
+    if (version.career) md += '---\n\n# 事业发展\n\n' + version.career + '\n\n';
+  } else if (src === 'talent') {
+    if (version.portrait) md += '# 先天思维特质报告\n\n' + version.portrait + '\n\n';
+    if (version.learning) md += '---\n\n# 学习风格\n\n' + version.learning + '\n\n';
+    if (version.emotion) md += '---\n\n# 情绪模式\n\n' + version.emotion + '\n\n';
+    if (version.potential) md += '---\n\n# 潜能发展\n\n' + version.potential + '\n\n';
+  } else {
+    md += '# 成长比对报告\n\n' + (version.content || '');
+  }
+
+  if (!md.trim()) return;
+
+  var filename = '报告_' + typeLabel + '_' + timeStr + '.md';
+  var blob = new Blob([md], {type: 'text/markdown;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 (function(){
+  _fetchUsers();
   const code = sessionStorage.getItem('see_code_shared');
-  if(code){ document.getElementById('userCode').value=code; loadAll(); }
+  if(code){ document.getElementById('userCode').value=code; loadAll(); } else { updateQuotaDisplay(''); }
 })();
 </script>
 </body>
