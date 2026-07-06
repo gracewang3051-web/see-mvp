@@ -747,9 +747,11 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 else:
                     name = data.get('name', code)
                     max_reports = int(data.get('maxReports', 20))
-                    conn.execute(
-                        "INSERT INTO users (code, name, max_reports) VALUES (?,?,?) ON CONFLICT(code) DO UPDATE SET name=excluded.name, max_reports=excluded.max_reports",
-                        (code, name, max_reports))
+                    # 兼容旧版 SQLite < 3.24（如 CentOS 7）：先 UPDATE，无行影响再 INSERT
+                    cur = conn.execute("UPDATE users SET name=?, max_reports=? WHERE code=?", (name, max_reports, code))
+                    if cur.rowcount == 0:
+                        conn.execute("INSERT INTO users (code, name, max_reports) VALUES (?,?,?)",
+                                     (code, name, max_reports))
                 conn.commit()
                 conn.close()
             self._json(200, {"success": True})
