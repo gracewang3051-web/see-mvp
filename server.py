@@ -1,5 +1,5 @@
 """SEE 生命印迹 - 本地测试服务端（保护 API Key）"""
-import json, base64, ssl, os, subprocess, tempfile, sys, threading, time, uuid, sqlite3
+import json, base64, re, ssl, os, subprocess, tempfile, sys, threading, time, uuid, sqlite3, traceback
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http.client import HTTPSConnection
 from urllib.parse import urlparse, urlencode
@@ -159,7 +159,6 @@ def _extract_region_values(words, image_b64):
     再按中文标签文本映射到 field key。
     对未能合并的独立行，尝试直接匹配标签文本。
     """
-    import re
     result = {}
 
     # 1. 按 Y 排序（10px 容差同行，同行左到右）
@@ -213,8 +212,7 @@ def _extract_region_values(words, image_b64):
                 result[key] = value
 
     # 3b. 拆分多值串（如「20 Wsc 22 Wc」→ 两个独立值），按 X 就近重新分配
-    import re as re_mod
-    multi_val_pattern = re_mod.compile(r'^(\d+\s*\w+)\s+(\d+\s*\w+)$')
+    multi_val_pattern = re.compile(r'^(\d+\s*\w+)\s+(\d+\s*\w+)$')
     for i, (label, value) in enumerate(merged_pairs):
         if not value:
             continue
@@ -281,12 +279,11 @@ def _extract_region_values(words, image_b64):
                 break
 
     # 5b. 拆分已分配的多值串（如 spirit_communication="20 Wsc 22 Wc" → split to spirit_creative）
-    import re as _re2
     _split_keys = [('spirit_communication', 'spirit_creative'),
                    ('spirit_creative', 'spirit_communication')]
     for _k1, _k2 in _split_keys:
         if _k1 in result and _k2 not in result:
-            _m = _re2.match(r'^(\d+\s*\w+)\s+(\d+\s*\w+)$', result[_k1])
+            _m = re.match(r'^(\d+\s*\w+)\s+(\d+\s*\w+)$', result[_k1])
             if _m:
                 # Find which label is more left — assign left val to left label, right val to right label
                 _k1_labels = [l for l in _LABEL_TO_KEY if _LABEL_TO_KEY[l] == _k1]
@@ -337,15 +334,18 @@ def _extract_region_values(words, image_b64):
 def proxy_request(url, payload, headers, timeout=180):
     """直连 API"""
     parsed = urlparse(url)
-    conn = HTTPSConnection(parsed.hostname, parsed.port or 443, timeout=timeout)
     ctx = ssl.create_default_context()
-    conn._context = ctx
-    conn.connect()
-    conn.request("POST", parsed.path + ("?" + parsed.query if parsed.query else ""),
-                 body=payload, headers=headers)
-    resp = conn.getresponse()
-    data = resp.read().decode()
-    conn.close()
+    conn = HTTPSConnection(parsed.hostname, parsed.port or 443, timeout=timeout, context=ctx)
+    try:
+        conn.request("POST", parsed.path + ("?" + parsed.query if parsed.query else ""),
+                     body=payload, headers=headers)
+        resp = conn.getresponse()
+        data = resp.read().decode()
+    except Exception:
+        traceback.print_exc()
+        raise
+    finally:
+        conn.close()
     if resp.status != 200:
         snippet = data.strip().replace('\n', ' ')[:300]
         raise Exception(f"upstream HTTP {resp.status} {resp.reason}: {snippet or 'empty response'}")
@@ -380,7 +380,6 @@ def _deepseek_cost(usage):
 
 def _trim_incomplete(text):
     """Remove trailing incomplete sentence/fragment from LLM output."""
-    import re
     text = text.rstrip()
     if not text:
         return text
@@ -529,7 +528,6 @@ def _pdf_content_disposition(title):
     will raise before the response is sent. We keep an ASCII fallback filename
     and add an RFC 5987 filename* parameter for browsers that support it.
     """
-    import re
     from urllib.parse import quote
 
     safe = re.sub(r'[^A-Za-z0-9._-]+', '_', str(title or 'SEE_Report')).strip('._-')
@@ -587,6 +585,9 @@ class SEEHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/':
             self.path = '/index.html'
+        elif self.path == '/health':
+            self._json(200, {"ok": True})
+            return
         elif self.path.startswith('/api/talent-job'):
             self._get_talent_job()
             return
@@ -597,6 +598,10 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self._db_get_users()
             return
         return super().do_GET()
+
+    def list_directory(self, path):
+        self.send_error(403, "Directory listing disabled")
+        return None
 
     def _proxy_vision(self, body):
         """云端识图已停用"""
@@ -760,16 +765,19 @@ class SEEHandler(SimpleHTTPRequestHandler):
             'client_id': BAIDU_OCR_API_KEY,
             'client_secret': BAIDU_OCR_SECRET_KEY
         }).encode()
-        conn = HTTPSConnection('aip.baidubce.com', 443, timeout=30)
-        conn.request(
-            'POST',
-            '/oauth/2.0/token',
-            body=payload,
-            headers={'Content-Type': 'application/x-www-form-urlencoded'}
-        )
-        resp = conn.getresponse()
-        raw = resp.read().decode()
-        conn.close()
+        ctx = ssl.create_default_context()
+        conn = HTTPSConnection('aip.baidubce.com', 443, timeout=30, context=ctx)
+        try:
+            conn.request(
+                'POST',
+                '/oauth/2.0/token',
+                body=payload,
+                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            )
+            resp = conn.getresponse()
+            raw = resp.read().decode()
+        finally:
+            conn.close()
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
@@ -927,16 +935,19 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 'paragraph': 'true',
                 'probability': 'true'
             }).encode()
-            conn = HTTPSConnection('aip.baidubce.com', 443, timeout=60)
-            conn.request(
-                'POST',
-                '/rest/2.0/ocr/v1/accurate?access_token=' + token,
-                body=payload,
-                headers={'Content-Type': 'application/x-www-form-urlencoded'}
-            )
-            resp = conn.getresponse()
-            raw = resp.read().decode()
-            conn.close()
+            ctx = ssl.create_default_context()
+            conn = HTTPSConnection('aip.baidubce.com', 443, timeout=60, context=ctx)
+            try:
+                conn.request(
+                    'POST',
+                    '/rest/2.0/ocr/v1/accurate?access_token=' + token,
+                    body=payload,
+                    headers={'Content-Type': 'application/x-www-form-urlencoded'}
+                )
+                resp = conn.getresponse()
+                raw = resp.read().decode()
+            finally:
+                conn.close()
             result = json.loads(raw)
             if resp.status != 200 or result.get('error_code'):
                 # Token may expire or be revoked; retry once with a fresh token.
@@ -955,7 +966,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 round(w.get('location', {}).get('top', 0) / 10) * 10,  # Y→10px容差同行
                 w.get('location', {}).get('left', 0)  # X→左到右
             ))
-            import re
+
             # 文字锁定：中文标签 + 正下方值块（X轴对齐，Y轴近距）
             words = [(w.get('words', '').strip(), w.get('location', {})) for w in sorted_words]
             words = [(t, l) for t, l in words if t]
@@ -1170,6 +1181,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
                     'status': 'running',
                     'created_at': time.time(),
                     'updated_at': time.time(),
+                    'finished_at': None,
                     'result': None,
                     'error': None,
                 }
@@ -1183,6 +1195,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
                             job['status'] = 'done'
                             job['result'] = result
                             job['updated_at'] = time.time()
+                            job['finished_at'] = time.time()
                 except Exception as e:
                     with _TALENT_JOB_LOCK:
                         job = _TALENT_JOBS.get(job_id)
@@ -1190,6 +1203,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
                             job['status'] = 'error'
                             job['error'] = str(e)
                             job['updated_at'] = time.time()
+                            job['finished_at'] = time.time()
 
             threading.Thread(target=worker, daemon=True).start()
             self._json(202, {'jobId': job_id, 'status': 'running'})
@@ -1204,6 +1218,16 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self._json(400, {'error': 'missing job id'})
             return
         with _TALENT_JOB_LOCK:
+            # TTL 清理：完成/错误的任务 5 分钟后删除，运行中的 30 分钟后清理
+            now = time.time()
+            stale = []
+            for jid, j in _TALENT_JOBS.items():
+                if j.get('finished_at') and now - j['finished_at'] > 300:
+                    stale.append(jid)
+                elif j['status'] == 'running' and now - j['created_at'] > 1800:
+                    stale.append(jid)
+            for jid in stale:
+                _TALENT_JOBS.pop(jid, None)
             job = _TALENT_JOBS.get(job_id)
             if not job:
                 self._json(404, {'error': 'job not found'})
@@ -1213,9 +1237,9 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 payload['result'] = job['result']
             elif job['status'] == 'error':
                 payload['error'] = job['error']
-            payload['age'] = round(time.time() - job['created_at'], 1)
+            payload['age'] = round(now - job['created_at'], 1)
             if job['status'] in ('done', 'error'):
-                del _TALENT_JOBS[job_id]
+                _TALENT_JOBS.pop(job_id, None)
         self._json(200, payload)
 
     def _run_talent_v2_job(self, body):
@@ -1504,7 +1528,6 @@ OCR文字内容：
             usage = result.get("usage", {})
             self._json(200, {"reply": reply, "action": action, "usage": usage})
         except Exception as e:
-            import traceback
             err_msg = str(e)
             stage = 'llm'
             if 'timeout' in err_msg.lower() or 'timed out' in err_msg.lower():
@@ -1623,7 +1646,6 @@ OCR文字内容：
 
     @staticmethod
     def _extract_json(text):
-        import re
         match = re.search(r'\{[\s\S]*\}', text)
         if not match: raise ValueError(f"无法解析JSON: {text[:100]}")
         return json.loads(match.group())
@@ -1636,6 +1658,13 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     _init_db()
+    # 启用 WAL 模式提升并发性能
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.close()
+    except Exception:
+        pass
     # Load shell-persisted API keys when the process is started directly.
     # This keeps local desktop/mobile testing aligned with ~/.zshrc and ~/.claude/settings.json.
     try:
@@ -1652,6 +1681,7 @@ if __name__ == '__main__':
     except Exception:
         pass
     ThreadingHTTPServer.allow_reuse_address = True
+    port = int(os.environ.get('PORT', 8088))
     import socket
     lan_ip = ''
     try:
@@ -1660,7 +1690,7 @@ if __name__ == '__main__':
         lan_ip = s.getsockname()[0]
         s.close()
     except: pass
-    server = ThreadingHTTPServer(('0.0.0.0', 8088), SEEHandler)
+    server = ThreadingHTTPServer(('0.0.0.0', port), SEEHandler)
     print('🔒 SEE 服务端启动 (多线程): http://127.0.0.1:8088')
     if lan_ip: print(f'   📱 手机访问: http://{lan_ip}:8088')
     print('   API Key 仅在服务端，前端不可见')
