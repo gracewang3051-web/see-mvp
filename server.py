@@ -32,6 +32,18 @@ def _init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_code TEXT NOT NULL,
             type TEXT NOT NULL, sections TEXT NOT NULL,
             created_at TEXT DEFAULT (datetime('now')))''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS qr_codes (
+            id TEXT PRIMARY KEY, name TEXT DEFAULT '', url TEXT DEFAULT '',
+            max_users INTEGER DEFAULT 10, max_reports INTEGER DEFAULT 20,
+            used_users INTEGER DEFAULT 0, used_reports INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'active', expires TEXT, created_at TEXT DEFAULT (datetime('now')))''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS activation_codes (
+            code TEXT PRIMARY KEY, bonus_type TEXT DEFAULT '', extra_reports INTEGER DEFAULT 10,
+            used INTEGER DEFAULT 0, used_at TEXT, created_at TEXT DEFAULT (datetime('now')))''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, time TEXT, code TEXT DEFAULT '',
+            questions INTEGER DEFAULT 0, reports INTEGER DEFAULT 0, cost REAL DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')))''')
         conn.commit()
         conn.close()
 
@@ -575,6 +587,12 @@ class SEEHandler(SimpleHTTPRequestHandler):
             self._db_save_report(body)
         elif self.path == '/api/db/users':
             self._db_save_user(body)
+        elif self.path == '/api/db/qr-codes':
+            self._db_save_qrcode(body)
+        elif self.path == '/api/db/activation-codes':
+            self._db_save_actcode(body)
+        elif self.path == '/api/db/records':
+            self._db_save_record(body)
         else:
             self.send_error(404)
 
@@ -596,6 +614,15 @@ class SEEHandler(SimpleHTTPRequestHandler):
             return
         elif self.path.startswith('/api/db/users'):
             self._db_get_users()
+            return
+        elif self.path.startswith('/api/db/qr-codes'):
+            self._db_get_qrcodes()
+            return
+        elif self.path.startswith('/api/db/activation-codes'):
+            self._db_get_actcodes()
+            return
+        elif self.path.startswith('/api/db/records'):
+            self._db_get_records()
             return
         return super().do_GET()
 
@@ -752,6 +779,93 @@ class SEEHandler(SimpleHTTPRequestHandler):
                     if cur.rowcount == 0:
                         conn.execute("INSERT INTO users (code, name, max_reports) VALUES (?,?,?)",
                                      (code, name, max_reports))
+                conn.commit()
+                conn.close()
+            self._json(200, {"success": True})
+        except Exception as e:
+            self._json(500, {"error": str(e)})
+
+    # ===== QR Codes API =====
+    def _db_get_qrcodes(self):
+        try:
+            with _DB_LOCK:
+                conn = sqlite3.connect(_DB_PATH)
+                rows = conn.execute("SELECT id,name,url,max_users,max_reports,used_users,used_reports,status,expires,created_at FROM qr_codes ORDER BY created_at DESC").fetchall()
+                conn.close()
+            result = [{"id":r[0],"name":r[1],"url":r[2],"maxUsers":r[3],"maxReports":r[4],"usedUsers":r[5],"usedReports":r[6],"status":r[7],"expires":r[8],"createdAt":r[9]} for r in rows]
+            self._json(200, {"codes": result})
+        except Exception as e:
+            self._json(500, {"error": str(e)})
+
+    def _db_save_qrcode(self, body):
+        try:
+            data = json.loads(body)
+            action = data.get('action', 'upsert')
+            with _DB_LOCK:
+                conn = sqlite3.connect(_DB_PATH)
+                if action == 'delete':
+                    conn.execute("DELETE FROM qr_codes WHERE id=?", (data.get('id',''),))
+                else:
+                    conn.execute("INSERT OR REPLACE INTO qr_codes (id,name,url,max_users,max_reports,used_users,used_reports,status,expires) VALUES (?,?,?,?,?,?,?,?,?)",
+                        (data.get('id',''), data.get('name',''), data.get('url',''), data.get('maxUsers',10), data.get('maxReports',20), data.get('usedUsers',0), data.get('usedReports',0), data.get('status','active'), data.get('expires','')))
+                conn.commit()
+                conn.close()
+            self._json(200, {"success": True})
+        except Exception as e:
+            self._json(500, {"error": str(e)})
+
+    # ===== Activation Codes API =====
+    def _db_get_actcodes(self):
+        try:
+            with _DB_LOCK:
+                conn = sqlite3.connect(_DB_PATH)
+                rows = conn.execute("SELECT code,bonus_type,extra_reports,used,used_at,created_at FROM activation_codes ORDER BY created_at DESC").fetchall()
+                conn.close()
+            result = [{"code":r[0],"bonusType":r[1],"extraReports":r[2],"used":bool(r[3]),"usedAt":r[4],"createdAt":r[5]} for r in rows]
+            self._json(200, {"codes": result})
+        except Exception as e:
+            self._json(500, {"error": str(e)})
+
+    def _db_save_actcode(self, body):
+        try:
+            data = json.loads(body)
+            action = data.get('action', 'upsert')
+            with _DB_LOCK:
+                conn = sqlite3.connect(_DB_PATH)
+                if action == 'delete':
+                    conn.execute("DELETE FROM activation_codes WHERE code=?", (data.get('code',''),))
+                else:
+                    conn.execute("INSERT OR REPLACE INTO activation_codes (code,bonus_type,extra_reports,used,used_at) VALUES (?,?,?,?,?)",
+                        (data.get('code',''), data.get('bonusType',''), data.get('extraReports',10), 1 if data.get('used') else 0, data.get('usedAt','')))
+                conn.commit()
+                conn.close()
+            self._json(200, {"success": True})
+        except Exception as e:
+            self._json(500, {"error": str(e)})
+
+    # ===== Records API =====
+    def _db_get_records(self):
+        try:
+            with _DB_LOCK:
+                conn = sqlite3.connect(_DB_PATH)
+                rows = conn.execute("SELECT id,time,code,questions,reports,cost,created_at FROM records ORDER BY id DESC LIMIT 200").fetchall()
+                conn.close()
+            result = [{"time":r[1],"code":r[2],"questions":r[3],"reports":r[4],"cost":r[5]} for r in rows]
+            self._json(200, {"records": result})
+        except Exception as e:
+            self._json(500, {"error": str(e)})
+
+    def _db_save_record(self, body):
+        try:
+            data = json.loads(body)
+            action = data.get('action', 'add')
+            with _DB_LOCK:
+                conn = sqlite3.connect(_DB_PATH)
+                if action == 'clear':
+                    conn.execute("DELETE FROM records")
+                else:
+                    conn.execute("INSERT INTO records (time,code,questions,reports,cost) VALUES (?,?,?,?,?)",
+                        (data.get('time',''), data.get('code',''), data.get('questions',0), data.get('reports',0), data.get('cost',0)))
                 conn.commit()
                 conn.close()
             self._json(200, {"success": True})

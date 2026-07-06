@@ -256,14 +256,23 @@ td .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-s
 // ============ DATA ============
 const SERVER_URL = window.location.origin;
 
-function getCodes() { return JSON.parse(localStorage.getItem('see_admin_codes') || '[]'); }
-function saveCodes(data) { localStorage.setItem('see_admin_codes', JSON.stringify(data)); }
-function getRecords() { return JSON.parse(localStorage.getItem('see_admin_records') || '[]'); }
+var _qrCache = [];
+var _actCache = [];
+var _recCache = [];
+function getCodes() { return _qrCache; }
+function getRecords() { return _recCache; }
+function fetchQRCodes() { fetch('/api/db/qr-codes').then(function(r){return r.json()}).then(function(d){_qrCache=d.codes||[];renderCodeTable();}).catch(function(){}); }
+function fetchRecords() { fetch('/api/db/records').then(function(r){return r.json()}).then(function(d){_recCache=d.records||[];renderRecordTable();}).catch(function(){}); }
+function saveQR(data) { fetch('/api/db/qr-codes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(){fetchQRCodes();}).catch(function(){}); }
+function saveRecord(data) { fetch('/api/db/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(){fetchRecords();}).catch(function(){}); }
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('qrExpires').value = new Date(Date.now()+90*86400000).toISOString().slice(0,10);
   fetchUsers();
+  fetchQRCodes();
+  fetchActCodes();
+  fetchRecords();
 });
 
 function randomStr(n) { return Math.random().toString(36).substring(2,2+n).toUpperCase(); }
@@ -373,8 +382,9 @@ function refreshAll() {
 }
 
 // ============ ACTIVATION CODES ============
-function getActCodes() { return JSON.parse(localStorage.getItem('see_activation_codes') || '[]'); }
-function saveActCodes(data) { localStorage.setItem('see_activation_codes', JSON.stringify(data)); }
+function getActCodes() { return _actCache; }
+function fetchActCodes() { fetch('/api/db/activation-codes').then(function(r){return r.json()}).then(function(d){_actCache=d.codes||[];renderActTable();}).catch(function(){}); }
+function saveAct(data) { fetch('/api/db/activation-codes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(){fetchActCodes();}).catch(function(){}); }
 
 function genActivation() {
   const code = document.getElementById('actCode').value.trim().toUpperCase() || 'WG' + randomStr(3);
@@ -384,8 +394,7 @@ function genActivation() {
   const codes = getActCodes();
   if (codes.find(c => c.code === code)) { toast('激活码已存在', true); return; }
 
-  codes.push({ code, extraReports, bonusType, used: false, createdAt: new Date().toISOString() });
-  saveActCodes(codes);
+  saveAct({ code, extraReports, bonusType, used: false });
 
   document.getElementById('actCode').value = '';
   refreshAll();
@@ -417,9 +426,7 @@ function copyActCode(code) { copyToClipboard(code); toast('已复制: ' + code);
 function copyUserCode(code) { copyToClipboard(code); toast('已复制: ' + code); }
 function delActCode(code) {
   if (!confirm('确定删除激活码 ' + code + '？')) return;
-  const codes = getActCodes().filter(c => c.code !== code);
-  saveActCodes(codes);
-  refreshAll();
+  saveAct({code: code, action: 'delete'});
   toast('已删除');
 }
 
@@ -444,9 +451,7 @@ async function generateQR() {
     expires: expires || null, url, createdAt: new Date().toISOString()
   };
 
-  const codes = getCodes();
-  codes.push(newCode);
-  saveCodes(codes);
+  saveQR(newCode);
 
   // Show preview
   document.getElementById('qrPreview').style.display = 'flex';
@@ -568,9 +573,7 @@ function deactivateCode(id) {
 
 function deleteCode(id) {
   if (!confirm('确定删除此二维码？将从列表中彻底移除，不可恢复。')) return;
-  const codes = getCodes().filter(c => c.id !== id);
-  saveCodes(codes);
-  refreshAll();
+  saveQR({id: id, action: 'delete'});
   toast('已删除');
 }
 
@@ -591,8 +594,7 @@ function exportRecords() {
 
 function clearRecords() {
   if (!confirm('确定清空所有使用记录？此操作不可恢复。')) return;
-  localStorage.setItem('see_admin_records', '[]');
-  refreshAll();
+  saveRecord({action: 'clear'});
   toast('已清空');
 }
 
