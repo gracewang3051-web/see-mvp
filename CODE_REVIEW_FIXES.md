@@ -553,3 +553,24 @@ reader.readAsDataURL(blob);
 | 文件 | 变更 |
 |------|------|
 | `index.html` | `initManualEntries()` + `applyManual()` 重写 |
+
+---
+
+## 🟡 P1 — 用户码加载失败（手机端静默吞错）（2026-07-07）
+
+### 根因
+
+`_fetchUsers()` 调用 `/api/db/users` 获取用户码列表，`.catch(function(){})` 空函数吞掉所有错误。手机网络波动时 fetch 失败 → `_userCache` 空 → `getUserCodes()` 回退读 localStorage → 首次访问 localStorage 也为空 → 任何码都校验失败。
+
+### 修复
+
+1. **移除 localStorage 兜底**：`getUserCodes()` 直接 `return _userCache`，不再回退读 localStorage
+2. **不再静默吞错**：`.catch()` 中加 `console.warn` 输出错误
+3. **自动重试**：失败后 1 秒重试，持续重试直到成功
+
+### 📋 涉及文件
+
+| 文件 | 函数 | 变更 |
+|------|------|------|
+| `index.html` | `_fetchUsers()` + `getUserCodes()` | 去 localStorage + 加重试 |
+| `talent.html` | `_fetchUsers()` + `getUserCodes()` | 去 localStorage + 加重试 |
