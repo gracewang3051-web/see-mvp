@@ -1311,50 +1311,6 @@ function showDebug(debug) {
 }
 
 
-async function downloadServerPDF(md, filename) {
-  // fetch + Blob：避免手机端 form.target='_blank' 被弹窗拦截
-  var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-  try {
-    var resp = await fetch(API_BASE + '/api/export-pdf', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: 'title=' + encodeURIComponent(filename) + '&markdown=' + encodeURIComponent(md)
-    });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    var blob = await resp.blob();
-    var url = URL.createObjectURL(blob);
-
-    if (isMobile) {
-      // 优先：原生分享（iOS 14+ / Android）
-      if (navigator.share && navigator.canShare) {
-        try {
-          var pdfFile = new File([blob], filename + '.pdf', { type: 'application/pdf' });
-          if (navigator.canShare({ files: [pdfFile] })) {
-            await navigator.share({ files: [pdfFile], title: filename });
-            URL.revokeObjectURL(url);
-            return;
-          }
-        } catch (e) { if (e.name === 'AbortError') return; }
-      }
-      // 回退：data URL 导航（iOS Safari 可靠支持）
-      var reader = new FileReader();
-      reader.onload = function() {
-        window.location.href = reader.result;
-      };
-      reader.readAsDataURL(blob);
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
-      return;
-    }
-    var a = document.createElement('a');
-    a.href = url; a.download = filename + '.pdf';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch(e) {
-    alert('PDF 导出失败: ' + e.message);
-  }
-}
-
-
 function downloadReport(key, format) {
   var key = key || null;
   var format = format || 'md';
@@ -1377,8 +1333,20 @@ function downloadReport(key, format) {
   var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
 
   if (format === 'pdf') {
-    // Server-side PDF export (mobile Safari compatible)
-    downloadServerPDF(md, filename);
+    var pdfForm = document.createElement('form');
+    pdfForm.method = 'POST';
+    pdfForm.action = API_BASE + '/api/export-pdf';
+    pdfForm.target = '_blank';
+    pdfForm.style.display = 'none';
+    var pt = document.createElement('input');
+    pt.type = 'hidden'; pt.name = 'title'; pt.value = filename;
+    pdfForm.appendChild(pt);
+    var pm = document.createElement('input');
+    pm.type = 'hidden'; pm.name = 'markdown'; pm.value = md;
+    pdfForm.appendChild(pm);
+    document.body.appendChild(pdfForm);
+    pdfForm.submit();
+    document.body.removeChild(pdfForm);
     return;
   }
 
@@ -1411,26 +1379,21 @@ function downloadReport(key, format) {
   }
 
   var html = '<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:serif;max-width:720px;margin:20px auto;padding:16px;line-height:1.9;color:#333;font-size:16px}h1{font-size:1.4em}h2{font-size:1.15em;margin-top:24px}h3{font-size:1em}p{margin:10px 0}li{margin:6px 0}</style></head><body><h1>' + getReportLabel(key||'report') + '</h1>' + parseMD(md) + '</body></html>';
-  var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
-  var url = URL.createObjectURL(blob);
-
-  if (isMobile) {
-    // 用 data URL 导航，避免 window.open 在 async 上下文中被拦截
-    var docReader = new FileReader();
-    docReader.onload = function() {
-      window.location.href = docReader.result;
-    };
-    docReader.readAsDataURL(blob);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
-    return;
-  }
-
-  // 桌面端：直接下载
-  var a = document.createElement('a');
-  a.href = url; a.download = filename + (format === 'doc' ? '.doc' : '.html');
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  if (format === 'pdf') { setTimeout(function(){ window.open(url, '_blank'); }, 300); }
-  setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+  var docForm = document.createElement('form');
+  docForm.method = 'POST';
+  docForm.action = API_BASE + '/api/export-doc';
+  docForm.target = '_blank';
+  docForm.style.display = 'none';
+  var dt = document.createElement('input');
+  dt.type = 'hidden'; dt.name = 'title'; dt.value = filename;
+  docForm.appendChild(dt);
+  var dh = document.createElement('input');
+  dh.type = 'hidden'; dh.name = 'html'; dh.value = html;
+  docForm.appendChild(dh);
+  document.body.appendChild(docForm);
+  docForm.submit();
+  document.body.removeChild(docForm);
+  return;
 }
 
 </script>

@@ -781,55 +781,27 @@ function parseMD(md) {
     .replace(/^(?!<)(.+)$/gm,'<p>$1</p>');
 }
 var REPORT_LABELS={portrait:'📋 思维画像报告',composite:'💫 合盘报告'};
-async function downloadPDF(){
+function downloadPDF(){
   var md='';
   for(var i=0;i<state.reportOrder.length;i++){
     var k=state.reportOrder[i];
     if(state.reports[k]) md+='# '+(REPORT_LABELS[k]||'报告')+'\n\n'+state.reports[k]+'\n\n---\n\n';
   }
   if(!md) return;
-  var filename = getFileNameBase('SEE_思维画像报告') + '.pdf';
-  var isMobile=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
-
-  try {
-    var resp = await fetch(API_BASE + '/api/export-pdf', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: 'title=' + encodeURIComponent(getFileNameBase('SEE_思维画像报告')) + '&markdown=' + encodeURIComponent(md)
-    });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    var blob = await resp.blob();
-    var url = URL.createObjectURL(blob);
-
-    if (isMobile) {
-      // 优先：原生分享（iOS 14+ / Android）
-      if (navigator.share && navigator.canShare) {
-        try {
-          var file = new File([blob], filename, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: filename });
-            URL.revokeObjectURL(url);
-            return;
-          }
-        } catch (e) { if (e.name === 'AbortError') return; }
-      }
-      // 回退：data URL 导航（iOS Safari 可靠支持 data: URL）
-      var reader = new FileReader();
-      reader.onload = function() {
-        window.location.href = reader.result;
-      };
-      reader.readAsDataURL(blob);
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
-      return;
-    }
-    // 桌面端：a 标签下载
-    var a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch(e) {
-    alert('PDF 导出失败: ' + e.message);
-  }
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = API_BASE + '/api/export-pdf';
+  form.target = '_blank';
+  form.style.display = 'none';
+  var t = document.createElement('input');
+  t.type = 'hidden'; t.name = 'title'; t.value = getFileNameBase('SEE_思维画像报告');
+  form.appendChild(t);
+  var m = document.createElement('input');
+  m.type = 'hidden'; m.name = 'markdown'; m.value = md;
+  form.appendChild(m);
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
 }
 
 function downloadReport(){
