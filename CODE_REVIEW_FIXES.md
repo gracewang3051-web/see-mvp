@@ -349,3 +349,43 @@ if isinstance(markdown, bytes):
 | `errors='replace'` | ⚠️ PDF 出现 `�` 乱码 | **是，改 ignore** | ✅ 两处改为 `errors='ignore'` |
 
 **全部已知问题已闭环，无阻塞项。**
+
+---
+
+## 🔧 2026-07-07 修复 — 手机端 PDF 下载被弹窗拦截
+
+### 🟡 P1 — index.html / talent.html 手机端 PDF 下载失败
+
+**根因**：`downloadPDF()` / `downloadServerPDF()` 使用 `form.submit()` + `form.target = '_blank'` 打开新窗口接收 PDF 响应。手机 Safari / Chrome 将此视为弹窗并拦截，用户看不到 PDF。
+
+**修复**：
+1. `index.html` 的 `downloadPDF()` 改为 `async function`，用 `fetch` POST 到 `/api/export-pdf`，拿到 Blob 后：
+   - 手机端：`window.location.href = blobUrl` 直接在当前窗口打开
+   - 桌面端：`a.download` 触发下载
+2. `talent.html` 的 `downloadServerPDF()` 同样改造
+3. 请求格式改为 `application/x-www-form-urlencoded`，兼容 `_parse_post_body`
+
+### 📋 涉及文件
+
+| 文件 | 变更 |
+|------|------|
+| `index.html` | `downloadPDF()` 从 form.submit 改为 fetch + Blob |
+| `talent.html` | `downloadServerPDF()` 从 form.submit 改为 fetch + Blob |
+
+---
+
+## 📊 最终状态（更新）
+
+| 维度 | 数量 | 状态 |
+|------|------|------|
+| Code Review P0 | 3 项 | ✅ 全部修复 |
+| Code Review P1 | 3 项 | ✅ 2 修复 + 1 延后 |
+| Code Review P2 | 5 项 | ✅ 1 修复 + 4 延后/不采纳 |
+| 部署审查 P0 | 6 项 | ✅ 全部修复 |
+| 线上问题 | 4 项 | ✅ 全部修复 |
+| 2026-07-07 部署包同步 | 6 项 | ✅ 全部修复 |
+| 2026-07-07 Tesseract 移除 | 2 页 | ✅ 全部完成 |
+| 2026-07-07 第三方审核（PDF UTF-8） | 2 项 | ✅ 全部修复 |
+| **2026-07-07 手机 PDF 下载弹窗拦截** | **2 文件** | **✅ 全部修复** |
+
+**全部已知问题已闭环，无阻塞项。**
