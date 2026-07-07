@@ -1333,6 +1333,21 @@ function downloadReport(key, format) {
   var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
 
   if (format === 'pdf') {
+    if (isMobile && navigator.share && navigator.canShare) {
+      // 移动端：优先 Share API
+      fetch(API_BASE + '/api/export-pdf', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'title=' + encodeURIComponent(filename) + '&markdown=' + encodeURIComponent(md)
+      }).then(function(r){ return r.blob(); }).then(function(blob){
+        var file = new File([blob], filename + '.pdf', { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: filename });
+        }
+      }).catch(function(){});
+      return;
+    }
+    // 桌面端：同步 form.submit _blank
     var pdfForm = document.createElement('form');
     pdfForm.method = 'POST';
     pdfForm.action = API_BASE + '/api/export-pdf';
@@ -1378,21 +1393,19 @@ function downloadReport(key, format) {
     return;
   }
 
+  // DOC: 纯前端 <a download>，无需服务端往返
   var html = '<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:serif;max-width:720px;margin:20px auto;padding:16px;line-height:1.9;color:#333;font-size:16px}h1{font-size:1.4em}h2{font-size:1.15em;margin-top:24px}h3{font-size:1em}p{margin:10px 0}li{margin:6px 0}</style></head><body><h1>' + getReportLabel(key||'report') + '</h1>' + parseMD(md) + '</body></html>';
-  var docForm = document.createElement('form');
-  docForm.method = 'POST';
-  docForm.action = API_BASE + '/api/export-doc';
-  docForm.target = '_blank';
-  docForm.style.display = 'none';
-  var dt = document.createElement('input');
-  dt.type = 'hidden'; dt.name = 'title'; dt.value = filename;
-  docForm.appendChild(dt);
-  var dh = document.createElement('input');
-  dh.type = 'hidden'; dh.name = 'html'; dh.value = html;
-  docForm.appendChild(dh);
-  document.body.appendChild(docForm);
-  docForm.submit();
-  document.body.removeChild(docForm);
+  var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  if (isMobile) {
+    window.location.href = url;
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+    return;
+  }
+  var a = document.createElement('a');
+  a.href = url; a.download = filename + (format === 'doc' ? '.doc' : '.html');
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
   return;
 }
 
