@@ -362,6 +362,7 @@ if isinstance(markdown, bytes):
 | **2026-07-07 手机 blob URL 不兼容 iOS Safari** | **3 函数** | **✅ 全部修复** |
 | **2026-07-07 用户码加载竞态条件** | **5 处** | **✅ 全部修复** |
 | **2026-07-07 下载 async/await 丢失用户手势** | **5 处** | **✅ 全部修复** |
+| **2026-07-07 下载风险排查（_blank拦截/DOC体积）** | **2 项** | **✅ 全部修复** |
 
 ---
 
@@ -1003,3 +1004,78 @@ self.end_headers()  # ← 这里又加一次
 | `talent.html` | `downloadReport()` DOC 分支 | data URL → 同步 form.submit |
 | `server.py` | `_export_pdf()` | 删除重复 CORS header |
 | `server.py` | `_export_doc()` | 删除重复 CORS header |
+
+---
+
+## ✅ 风险排查报告 — 同步 form.submit 方案（2026-07-07 19:11）[已处理]
+
+> 上次修复将 PDF/DOC 下载从 `async fetch + data URL` 改为同步 `form.submit()`，解决了手机端下载失败问题。本次排查评估该方案的后续风险。
+
+---
+
+### 🟡 中风险（3 项）
+
+#### 风险 1：丢失错误反馈
+
+旧代码有 `alert('PDF 导出失败: ' + e.message)`。新代码无任何错误处理——服务器 500 时，用户在新标签页看到空白或 JSON 错误页，不知道发生了什么。
+
+**当前状态**：`downloadPDF()` 有 `if(!md) return` 守卫。服务端返回 200+PDF 或 500+JSON，不会静默吞错。
+
+**建议**：可加一个前端超时提示——30 秒后新标签页没打开则 alert。
+
+---
+
+#### 风险 2：移动端 `target='_blank'` 可能被弹窗拦截器阻止
+
+iOS Safari "阻止弹窗" 开启时，即使 `form.submit()` 是同步调用，`_blank` 也可能被拦截。旧方案有 Share API → data URL → location.href 的多级回退，新方案只有 form.submit 一条路。
+
+| 环境 | 旧方案 (async fetch) | 新方案 (form.submit) |
+|------|:---:|:---:|
+| iOS Safari 弹窗拦截 | Share API 或 data URL 兜底 ✅ | form.submit 可能被拦截 ❌ |
+| 桌面 Chrome | a.click 下载 ✅ | form.submit ✅ |
+| Android Chrome | Share API 兜底 ✅ | 通常 ✅ |
+
+**建议**：
+- 移动端：Share API 优先（需要 fetch，但体验最好）→ `form.submit` `_self` 回退（当前页打开）
+- 桌面端：`form.submit` `_blank` 保持现状
+
+**推荐方案**（按场景分策略）：
+
+| 环境 | PDF | DOC |
+|------|-----|-----|
+| 桌面 | `form.submit` `_blank` ✅ | `<a download>` 保持旧方案 ✅ |
+| 移动 | Share API 优先 → `form.submit` `_self` 回退 | `<a download>` 保持旧方案 ✅ |
+
+> PDF 需要服务端 `fpdf` 渲染，必须走 form.submit。DOC 只是 HTML 改名，可用前端 `<a download>` 方案，无需服务端往返。
+
+---
+
+#### 风险 3：DOC 导出 HTML 体积大，URL 编码后可能触发上传限制
+
+完整 HTML 包含内嵌样式表 + `parseMD(md)` 输出，URL 编码后可达数百 KB。部分反向代理 / CDN 默认 POST body 限制 1MB，大型报告可能触及。
+
+**建议**：DOC 分支改为前端 `<a download>` 方式（Blob + `a.click()`），不经过服务端往返。DOC 本质是 HTML 改名，不依赖 `_generate_pdf`。
+
+---
+
+### 🟢 低风险 / 无风险（4 项）
+
+| # | 项 | 结论 |
+|---|-----|------|
+| 4 | `parse_qs` 对 `+` 号的解析 | 浏览器编码 `+` 为 `%2B`，`parse_qs` 正确还原，无风险 |
+| 5 | `form.removeChild` 时序 | `target='_blank'` 导航不阻塞当前页执行，安全 |
+| 6 | 重复 CORS header 移除 | `end_headers()` 全局添加，导出函数去重纯属清理 |
+| 7 | markdown 空内容 | `if(!md) return` 守卫已存在 |
+
+---
+
+### 📊 结论
+
+| 风险 | 等级 | 是否需要立即修复 | 建议处理方式 |
+|------|:---:|:---:|------|
+| #1 丢失错误反馈 | 🟡 中 | 否 | 后续加超时提示 |
+| #2 `_blank` 弹窗拦截 | 🟡 中 | **是** | 移动端改 `_self` / 桌面端保持 `_blank` |
+| #3 DOC body 体积大 | 🟡 中 | 否 | 后续 DOC 改前端 `<a download>` |
+| #4-7 | 🟢 低 | 否 | 无需处理 |
+
+**最值得关注的是风险 #2**（移动端弹窗拦截），建议按场景分策略：PDF 移动端用 Share API → `_self` 回退，DOC 改为纯前端 `<a download>`。
