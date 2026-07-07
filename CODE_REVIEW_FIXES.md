@@ -360,6 +360,7 @@ if isinstance(markdown, bytes):
 | 2026-07-07 第三方审核（PDF UTF-8） | 2 项 | ✅ 全部修复 |
 | 2026-07-07 手机 PDF 下载弹窗拦截 | 2 文件 | ✅ 第一次修复 |
 | **2026-07-07 手机 blob URL 不兼容 iOS Safari** | **3 函数** | **✅ 全部修复** |
+| **2026-07-07 用户码加载竞态条件** | **5 处** | **✅ 全部修复** |
 
 ---
 
@@ -574,3 +575,152 @@ reader.readAsDataURL(blob);
 |------|------|------|
 | `index.html` | `_fetchUsers()` + `getUserCodes()` | 去 localStorage + 加重试 |
 | `talent.html` | `_fetchUsers()` + `getUserCodes()` | 去 localStorage + 加重试 |
+
+---
+
+## ✅ P0 — 手机端用户码加载竞态条件：`loadUserReports()` 在 `_fetchUsers()` 完成前执行（2026-07-07 14:28）[已修复]
+
+> 上一轮修复加重试解决了 fetch 失败的问题，但没解决**时序问题**：即使 fetch 成功，结果也可能在 `loadUserReports()` 检查之后才到达。
+
+### 根因
+
+`DOMContentLoaded` 时两个函数顺序调用，但 `_fetchUsers()` 是异步的（fetch），`loadUserReports()` 是同步的：
+
+```
+DOMContentLoaded
+  → _fetchUsers()           ← fire fetch, return immediately
+  → loadUserReports()       ← sync call, _userCache === [] 
+    → isValidCode(code)     ← _userCache = [] → false
+    → return early          ← 用户看到空白
+```
+
+### 为什么桌面端正常、手机端失败？
+
+| 场景 | 桌面端 | 手机端 |
+|------|:---:|:---:|
+| 无 savedCode，用户手动输入 → 点"加载" | ✅ 此时间隔足够，fetch 已完成 | ❌ 慢网络下 fetch 仍在进行中 |
+| 有 savedCode（扫码 `?code=...` 进入），DOMContentLoaded 自动调 `loadUserReports()` | 🍀 快网络下可能通过 | ❌ 确定性失败 |
+
+手机端两个因素叠加：**网络更慢 + 扫码入口 100% 触发竞态** → 任何码都校验失败。
+
+### 涉及代码
+
+**index.html**（476-479 行）：
+```javascript
+document.addEventListener('DOMContentLoaded', () => {
+  _fetchUsers();                          // 异步
+  const savedCode = sessionStorage.getItem('see_code_shared');
+  if (savedCode) { ...; loadUserReports(); }  // 同步，此时 _userCache 为空
+```
+
+**index.html** `loadUserReports()`（418 行）：
+```javascript
+if (!code || !isValidCode(code)) { updateQuotaDisplay(code); return; }
+//                                ^^^^^^^^^^^^^^^^ 此时 _userCache 一定是空的
+```
+
+**talent.html** 存在同样问题（528-534 行 + 474 行）。
+
+### 修复方案
+
+**核心思路**：让 `_fetchUsers()` 返回 Promise，`loadUserReports()` 改为 async 并 await。
+
+#### 修复 1：`_fetchUsers()` 返回 Promise + 防重复请求
+
+**文件**：`index.html`（250-264 行）、`talent.html`（408-419 行）
+
+**当前代码**：
+```javascript
+var _userCache = [];
+function _fetchUsers() {
+  _userFetchFailed = false;
+  fetch(API_BASE + '/api/db/users').then(function(r){
+    ...
+  }).catch(function(err){
+    _userFetchFailed = true;
+    console.warn('用户码加载失败，1秒后重试: ' + err.message);
+    setTimeout(function(){ _fetchUsers(); }, 1000);
+  });
+}
+```
+
+**改为**：
+```javascript
+var _userCache = [];
+var _usersPromise = null;
+function _fetchUsers() {
+  if (_usersPromise) return _usersPromise;
+  _userFetchFailed = false;
+  _usersPromise = fetch(API_BASE + '/api/db/users').then(function(r){
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(d){
+    _userCache = (d.users || []).map(function(u){ u.code = u.code || ''; return u; });
+    var code = getUserCode();
+    if (code) updateQuotaDisplay(code);
+    _usersPromise = null;
+    return _userCache;
+  }).catch(function(err){
+    _userFetchFailed = true;
+    _usersPromise = null;
+    console.warn('用户码加载失败，1秒后重试: ' + err.message);
+    setTimeout(function(){ _fetchUsers(); }, 1000);
+  });
+  return _usersPromise;
+}
+```
+
+**改动点**：
+- 新增 `_usersPromise` 缓存正在进行的请求，避免并发重复 fetch
+- `return _usersPromise` 让调用方可以 await
+- 成功后 `_usersPromise = null` 释放，下次重新请求
+
+#### 修复 2：`loadUserReports()` 改为 async 并 await `_fetchUsers()`
+
+**文件**：`index.html`（404 行）、`talent.html`（472 行）
+
+**当前代码**：
+```javascript
+function loadUserReports() {
+  const code = getUserCode();
+  if (!code || !isValidCode(code)) { updateQuotaDisplay(code); return; }
+  ...
+```
+
+**改为**：
+```javascript
+async function loadUserReports() {
+  const code = getUserCode();
+  if (!code) { updateQuotaDisplay(code); return; }
+  await _fetchUsers();
+  if (!isValidCode(code)) { updateQuotaDisplay(code); return; }
+  ...
+```
+
+**改动点**：
+- `function` → `async function`
+- 先检查 `!code`（不需要 await）
+- `!isValidCode(code)` 前插 `await _fetchUsers()` 确保数据已加载
+
+#### 修复 3（bonus）：`talent.html` 补充缺失的 `_userFetchFailed` 变量
+
+`talent.html` 的 `_fetchUsers()` catch 块写了 `_userFetchFailed = true` 但从未声明该变量，会创建全局变量。需在 `_userCache` 旁补充声明。
+
+### 📋 涉及文件汇总
+
+| 文件 | 函数 | 行号 | 变更 |
+|------|------|------|------|
+| `index.html` | `_fetchUsers()` | 250-264 | 返回 Promise + 防重复 |
+| `index.html` | `loadUserReports()` | 404 | async + await _fetchUsers |
+| `talent.html` | `_fetchUsers()` | 408-419 | 返回 Promise + 防重复 |
+| `talent.html` | `loadUserReports()` | 472 | async + await _fetchUsers |
+| `talent.html` | 全局变量区 | ~407 | 补充 `_userFetchFailed`、`_usersPromise` 声明 |
+
+### 📊 为什么这个修复能解决手机端问题？
+
+| 时序 | 修复前 | 修复后 |
+|------|--------|--------|
+| `_fetchUsers()` 调用 | fire and forget | 返回 Promise |
+| `loadUserReports()` | 同步检查 `_userCache`（空）→ fail | `await _fetchUsers()` → 等待 http 返回 |
+| 用户手动输入码 | 可能 fetch 仍在进行 → fail | `await _fetchUsers()` 复用已完成 Promise → immediate |
+| 重复调用 | 每次发新请求 | `_usersPromise` 缓存，只发一次
