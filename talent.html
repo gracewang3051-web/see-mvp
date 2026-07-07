@@ -1295,23 +1295,31 @@ function showDebug(debug) {
 }
 
 
-function downloadServerPDF(md, filename) {
-  // Form-based POST: browser handles PDF response natively (works on mobile Safari)
-  var form = document.createElement('form');
-  form.method = 'POST';
-  form.action = API_BASE + '/api/export-pdf';
-  form.target = '_blank';
-  form.acceptCharset = 'UTF-8';
-  form.style.display = 'none';
-  var titleInput = document.createElement('input');
-  titleInput.name = 'title'; titleInput.value = filename;
-  form.appendChild(titleInput);
-  var mdInput = document.createElement('input');
-  mdInput.name = 'markdown'; mdInput.value = md;
-  form.appendChild(mdInput);
-  document.body.appendChild(form);
-  form.submit();
-  setTimeout(function(){ if (form.parentNode) form.parentNode.removeChild(form); }, 1500);
+async function downloadServerPDF(md, filename) {
+  // fetch + Blob：避免手机端 form.target='_blank' 被弹窗拦截
+  var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  try {
+    var resp = await fetch(API_BASE + '/api/export-pdf', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'title=' + encodeURIComponent(filename) + '&markdown=' + encodeURIComponent(md)
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+
+    if (isMobile) {
+      window.location.href = url;
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+      return;
+    }
+    var a = document.createElement('a');
+    a.href = url; a.download = filename + '.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('PDF 导出失败: ' + e.message);
+  }
 }
 
 

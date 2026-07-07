@@ -769,24 +769,40 @@ function parseMD(md) {
     .replace(/^(?!<)(.+)$/gm,'<p>$1</p>');
 }
 var REPORT_LABELS={portrait:'📋 思维画像报告',composite:'💫 合盘报告'};
-function downloadPDF(){
+async function downloadPDF(){
   var md='';
   for(var i=0;i<state.reportOrder.length;i++){
     var k=state.reportOrder[i];
     if(state.reports[k]) md+='# '+(REPORT_LABELS[k]||'报告')+'\n\n'+state.reports[k]+'\n\n---\n\n';
   }
   if(!md) return;
-  var form = document.createElement('form');
-  form.method = 'POST';
-  form.action = API_BASE + '/api/export-pdf';
-  form.target = '_blank';
-  form.acceptCharset = 'UTF-8';
-  form.style.display = 'none';
-  var t = document.createElement('input'); t.name='title'; t.value=getFileNameBase('SEE_思维画像报告'); form.appendChild(t);
-  var m = document.createElement('input'); m.name='markdown'; m.value=md; form.appendChild(m);
-  document.body.appendChild(form);
-  form.submit();
-  setTimeout(function(){ if (form.parentNode) form.parentNode.removeChild(form); }, 1500);
+  var filename = getFileNameBase('SEE_思维画像报告') + '.pdf';
+  var isMobile=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+
+  try {
+    var resp = await fetch(API_BASE + '/api/export-pdf', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'title=' + encodeURIComponent(getFileNameBase('SEE_思维画像报告')) + '&markdown=' + encodeURIComponent(md)
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+
+    if (isMobile) {
+      // 手机端：直接打开 Blob URL，避免被弹窗拦截
+      window.location.href = url;
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+      return;
+    }
+    // 桌面端：a 标签下载
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('PDF 导出失败: ' + e.message);
+  }
 }
 
 function downloadReport(){
