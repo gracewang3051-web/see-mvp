@@ -1079,3 +1079,62 @@ iOS Safari "阻止弹窗" 开启时，即使 `form.submit()` 是同步调用，`
 | #4-7 | 🟢 低 | 否 | 无需处理 |
 
 **最值得关注的是风险 #2**（移动端弹窗拦截），建议按场景分策略：PDF 移动端用 Share API → `_self` 回退，DOC 改为纯前端 `<a download>`。
+
+---
+
+## ✅ P0 — `see-mvp/` 部署目录未同步最新修复（2026-07-07 20:58）[已验证：已同步]
+
+> 主目录已完成 6 轮修复，但 `see-mvp/` 部署子目录（实际运行在服务端）的代码停留在旧版本。
+
+### 文件大小对比
+
+| 文件 | 主目录（最新） | see-mvp/（部署） | 差距 |
+|------|------|------|:---:|
+| `index.html` | 43573B | 42467B | -1106B |
+| `talent.html` | 67372B | 67008B | -364B |
+| `server.py` | 83331B | 83461B | +130B（有重复行） |
+
+### 📋 缺失修复清单
+
+| # | 修复项 | 主目录 | see-mvp/ | 修复来源 |
+|---|--------|:---:|:---:|------|
+| 1 | `downloadPDF()` 同步 form.submit | ✅ line 784 | ❌ 仍是 async (line 772) | 手机端下载修复 |
+| 2 | `downloadServerPDF()` 删除 | ✅ 已删除 | ❌ 仍在 (line 1298, 1349) | 手机端下载修复 |
+| 3 | `downloadReport()` PDF → form.submit | ✅ | ❌ 调用旧 downloadServerPDF | 手机端下载修复 |
+| 4 | `downloadReport()` DOC → form.submit | ✅ | ❌ 未同步 | 手机端下载修复 |
+| 5 | `_usersPromise` 竞态修复 | ✅ 有 | ❌ 无 | 用户码加载竞态 |
+| 6 | `_userFetchFailed` 声明 | ✅ 有 | ❌ 无 | 用户码加载竞态 |
+| 7 | server.py CORS 去重 | ✅ 3 处 | ❌ 5 处（line 1505, 1530 多余） | server CORS 清理 |
+| 8 | server.py `errors='ignore'` | ✅ | ✅ 已有 | PDF UTF-8 修复 |
+
+### 📋 需要同步的操作
+
+#### index.html
+
+| 改动 | 行号（主目录） | 详情 |
+|------|------|------|
+| `downloadPDF()` async→sync | 784-826 | `async function` → `function`，fetch+blob → form.submit |
+| `_usersPromise` 变量 + `_fetchUsers()` 返回 Promise | 250-270 | 防重复请求 + await 支持 |
+| `loadUserReports()` async + await | 404-408 | 等待用户码加载完成再校验 |
+
+#### talent.html
+
+| 改动 | 行号（主目录） | 详情 |
+|------|------|------|
+| 删除 `downloadServerPDF()` | 1298-1345 | 整个函数删除 |
+| `downloadReport()` PDF 分支 → form.submit | ~1335 | 替换 downloadServerPDF 调用 |
+| `downloadReport()` DOC 分支 → form.submit | ~1381 | data URL → 同步 form.submit |
+| `_usersPromise` + `_userFetchFailed` 声明 | ~407 | 补充缺失变量 |
+| `_fetchUsers()` 返回 Promise | ~408-428 | 同 index.html |
+| `loadUserReports()` async + await | ~472 | 同 index.html |
+
+#### server.py
+
+| 改动 | 行号（主目录） | 详情 |
+|------|------|------|
+| 删除 `_export_pdf` 中的 CORS header | 1505 | 删除 `self.send_header('Access-Control-Allow-Origin', '*')` |
+| 删除 `_export_doc` 中的 CORS header | 1530 | 同上 |
+
+### 📊 see_deploy_副本/ 状态
+
+完全过期（server.py 22KB vs 主目录 83KB），不再维护此目录。
