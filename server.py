@@ -442,6 +442,11 @@ def _generate_pdf(title, markdown):
     import io, re
     from fpdf import FPDF
 
+    # 确保输入是纯字符串（CentOS 7 Python 3.6 兼容）
+    if isinstance(markdown, bytes):
+        markdown = markdown.decode('utf-8', errors='replace')
+    markdown = str(markdown)
+
     pdf = FPDF(orientation='P', unit='mm', format='A4')
     pdf.set_left_margin(15)
     pdf.set_right_margin(15)
@@ -1470,6 +1475,9 @@ OCR文字内容：
             if not markdown:
                 self._json(400, {"error": "缺少报告内容"})
                 return
+            # 确保 markdown 是纯 str，避免 bytes/encoding 问题
+            if isinstance(markdown, bytes):
+                markdown = markdown.decode('utf-8', errors='replace')
 
             pdf_bytes = _generate_pdf(title, markdown)
             self.send_response(200)
