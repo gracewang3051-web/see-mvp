@@ -411,20 +411,15 @@ function _fetchUsers() {
     return r.json();
   }).then(function(d){
     _userCache = (d.users || []).map(function(u){ u.code = u.code || ''; return u; });
-    try { localStorage.setItem('see_user_codes', JSON.stringify(_userCache)); } catch(e) {}
     var code = getUserCode();
     if (code) updateQuotaDisplay(code);
   }).catch(function(err){
-    console.warn('用户码加载失败，使用本地缓存: ' + err.message);
-    var local = getUserCodes();
-    if (local.length === 0) {
-      setTimeout(function(){ _fetchUsers(); }, 1000);
-    }
+    console.warn('用户码加载失败，1秒后重试: ' + err.message);
+    setTimeout(function(){ _fetchUsers(); }, 1000);
   });
 }
 function getUserCodes() {
-  if (_userCache.length > 0) return _userCache;
-  try { return JSON.parse(localStorage.getItem('see_user_codes') || '[]'); } catch(e) { return []; }
+  return _userCache;
 }
 function isValidCode(code) { return getUserCodes().some(function(u){ return u.code === code; }); }
 function getReportCount(code) {
