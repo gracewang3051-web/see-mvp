@@ -524,3 +524,32 @@ reader.readAsDataURL(blob);
 |------|------|------|------|
 | `index.html` | `downloadPDF()` | ~797 | catch all → 加 AbortError 判断 |
 | `talent.html` | `downloadServerPDF()` | ~1316 | catch all → 加 AbortError 判断 |
+
+---
+
+## 🔧 2026-07-07 重构 — 手动输入从 25 个下拉框改为 5 个文本框
+
+### 背景
+
+用户反馈：手动输入 25 个 `<select>` 下拉框逐个选 ABCD 太繁琐。5 个板块每板块 5 题，直接输入 5 个字母更高效。
+
+### 修改
+
+**文件**：`index.html`
+
+| 函数 | 旧 | 新 |
+|------|-----|-----|
+| `initManualEntries()` | 25 个 `<select>` 下拉框 | 5 个 `<input maxlength=5>` 文本框 |
+| `applyManual()` | 逐个读取 25 个 select 值 | 读取 5 个文本框，校验 `/^[ABCD]{5}$/`，按位置拆分 |
+
+**特性**：
+- `autocapitalize="characters"` 自动大写
+- `letter-spacing:4px` 视觉清晰
+- `maxlength="5"` 限制长度
+- 校验：每框必须恰好 5 个 ABCD 字母
+
+### 📋 涉及文件
+
+| 文件 | 变更 |
+|------|------|
+| `index.html` | `initManualEntries()` + `applyManual()` 重写 |
