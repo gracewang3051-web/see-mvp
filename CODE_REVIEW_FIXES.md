@@ -358,6 +358,123 @@ if isinstance(markdown, bytes):
 | 2026-07-07 部署包同步 | 6 项 | ✅ 全部修复 |
 | 2026-07-07 Tesseract 移除 | 2 页 | ✅ 全部完成 |
 | 2026-07-07 第三方审核（PDF UTF-8） | 2 项 | ✅ 全部修复 |
-| **2026-07-07 手机 PDF 下载弹窗拦截** | **2 文件** | **✅ 全部修复** |
+| 2026-07-07 手机 PDF 下载弹窗拦截 | 2 文件 | ✅ 第一次修复 |
+| **2026-07-07 手机 blob URL 不兼容 iOS Safari** | **3 函数** | **✅ 全部修复** |
 
-**全部已知问题已闭环，无阻塞项。**
+---
+
+## 🛑 P0 — 手机端 Blob URL 方案在 iOS Safari 中仍然失败（2026-07-07 12:47）
+
+> 第一次修复把 `form.submit` 改成 `fetch + blobURL`，但 blob URL 在 iOS Safari 中导航无效。
+
+### 问题 1：iOS Safari 不支持 `window.location.href = blobURL`
+
+**涉及文件**：`index.html`（792-796 行）、`talent.html`（1311-1314 行）
+
+**当前代码**：
+
+```javascript
+if (isMobile) {
+    window.location.href = url;  // url = URL.createObjectURL(blob)
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    return;
+}
+```
+
+**原因**：iOS Safari 的 Blob URL 只在创建它的 document 内有效（用于 `<img>`、`<a download>`）。`location.href` 导航到 blob URL 时，Safari 创建新 document 上下文，丢失原 document 的 blob 引用 → 空白页或无反应。
+
+### 问题 2：`talent.html` DOC 导出用 `window.open` 被拦截
+
+**涉及文件**：`talent.html`（1386 行）
+
+```javascript
+var w = window.open(url, '_blank');
+if (!w) { alert('请允许弹出窗口...'); location.href = url; }
+```
+
+async 函数中 `window.open` 脱离用户点击上下文，必然被弹窗拦截器拦截。
+
+### 为什么 data URL 可行而 blob URL 不行？
+
+| 方式 | iOS Safari | 原因 |
+|------|:---:|------|
+| `location.href = blob:...` | ❌ | 跨 document 上下文丢失 blob 引用 |
+| `location.href = data:application/pdf;base64,...` | ✅ | data URL 自包含，不依赖原 document |
+| `navigator.share({files:[...]})` | ✅ | iOS 14+ 原生分享面板 |
+
+---
+
+### 修复 1：PDF 导出 — 优先 Share API，回退 data URL
+
+**文件**：`index.html` `downloadPDF()` 手机分支（792-797 行）
+**文件**：`talent.html` `downloadServerPDF()` 手机分支（1311-1314 行）
+
+**改为**：
+
+```javascript
+if (isMobile) {
+    // 优先：原生分享（iOS 14+ / Android）
+    if (navigator.share && navigator.canShare) {
+        try {
+            var file = new File([blob], filename, { type: 'application/pdf' });
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: filename });
+                URL.revokeObjectURL(url);
+                return;
+            }
+        } catch (e) {}
+    }
+    // 回退：data URL 导航（iOS Safari 可靠支持）
+    var reader = new FileReader();
+    reader.onload = function() {
+        window.location.href = reader.result;
+    };
+    reader.readAsDataURL(blob);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+    return;
+}
+```
+
+---
+
+### 修复 2：DOC 导出 — 用 data URL 替代 window.open
+
+**文件**：`talent.html` `downloadReport()` DOC 分支（1385-1392 行）
+
+**当前代码**：
+
+```javascript
+if (isMobile) {
+    var w = window.open(url, '_blank');
+    if (!w) { alert('请允许弹出窗口...'); location.href = url; }
+    setTimeout(function(){ try { if (w) { w.focus(); w.print(); } } catch (e) {} }, 800);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    return;
+}
+```
+
+**改为**：
+
+```javascript
+if (isMobile) {
+    // 用 data URL 导航，避免 window.open 被拦截
+    var docReader = new FileReader();
+    docReader.onload = function() {
+        window.location.href = docReader.result;
+    };
+    docReader.readAsDataURL(blob);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+    return;
+}
+```
+
+---
+
+### 📋 涉及文件汇总
+
+| 文件 | 函数 | 行号 | 问题 |
+|------|------|------|------|
+| `index.html` | `downloadPDF()` | 792-797 | blob URL → data URL |
+| `talent.html` | `downloadServerPDF()` | 1311-1314 | blob URL → data URL |
+| `talent.html` | `downloadReport()` DOC | 1385-1392 | `window.open` → data URL |
+benben test

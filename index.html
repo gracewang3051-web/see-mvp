@@ -790,9 +790,24 @@ async function downloadPDF(){
     var url = URL.createObjectURL(blob);
 
     if (isMobile) {
-      // 手机端：直接打开 Blob URL，避免被弹窗拦截
-      window.location.href = url;
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+      // 优先：原生分享（iOS 14+ / Android）
+      if (navigator.share && navigator.canShare) {
+        try {
+          var file = new File([blob], filename, { type: 'application/pdf' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: filename });
+            URL.revokeObjectURL(url);
+            return;
+          }
+        } catch (e) {}
+      }
+      // 回退：data URL 导航（iOS Safari 可靠支持 data: URL）
+      var reader = new FileReader();
+      reader.onload = function() {
+        window.location.href = reader.result;
+      };
+      reader.readAsDataURL(blob);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
       return;
     }
     // 桌面端：a 标签下载

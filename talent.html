@@ -1309,8 +1309,24 @@ async function downloadServerPDF(md, filename) {
     var url = URL.createObjectURL(blob);
 
     if (isMobile) {
-      window.location.href = url;
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+      // 优先：原生分享（iOS 14+ / Android）
+      if (navigator.share && navigator.canShare) {
+        try {
+          var pdfFile = new File([blob], filename + '.pdf', { type: 'application/pdf' });
+          if (navigator.canShare({ files: [pdfFile] })) {
+            await navigator.share({ files: [pdfFile], title: filename });
+            URL.revokeObjectURL(url);
+            return;
+          }
+        } catch (e) {}
+      }
+      // 回退：data URL 导航（iOS Safari 可靠支持）
+      var reader = new FileReader();
+      reader.onload = function() {
+        window.location.href = reader.result;
+      };
+      reader.readAsDataURL(blob);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
       return;
     }
     var a = document.createElement('a');
@@ -1383,12 +1399,13 @@ function downloadReport(key, format) {
   var url = URL.createObjectURL(blob);
 
   if (isMobile) {
-    var w = window.open(url, '_blank');
-    if (!w) { alert('请允许弹出窗口，或使用浏览器分享/打印'); location.href = url; }
-    setTimeout(function(){
-      try { if (w) { w.focus(); w.print(); } } catch (e) {}
-    }, 800);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    // 用 data URL 导航，避免 window.open 在 async 上下文中被拦截
+    var docReader = new FileReader();
+    docReader.onload = function() {
+      window.location.href = docReader.result;
+    };
+    docReader.readAsDataURL(blob);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
     return;
   }
 
