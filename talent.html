@@ -406,11 +406,21 @@ function getFileNameBase(fallback) {
 // ===== 用户码管理（数据源：服务端 SQLite，localStorage 兜底）=====
 var _userCache = [];
 function _fetchUsers() {
-  fetch(API_BASE + '/api/db/users').then(function(r){ return r.json(); }).then(function(d){
+  fetch(API_BASE + '/api/db/users').then(function(r){
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(d){
     _userCache = (d.users || []).map(function(u){ u.code = u.code || ''; return u; });
+    try { localStorage.setItem('see_user_codes', JSON.stringify(_userCache)); } catch(e) {}
     var code = getUserCode();
     if (code) updateQuotaDisplay(code);
-  }).catch(function(){});
+  }).catch(function(err){
+    console.warn('用户码加载失败，使用本地缓存: ' + err.message);
+    var local = getUserCodes();
+    if (local.length === 0) {
+      setTimeout(function(){ _fetchUsers(); }, 1000);
+    }
+  });
 }
 function getUserCodes() {
   if (_userCache.length > 0) return _userCache;
