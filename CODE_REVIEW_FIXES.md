@@ -477,4 +477,50 @@ if (isMobile) {
 | `index.html` | `downloadPDF()` | 792-797 | blob URL → data URL |
 | `talent.html` | `downloadServerPDF()` | 1311-1314 | blob URL → data URL |
 | `talent.html` | `downloadReport()` DOC | 1385-1392 | `window.open` → data URL |
-benben test
+---
+
+## 🟡 P1 — Share API 取消后仍跳转 data URL（2026-07-07 13:11）
+
+> 用户点"分享"后又点取消，代码继续走到 data URL 导航，强制跳转 PDF 页面，体验差。
+
+### 问题
+
+**涉及文件**：`index.html` `downloadPDF()`（~797 行）、`talent.html` `downloadServerPDF()`（~1316 行）
+
+**当前代码**：
+
+```javascript
+if (navigator.share && navigator.canShare) {
+    try {
+        var file = new File([blob], filename, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: filename });
+            URL.revokeObjectURL(url);
+            return;
+        }
+    } catch (e) {}  // ← 用户取消也走到这里，继续往下走 data URL
+}
+// 回退：data URL 导航
+var reader = new FileReader();
+reader.onload = function() { window.location.href = reader.result; };
+reader.readAsDataURL(blob);
+```
+
+**影响**：用户点击 PDF 下载 → 弹出系统分享面板 → 用户点取消 → 代码直接走 data URL 导航，用户被强制跳转 PDF 页面。体验上"我明明取消了怎么还跳走了"。
+
+### 修复
+
+区分用户取消（`AbortError`）和真正的错误：
+
+```javascript
+} catch (e) {
+    if (e.name === 'AbortError') return;  // 用户取消分享，不做任何操作
+}
+```
+
+### 📋 涉及文件
+
+| 文件 | 函数 | 行号 | 问题 |
+|------|------|------|------|
+| `index.html` | `downloadPDF()` | ~797 | catch all → 加 AbortError 判断 |
+| `talent.html` | `downloadServerPDF()` | ~1316 | catch all → 加 AbortError 判断 |

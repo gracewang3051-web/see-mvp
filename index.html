@@ -799,7 +799,7 @@ async function downloadPDF(){
             URL.revokeObjectURL(url);
             return;
           }
-        } catch (e) {}
+        } catch (e) { if (e.name === 'AbortError') return; }
       }
       // 回退：data URL 导航（iOS Safari 可靠支持 data: URL）
       var reader = new FileReader();
