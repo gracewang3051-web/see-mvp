@@ -361,6 +361,7 @@ if isinstance(markdown, bytes):
 | 2026-07-07 手机 PDF 下载弹窗拦截 | 2 文件 | ✅ 第一次修复 |
 | **2026-07-07 手机 blob URL 不兼容 iOS Safari** | **3 函数** | **✅ 全部修复** |
 | **2026-07-07 用户码加载竞态条件** | **5 处** | **✅ 全部修复** |
+| **2026-07-07 下载 async/await 丢失用户手势** | **5 处** | **✅ 全部修复** |
 
 ---
 
@@ -723,4 +724,282 @@ async function loadUserReports() {
 | `_fetchUsers()` 调用 | fire and forget | 返回 Promise |
 | `loadUserReports()` | 同步检查 `_userCache`（空）→ fail | `await _fetchUsers()` → 等待 http 返回 |
 | 用户手动输入码 | 可能 fetch 仍在进行 → fail | `await _fetchUsers()` 复用已完成 Promise → immediate |
-| 重复调用 | 每次发新请求 | `_usersPromise` 缓存，只发一次
+| 重复调用 | 每次发新请求 | `_usersPromise` 缓存，只发一次 |
+
+---
+
+## ✅ P0 — 手机端 PDF/Word 下载仍然失败：fetch + data URL 方案根本性缺陷（2026-07-07 15:47）[已修复]
+
+> 上一轮修复（Share API + data URL 回退）在逻辑上正确，但在移动端实际执行中会因 4 个原因静默失败。
+
+### 🔍 问题全景
+
+当前所有下载路径都遵循同一模式：
+
+```
+按钮点击 → async 函数 → await fetch(/api/export-pdf) → resp.blob()
+  → mobile: navigator.share → data URL → location.href
+```
+
+这个链条在手机端有 **4 个致命缺陷**：
+
+---
+
+### 问题 1：`async/await` 丢失用户手势
+
+**涉及**：`downloadPDF()`（index.html 784 行）、`downloadServerPDF()`（talent.html 1314 行）
+
+```javascript
+async function downloadPDF() {
+  var resp = await fetch(...);   // ← 用户手势在此丢失！
+  ...
+  // Share API / data URL / window.open — 全部被当作非用户触发
+}
+```
+
+`await` 之后的任何操作都脱离了原始点击事件栈。浏览器（尤其是 iOS Safari）严格把 user gesture token 绑定到同步调用链上。一旦 `await`，token 丢失：
+- `navigator.share()` → 可能被拒绝（需要用户手势）
+- `a.click()` → 被视为非用户触发，被拦截
+- `window.open()` → 确定被拦截
+
+**桌面上能 "凑合工作"** 是因为 Chrome/Edge 对 user gesture 更宽容，但 iOS Safari 严格限制。
+
+---
+
+### 问题 2：Data URL 超过手机浏览器 URL 长度限制
+
+**涉及**：`downloadPDF()`（index.html 817-821）、`downloadServerPDF()`（talent.html 1340-1345）、`downloadReport()` DOC 分支（talent.html 1418-1424）
+
+```javascript
+reader.onload = function() {
+  window.location.href = reader.result;  // data:application/pdf;base64,AAAA...
+};
+reader.readAsDataURL(blob);
+```
+
+PDF 报告 500KB-2MB+ → Base64 编码后 667KB-2.7MB+ 的 data URL。
+
+| 浏览器 | URL 长度上限 | 实际行为 |
+|--------|:---:|------|
+| iOS Safari | ~2MB | 📛 静默失败，无错误提示 |
+| Android Chrome | 2MB | 📛 静默失败 |
+
+即使报告较小，data URL 也占用内存（Blob + Base64 同时在内存中），低端手机可能 OOM。
+
+---
+
+### 问题 3：FileReader 无 `onerror` 处理
+
+**涉及**：上述 3 处，全部相同模式
+
+```javascript
+reader.onload = function() { ... };
+// ← onerror 未设置！
+reader.readAsDataURL(blob);
+```
+
+`readAsDataURL` 失败时（OOM、Blob 损坏），用户看到 **什么都没发生**，零反馈。
+
+---
+
+### 问题 4：无响应 Content-Type 校验
+
+**涉及**：`downloadPDF()`（index.html 800-801）、`downloadServerPDF()`（talent.html 1323-1324）
+
+```javascript
+if (!resp.ok) throw new Error('HTTP ' + resp.status);
+var blob = await resp.blob();  // ← HTTP 200 但 Content-Type 可能是 text/html（错误页）
+```
+
+如果服务器返回 200 但内容是 HTML/JSON 错误页（如反向代理 502 页面），`resp.blob()` 会创建一个 HTML 文本 blob。后续作为 PDF 打开 → 浏览器无法渲染 → 静默失败。
+
+---
+
+### ✅ 修复方案：回到 `form.submit()` — 但关键是保持同步
+
+**核心思路**：不用 `fetch`，不用 `async/await`，用纯同步的 `form.submit()` 直接 POST 到服务端端点。
+
+**为什么之前 `form.submit()` 也被拦截？** 因为它在 `async` 函数内部、`await` 之后调用，用户手势已丢失。
+
+**新方案**：所有下载函数改为 **非 async 同步函数**，`form.submit()` 在同步调用栈中执行。
+
+#### 修复 1：`downloadPDF()` — 同步 form.submit 到 `/api/export-pdf`
+
+**文件**：`index.html`（784-833 行）
+
+**当前代码**：
+```javascript
+async function downloadPDF(){
+  var md='';
+  for(...) { md += ...; }
+  if(!md) return;
+  try {
+    var resp = await fetch(API_BASE + '/api/export-pdf', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'title=' + ... + '&markdown=' + ...
+    });
+    var blob = await resp.blob();
+    // ... Share API / data URL / FileReader ...
+  } catch(e) { alert('PDF 导出失败: ' + e.message); }
+}
+```
+
+**改为**：
+```javascript
+function downloadPDF(){
+  var md='';
+  for(var i=0;i<state.reportOrder.length;i++){
+    var k=state.reportOrder[i];
+    if(state.reports[k]) md+='# '+(REPORT_LABELS[k]||'报告')+'\n\n'+state.reports[k]+'\n\n---\n\n';
+  }
+  if(!md) return;
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = API_BASE + '/api/export-pdf';
+  form.target = '_blank';
+  form.style.display = 'none';
+  var t = document.createElement('input');
+  t.type = 'hidden'; t.name = 'title';
+  t.value = getFileNameBase('SEE_思维画像报告');
+  form.appendChild(t);
+  var m = document.createElement('input');
+  m.type = 'hidden'; m.name = 'markdown';
+  m.value = md;
+  form.appendChild(m);
+  document.body.appendChild(form);
+  form.submit();  // 同步执行 → 用户手势有效
+  document.body.removeChild(form);
+}
+```
+
+**关键点**：
+- `function` 而非 `async function` → 无 await → 用户手势保留
+- `form.submit()` 同步调用 → 浏览器认为是用户点击触发的导航
+- `target='_blank'` → 新标签页打开 PDF，原生查看器渲染
+- 无需 blob URL、data URL、FileReader
+
+---
+
+#### 修复 2：`downloadServerPDF()` → 合并到 `downloadReport()` PDF 分支
+
+**文件**：`talent.html`（1314-1355 行 → 合并到 1379-1382 行）
+
+**当前代码**：
+```javascript
+async function downloadServerPDF(md, filename) {
+  var resp = await fetch(...);
+  var blob = await resp.blob();
+  // ... Share API / data URL ...
+}
+
+function downloadReport(key, format) {
+  ...
+  if (format === 'pdf') {
+    downloadServerPDF(md, filename);  // ← async, 用户手势丢失
+    return;
+  }
+```
+
+**改为**（删除 `downloadServerPDF`，直接在 `downloadReport` 中处理）：
+```javascript
+function downloadReport(key, format) {
+  ...
+  if (format === 'pdf') {
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = API_BASE + '/api/export-pdf';
+    form.target = '_blank';
+    form.style.display = 'none';
+    var t = document.createElement('input');
+    t.type = 'hidden'; t.name = 'title'; t.value = filename;
+    form.appendChild(t);
+    var m = document.createElement('input');
+    m.type = 'hidden'; m.name = 'markdown'; m.value = md;
+    form.appendChild(m);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+    return;
+  }
+```
+
+---
+
+#### 修复 3：`downloadReport()` DOC 分支 → 同步 form.submit 到 `/api/export-doc`
+
+**文件**：`talent.html`（1412-1434 行）
+
+**当前代码**：
+```javascript
+  var html = '...' + parseMD(md) + '...';
+  var blob = new Blob([html], ...);
+  var url = URL.createObjectURL(blob);
+  if (isMobile) {
+    var docReader = new FileReader();
+    docReader.onload = function() { window.location.href = docReader.result; };
+    docReader.readAsDataURL(blob);  // ← data URL 问题
+    ...
+  }
+```
+
+**改为**：
+```javascript
+  var html = '...' + parseMD(md) + '...';
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = API_BASE + '/api/export-doc';
+  form.target = '_blank';
+  form.style.display = 'none';
+  var t = document.createElement('input');
+  t.type = 'hidden'; t.name = 'title'; t.value = filename;
+  form.appendChild(t);
+  var h = document.createElement('input');
+  h.type = 'hidden'; h.name = 'html'; h.value = html;
+  form.appendChild(h);
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+  return;
+```
+
+---
+
+#### 修复 4（bonus）：服务端去重 CORS 头
+
+**文件**：`server.py` `_export_pdf()`（1505 行）和 `_export_doc()`（1530 行）
+
+`end_headers()`（604-606 行）已全局添加 `Access-Control-Allow-Origin: *`，但导出函数又手动加了一次，导致重复 header：
+
+```python
+# _export_pdf line 1505
+self.send_header('Access-Control-Allow-Origin', '*')  # ← 多余
+self.send_header('Content-Length', str(len(pdf_bytes)))
+self.end_headers()  # ← 这里又加一次
+```
+
+**修复**：删除导出函数中手动添加的 CORS 头，只保留 `end_headers()` 中的全局设置。
+
+---
+
+### 📊 为什么新方案能解决手机端问题？
+
+| 维度 | 旧方案 (fetch + data URL) | 新方案 (同步 form.submit) |
+|------|------|------|
+| 用户手势 | `await` 后丢失 | ✅ 同步调用保留 |
+| URL 长度 | data URL 2MB+ 超限 | ✅ 服务端直出，无需 URL |
+| 内存 | Blob + Base64 双份 | ✅ 零额外内存 |
+| 错误处理 | 无 Content-Type 校验 | ✅ 浏览器原生处理 |
+| 代码复杂度 | Share API + FileReader + 回退 | ✅ ~15 行同步代码 |
+| iOS Safari | 全部 3 条路径失败 | ✅ `target='_blank'` 正常打开 |
+
+### 📋 涉及文件汇总
+
+| 文件 | 函数 | 变更 |
+|------|------|------|
+| `index.html` | `downloadPDF()` | async fetch → 同步 form.submit |
+| `talent.html` | `downloadServerPDF()` | **删除**，合并到 downloadReport |
+| `talent.html` | `downloadReport()` PDF 分支 | 改为同步 form.submit |
+| `talent.html` | `downloadReport()` DOC 分支 | data URL → 同步 form.submit |
+| `server.py` | `_export_pdf()` | 删除重复 CORS header |
+| `server.py` | `_export_doc()` | 删除重复 CORS header |
