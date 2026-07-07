@@ -218,13 +218,6 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
   padding: 6px 10px; background: #1a1a38; border-radius: 6px;
 }
 </style>
-<script src="tesseract.min.js"></script>
-<script>
-window.TESSERACT_CONFIG = {
-  workerPath: 'tesseract/worker.min.js',
-  langPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/',
-};
-</script>
 </head>
 <body>
 
@@ -856,40 +849,6 @@ async function startBaiduOcrDraft() {
   btn.textContent = '☁️ 百度云识别文字草稿';
 }
 
-async function runTesseractWithTimeout(imageData, onLog, timeoutMs) {
-  var cfg = window.TESSERACT_CONFIG || {};
-  var worker = null;
-  var timedOut = false;
-  var timer = null;
-  var task = (async function() {
-    var options = {
-      workerPath: cfg.workerPath,
-      langPath: cfg.langPath
-    };
-    if (onLog) options.logger = onLog;
-    worker = await Tesseract.createWorker('chi_sim+eng', 1, options);
-    if (timedOut) {
-      try { await worker.terminate(); } catch(_) {}
-      throw new Error('OCR超时(20s)');
-    }
-    return await worker.recognize(imageData);
-  })();
-  var timeout = new Promise(function(_, reject) {
-    timer = setTimeout(function() {
-      timedOut = true;
-      if (worker) { try { worker.terminate(); } catch(_) {} }
-      reject(new Error('OCR超时(20s)'));
-    }, timeoutMs || 20000);
-  });
-  try {
-    return await Promise.race([task, timeout]);
-  } finally {
-    clearTimeout(timer);
-    if (worker) { try { await worker.terminate(); } catch(_) {} }
-    task.catch(function(){});
-  }
-}
-
 async function generateFromText() {
   var text = document.getElementById('directOcrInput').value.trim();
   if (!text) { alert('请先粘贴报告文本'); return; }
@@ -1196,6 +1155,26 @@ async function summarizeChat() {
 // ===== 合盘 =====
 let compositeType = '';
 
+// 百度云 OCR（服务端统一使用）
+async function runBaiduOcr(imageData, timeoutMs) {
+  var controller = new AbortController();
+  var timer = setTimeout(function(){ controller.abort(); }, timeoutMs || 90000);
+  try {
+    var resp = await fetch(API_BASE + '/api/baidu-ocr', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({image: imageData}),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    var data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || ('HTTP ' + resp.status));
+    return data.text || '';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function startComposite(type) {
   compositeType = type;
   document.getElementById('compositeFile').click();
@@ -1211,10 +1190,9 @@ async function handleCompositeFile(file) {
   const ids = {parent:'compositeParent',partner:'compositePartner',family:'compositeFamily'};
   const status = document.getElementById(ids[compositeType]+'Status');
   status.classList.remove('hidden');
-  status.textContent = '⏳ OCR识别中...';
+  status.textContent = '☁️ 百度云识别中...';
   try {
-    var ocrResult = await runTesseractWithTimeout(result, null);
-    var ocrText = ocrResult.data.text || '';
+    var ocrText = await runBaiduOcr(result);
     if (ocrText.length < 20) throw new Error('OCR文字不足');
     // 解析答案
     status.textContent = '⏳ 解析答案...';

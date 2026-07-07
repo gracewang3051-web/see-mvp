@@ -444,7 +444,7 @@ def _generate_pdf(title, markdown):
 
     # 确保输入是纯字符串（CentOS 7 Python 3.6 兼容）
     if isinstance(markdown, bytes):
-        markdown = markdown.decode('utf-8', errors='replace')
+        markdown = markdown.decode('utf-8', errors='ignore')
     markdown = str(markdown)
 
     pdf = FPDF(orientation='P', unit='mm', format='A4')
@@ -1476,7 +1476,7 @@ OCR文字内容：
             try:
                 return json.loads(body)
             except (json.JSONDecodeError, UnicodeDecodeError):
-                pass
+                return {}
         from urllib.parse import parse_qs
         try:
             text = body.decode('utf-8')
@@ -1496,7 +1496,7 @@ OCR文字内容：
                 return
             # 确保 markdown 是纯 str，避免 bytes/encoding 问题
             if isinstance(markdown, bytes):
-                markdown = markdown.decode('utf-8', errors='replace')
+                markdown = markdown.decode('utf-8', errors='ignore')
 
             pdf_bytes = _generate_pdf(title, markdown)
             self.send_response(200)
@@ -1813,17 +1813,28 @@ if __name__ == '__main__':
         pass
     # Load shell-persisted API keys when the process is started directly.
     # This keeps local desktop/mobile testing aligned with ~/.zshrc and ~/.claude/settings.json.
+    #
+    # 注意：模块级全局变量（DEEPSEEK_KEY / BAIDU_OCR_API_KEY / BAIDU_OCR_SECRET_KEY）
+    # 在 import 时已从 os.environ 取过一次值。systemd 启动没有环境变量，所以此处
+    # 从 ~/.zshrc 回读后必须重新赋值，否则全局变量仍然是空字符串。
     try:
-        if not os.environ.get('BAIDU_OCR_API_KEY') or not os.environ.get('BAIDU_OCR_SECRET_KEY'):
-            zshrc = os.path.expanduser('~/.zshrc')
-            if os.path.exists(zshrc):
-                with open(zshrc, 'r', encoding='utf-8', errors='ignore') as fh:
-                    for line in fh:
-                        line = line.strip()
-                        if line.startswith('export BAIDU_OCR_API_KEY=') and not os.environ.get('BAIDU_OCR_API_KEY'):
-                            os.environ['BAIDU_OCR_API_KEY'] = line.split('=', 1)[1].strip().strip('"').strip("'")
-                        elif line.startswith('export BAIDU_OCR_SECRET_KEY=') and not os.environ.get('BAIDU_OCR_SECRET_KEY'):
-                            os.environ['BAIDU_OCR_SECRET_KEY'] = line.split('=', 1)[1].strip().strip('"').strip("'")
+        zshrc = os.path.expanduser('~/.zshrc')
+        if os.path.exists(zshrc):
+            with open(zshrc, 'r', encoding='utf-8', errors='ignore') as fh:
+                for line in fh:
+                    line = line.strip()
+                    if line.startswith('export DEEPSEEK_KEY=') and not DEEPSEEK_KEY:
+                        val = line.split('=', 1)[1].strip().strip('"').strip("'")
+                        os.environ['DEEPSEEK_KEY'] = val
+                        DEEPSEEK_KEY = val
+                    elif line.startswith('export BAIDU_OCR_API_KEY=') and not BAIDU_OCR_API_KEY:
+                        val = line.split('=', 1)[1].strip().strip('"').strip("'")
+                        os.environ['BAIDU_OCR_API_KEY'] = val
+                        BAIDU_OCR_API_KEY = val
+                    elif line.startswith('export BAIDU_OCR_SECRET_KEY=') and not BAIDU_OCR_SECRET_KEY:
+                        val = line.split('=', 1)[1].strip().strip('"').strip("'")
+                        os.environ['BAIDU_OCR_SECRET_KEY'] = val
+                        BAIDU_OCR_SECRET_KEY = val
     except Exception:
         pass
     ThreadingHTTPServer.allow_reuse_address = True

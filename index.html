@@ -123,8 +123,6 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 #manualCard select, #manualCard input { background: #1a1a38; color: #e0dcd4; border-color: #3a3a55; }
 </style>
 <script src="dealer.js"></script>
-<script src="tesseract.min.js"></script>
-<script>window.TESSERACT_CONFIG={workerPath:"tesseract/worker.min.js"};</script>
 </head>
 <body>
 
@@ -494,50 +492,51 @@ function handleFile(file) {
 }
 
 // ============ RECOGNITION ============
-async function runTesseractWithTimeout(imageData, onLog, timeoutMs) {
-  var cfg = window.TESSERACT_CONFIG || {};
-  var worker = null;
-  var timedOut = false;
-  var timer = null;
-  var task = (async function() {
-    var options = { workerPath: cfg.workerPath };
-    if (onLog) options.logger = onLog;
-    worker = await Tesseract.createWorker('chi_sim+eng', 1, options);
-    if (timedOut) {
-      try { await worker.terminate(); } catch(_) {}
-      throw new Error('OCR超时(20s)');
-    }
-    return await worker.recognize(imageData);
-  })();
-  var timeout = new Promise(function(_, reject) {
-    timer = setTimeout(function() {
-      timedOut = true;
-      if (worker) { try { worker.terminate(); } catch(_) {} }
-      reject(new Error('OCR超时(20s)'));
-    }, timeoutMs || 20000);
-  });
+// 百度云 OCR（服务端，统一使用）
+async function runBaiduOcr(imageData, timeoutMs) {
+  var controller = new AbortController();
+  var timer = setTimeout(function(){ controller.abort(); }, timeoutMs || 90000);
   try {
-    return await Promise.race([task, timeout]);
+    var resp = await fetch(API_BASE + '/api/baidu-ocr', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({image: imageData}),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    var data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || ('HTTP ' + resp.status));
+    return data.text || '';
   } finally {
     clearTimeout(timer);
-    if (worker) { try { await worker.terminate(); } catch(_) {} }
-    task.catch(function(){});
   }
 }
 
 async function startRecognition() {
   const btn = document.getElementById('btnRecognize');
   const status = document.getElementById('uploadStatus');
-  btn.disabled = true; btn.textContent = '⏳ 加载OCR引擎...';
-  status.textContent = '';
+  btn.disabled = true; btn.textContent = '☁️ 百度云识别中...';
+  status.textContent = '正在识别图片文字（约10-30秒）...';
+  status.style.color = '';
+  var ocrText = '';
   try {
-    const { data: ocrData } = await runTesseractWithTimeout(state.imageData, m => {
-      if (m.status === 'recognizing text') btn.textContent = '🔍 识别 ' + Math.round(m.progress*100) + '%';
-      else if (m.status && m.status.includes('loading')) btn.textContent = '⏳ 加载引擎...';
-    });
-    var ocrText = ocrData.text || '';
-    status.textContent = '✅ OCR完成: ' + ocrText.length + '字';
-    btn.textContent = '🧠 解析答案...';
+    ocrText = await runBaiduOcr(state.imageData);
+  } catch(e) {
+    status.textContent = '❌ 识别失败: ' + e.message;
+    status.style.color = 'var(--danger)';
+    toggleManual();
+    btn.disabled = false; btn.textContent = '☁️ 重新识别';
+    return;
+  }
+  if (!ocrText.trim()) {
+    status.textContent = '❌ 未识别到文字，请确保图片清晰';
+    status.style.color = 'var(--danger)';
+    btn.disabled = false; btn.textContent = '☁️ 重新识别';
+    return;
+  }
+  status.textContent = '✅ 百度云识别完成: ' + ocrText.length + '字';
+  btn.textContent = '🧠 解析答案...';
+  try {
     var resp = await fetch(API_BASE + '/api/parse-answers', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ocrText: ocrText})
@@ -553,12 +552,11 @@ async function startRecognition() {
     state.recognitionDone = true;
     showResults();
   } catch(e) {
-    // 识别失败 → 引导手动输入（无云端兜底）
-    status.textContent = '❌ 自动识别失败，请使用手动输入: ' + e.message;
+    status.textContent = '❌ 解析失败: ' + e.message;
     status.style.color = 'var(--danger)';
     toggleManual();
   }
-  btn.disabled = false; btn.textContent = '🔍 重新识别';
+  btn.disabled = false; btn.textContent = '☁️ 重新识别';
 }
 
 // ============ SHOW RESULTS ============
@@ -728,35 +726,34 @@ async function handleCompositeFile(file) {
     const card = document.getElementById(ids[compositeType]);
     const status = document.getElementById(ids[compositeType]+'Status');
     status.classList.remove('hidden');
-    status.textContent = '⏳ 识别中...';
-    var cfg = window.TESSERACT_CONFIG || {};
-    var worker = await Tesseract.createWorker('chi_sim+eng', 1, {workerPath: cfg.workerPath, langPath: cfg.langPath});
-    var ocrRes = await worker.recognize(e.target.result);
-    await worker.terminate();
-    var ocrText = ocrRes.data.text || '';
-    var parseResp = await fetch(API_BASE + '/api/parse-answers', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ocrText: ocrText})
-    });
-    var data = await parseResp.json();
-    if (data.error) { status.textContent = '❌ ' + data.error; return; }
-    status.textContent = '⏳ 生成合盘报告...';
-    // Generate composite
-    const compResp = await fetch(API_BASE + '/api/composite', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        type: compositeType,
-        myPortrait: state.reports.portrait||'',
-        partnerAnswers: data.answers||{},
-        partnerHandwritten: data.handwritten_fields||{}
-      })
-    });
-    const compData = await compResp.json();
-    if (compData.error) { status.textContent = '❌ ' + compData.error; return; }
-    document.getElementById('reportContent').classList.remove('loading');
-    document.getElementById('reportContent').innerHTML = parseMD(compData.content);
-    document.getElementById('reportCard').classList.remove('hidden');
-    status.textContent = '✅ 已生成';
+    status.textContent = '☁️ 百度云识别中...';
+    try {
+      var ocrText = await runBaiduOcr(e.target.result);
+      status.textContent = '⏳ 生成合盘报告...';
+      var parseResp = await fetch(API_BASE + '/api/parse-answers', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ocrText: ocrText})
+      });
+      var data = await parseResp.json();
+      if (data.error) { status.textContent = '❌ ' + data.error; return; }
+      const compResp = await fetch(API_BASE + '/api/composite', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          type: compositeType,
+          myPortrait: state.reports.portrait||'',
+          partnerAnswers: data.answers||{},
+          partnerHandwritten: data.handwritten_fields||{}
+        })
+      });
+      const compData = await compResp.json();
+      if (compData.error) { status.textContent = '❌ ' + compData.error; return; }
+      document.getElementById('reportContent').classList.remove('loading');
+      document.getElementById('reportContent').innerHTML = parseMD(compData.content);
+      document.getElementById('reportCard').classList.remove('hidden');
+      status.textContent = '✅ 已生成';
+    } catch(err) {
+      status.textContent = '❌ ' + err.message;
+    }
   };
   reader.readAsDataURL(file);
 }
