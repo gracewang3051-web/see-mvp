@@ -690,7 +690,15 @@ class SEEHandler(SimpleHTTPRequestHandler):
 
     def _read_body(self):
         length = int(self.headers.get('Content-Length', 0))
-        return self.rfile.read(length) if length else b''
+        if not length:
+            return b''
+        data = self.rfile.read(length)
+        while len(data) < length:
+            chunk = self.rfile.read(length - len(data))
+            if not chunk:
+                break
+            data += chunk
+        return data
 
     def _json(self, code, data):
         self.send_response(code)
@@ -1459,17 +1467,28 @@ OCR文字内容：
         except Exception as e:
             self._json(500, {"error": str(e)})
 
-    # ===== Talent Chat（报告对话 + 整合）=====
+    # ===== Export Helpers =====
+    def _parse_post_body(self, body):
+        """Safely parse POST body: JSON or form-encoded, with encoding fallback."""
+        if not body:
+            return {}
+        if body[0:1] == b'{':
+            try:
+                return json.loads(body)
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                pass
+        from urllib.parse import parse_qs
+        try:
+            text = body.decode('utf-8')
+        except UnicodeDecodeError:
+            text = body.decode('latin-1')
+        params = parse_qs(text)
+        return {k: v[0] if isinstance(v, list) else v for k, v in params.items()}
+
     def _export_pdf(self, body):
         """服务端 PDF 导出（移动端 Safari 兼容，支持 JSON + form POST）"""
         try:
-            # Support both JSON and form-encoded POST
-            if body and body[0:1] == b'{':
-                data = json.loads(body)
-            else:
-                from urllib.parse import parse_qs
-                params = parse_qs(body.decode('utf-8') if isinstance(body, bytes) else body)
-                data = {k: v[0] if isinstance(v, list) else v for k, v in params.items()}
+            data = self._parse_post_body(body)
             title = data.get('title', 'SEE报告')
             markdown = data.get('markdown', '')
             if not markdown:
@@ -1493,12 +1512,7 @@ OCR文字内容：
     def _export_doc(self, body):
         """服务端 Word 导出（HTML 作为 .doc 返回，兼容微信内置浏览器）"""
         try:
-            if body and body[0:1] == b'{':
-                data = json.loads(body)
-            else:
-                from urllib.parse import parse_qs
-                params = parse_qs(body.decode('utf-8') if isinstance(body, bytes) else body)
-                data = {k: v[0] if isinstance(v, list) else v for k, v in params.items()}
+            data = self._parse_post_body(body)
 
             title = data.get('title', 'SEE报告')
             html = data.get('html', '')
