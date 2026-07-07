@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SEE 生命印迹 · 先天思维特质报告</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+:root {
+  --bg: #0f0f28; --card: #161630; --border: #2a2a45;
+  --text: #e0dcd4; --muted: #8a8590; --accent: #6b96ac;
+  --accent2: #a08868; --gold: #b8a080; --danger: #e05555;
+  --shadow: 0 2px 12px rgba(0,0,0,.2); --radius: 14px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; background: var(--bg); color: var(--text); line-height:1.7; min-height:100vh; }
+
+/* Header */
+.hero {
+  background: linear-gradient(170deg, #0f0f28 0%, #162038 35%, #1a2440 60%, #1a2038 100%);
+  color: #e0dcd4; padding: 40px 24px 0; text-align:center;
+}
+.hero-top, .hero .features { position: relative; z-index: 1; }
+.hero-bg {
+  margin-top: 20px; line-height: 0; opacity: 1;
+}
+.hero-bg img { width: 100%; max-width: 720px; height: auto; display: block; margin: 0 auto; }
+.hero-top { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 4px; }
+.hero-logo {
+  font-size: 2.6em; line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.08));
+}
+.hero-brand { text-align: left; }
+.hero-name {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 1.7em; font-weight: 700; letter-spacing: .06em;
+  line-height: 1.2; color: #f0ece2;
+}
+.hero-subtitle {
+  font-size: .88em; letter-spacing: .15em; font-weight: 400;
+  color: #a09888; margin-top: 2px;
+}
+.hero .features { display: flex; justify-content: center; gap: 12px; margin-top: 28px; }
+.hero .feature {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px; padding: 16px 14px; flex: 1; max-width: 180px;
+  transition: all .2s; backdrop-filter: blur(4px);
+}
+.hero .feature:hover {
+  background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.25);
+  transform: translateY(-1px);
+}
+.hero .feature-icon { font-size: 1.3em; }
+.hero .feature-text { font-size: .82em; font-weight: 500; color: #d8d2c4; white-space: nowrap; }
+@media (max-width: 420px) {
+  .hero .features { gap: 6px; }
+  .hero .feature { padding: 12px 8px; max-width: 120px; }
+  .hero .feature-text { font-size: .7em; }
+}
+
+.container { max-width: 720px; margin: 0 auto; padding: 20px 12px; }
+.card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.report-content { padding: 16px; background: #1a1a35; border-radius: 10px; font-size: .9em; line-height: 1.8; max-height: 500px; overflow-y: auto; border: 1px solid #2a2a45; }
+@media (max-width: 500px) {
+  .container { padding: 12px 6px; }
+  .card { padding: 12px 10px; border-radius: 10px; }
+  .report-content { padding: 12px 10px; font-size: .85em; }
+  .btn { padding: 10px 16px; font-size: .85em; }
+  h2 { font-size: 1em; }
+}
+.card h2 { font-size: 1.1em; margin-bottom: 16px; display:flex; align-items:center; gap:8px; font-weight: 600; color: #e0dcd4; }
+
+.step-badge { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:var(--accent); color:#0f0f28; font-size:.8em; font-weight:700; margin-right:6px; flex-shrink:0; }
+
+.upload-zone p, .upload-zone .icon { color: #8a8590; }
+
+/* Upload */
+.upload-zone { border: 2px dashed #3a3a55; border-radius: var(--radius); text-align: center; cursor: pointer; transition: all .2s; background: #1a1a38; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:200px; padding: 16px; }
+.upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: #1e1e40; }
+.upload-zone .icon { font-size: 2em; margin-bottom: 6px; }
+.upload-zone p { color: var(--muted); font-size: .85em; }
+.preview-img { max-width: 100%; max-height: 280px; border-radius: 8px; border: 1px solid var(--border); display: none; }
+.preview-img.show { display: block; }
+
+.btn { display: inline-flex; align-items:center; gap:6px; padding: 10px 22px; border: none; border-radius: 10px; font-size: .9em; font-weight: 500; cursor: pointer; transition: all .15s; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(107,150,172,.3); }
+.btn-primary:hover:not(:disabled) { background: #5a8296; box-shadow: 0 4px 14px rgba(107,150,172,.4); transform: translateY(-1px); }
+.btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+.btn-outline:hover { background: rgba(107,150,172,.1); }
+.btn-sm { padding: 6px 16px; font-size: .8em; border-radius: 8px; }
+
+/* Results */
+.result-grid { display: flex; flex-direction: column; gap: 5px; }
+.result-item { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: #1e1e3a; border-radius: 10px; font-size: .85em; cursor: pointer; transition: all .12s; border: 1.5px solid transparent; }
+.result-item:hover { border-color: var(--accent); background: #242444; }
+.result-item .q { flex: 1; min-width: 0; }
+.result-item .ans { font-weight: 700; font-size: 1.1em; color: var(--accent); min-width: 32px; text-align: center; background: #1a2a38; border-radius: 8px; padding: 2px 8px; }
+.result-item.low-conf { background: #2e1e1e; border-color: #553333; }
+.result-item.low-conf .ans { color: var(--danger); background: #3e2020; }
+
+.module-title { font-weight: 600; color: var(--accent2); margin: 14px 0 6px; font-size: .9em; padding-bottom: 3px; border-bottom: 1px solid #2a2a45; }
+.report-content.loading { text-align:center; color: var(--muted); padding: 40px; border: none; }
+.report-content h1 { font-family: "Noto Serif SC", serif; font-size: 1.3em; color: #e8dcc0; margin: 20px 0 16px; font-weight: 700; border-bottom: 1px solid #3a3a55; padding-bottom: 8px; }
+.report-content h2 { font-family: "Noto Serif SC", serif; font-size: 1.1em; color: #d0c8a0; margin: 20px 0 10px; }
+.report-content h3 { font-family: "Noto Serif SC", serif; font-size: .95em; color: #c0b898; margin: 14px 0 8px; font-weight: 600; }
+.report-content p { margin-bottom: 8px; }
+.report-content ul { margin: 8px 0; padding-left: 20px; }
+.report-content li { margin-bottom: 4px; }
+
+/* Extra reports */
+.extra-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+@media (max-width: 500px) { .extra-cards { grid-template-columns: 1fr; } }
+.extra-card { padding: 18px 14px; background: #1a1a35; border: 1.5px solid #2a2a45; border-radius: 12px; text-align: center; cursor: pointer; transition: all .2s; }
+.extra-card:hover { border-color: var(--accent); background: #202040; box-shadow: 0 4px 16px rgba(0,0,0,.3); transform: translateY(-1px); }
+.extra-card .icon { font-size: 1.5em; margin-bottom: 4px; }
+.extra-card .title { font-weight: 600; font-size: .9em; color: #d8d0c0; }
+.extra-card .desc { font-size: .75em; color: var(--muted); margin-top: 2px; }
+.extra-card.loading { opacity: .6; pointer-events: none; }
+.extra-card.done { border-color: var(--accent); background: #1a2a28; cursor: default; }
+.extra-card.done .title { color: var(--accent); }
+
+.flex-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.hidden { display: none !important; }
+
+#manualCard select, #manualCard input { background: #1a1a38; color: #e0dcd4; border-color: #3a3a55; }
+
+/* --- Structured editing panel --- */
+.structured-toggle {
+  display: flex; gap: 0; margin-bottom: 16px;
+  background: #1a1a38; border-radius: 8px; border: 1px solid var(--border);
+  overflow: hidden;
+}
+.structured-toggle button {
+  flex: 1; padding: 8px 16px; border: none; font-size: .82em;
+  background: transparent; color: var(--muted); cursor: pointer;
+  transition: all .15s;
+}
+.structured-toggle button.active {
+  background: var(--accent); color: #fff; font-weight: 600;
+}
+.structured-toggle button:not(.active):hover {
+  background: rgba(107,150,172,.15); color: var(--text);
+}
+
+.structured-panel { display: none; }
+.structured-panel.show { display: block; }
+
+.structured-section {
+  background: #1a1a35; border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px; margin-bottom: 12px;
+}
+.structured-section .section-title {
+  font-size: .85em; font-weight: 600; color: var(--accent2);
+  margin-bottom: 10px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.field-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-grid-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+@media (max-width: 500px) {
+  .field-grid-2col { grid-template-columns: 1fr; }
+  .field-grid-3col { grid-template-columns: 1fr; }
+}
+
+.field-row { display: flex; flex-direction: column; gap: 3px; }
+.field-row label {
+  font-size: .78em; color: var(--muted); font-weight: 500;
+}
+.field-row input, .field-row select {
+  padding: 6px 10px; border-radius: 6px; border: 1.5px solid var(--border);
+  background: #161630; color: var(--text); font-size: .85em;
+}
+.field-row input:focus, .field-row select:focus {
+  border-color: var(--accent); outline: none;
+}
+
+.input-with-unit { display: flex; align-items: center; gap: 4px; }
+.input-with-unit input { flex: 1; }
+.input-with-unit span { color: var(--muted); font-size: .82em; }
+
+/* Function area grid */
+.func-grid {
+  display: grid; gap: 6px;
+  grid-template-columns: minmax(50px, 80px) 1fr 1fr;
+}
+.func-header {
+  display: contents; font-size: .78em; color: var(--muted); font-weight: 600;
+}
+.func-header .func-label { grid-column: 1; }
+.func-header .func-left { grid-column: 2; text-align: center; }
+.func-header .func-right { grid-column: 3; text-align: center; }
+.func-row { display: contents; }
+.func-row .func-label {
+  display: flex; align-items: center; font-size: .82em; color: var(--text);
+  padding: 4px 0;
+}
+.func-cell {
+  display: flex; gap: 4px; align-items: center;
+  background: #1a1a38; border-radius: 6px; padding: 2px 6px;
+  border: 1px solid transparent;
+}
+.func-cell input[type="number"] {
+  width: 48px; padding: 4px; border: none; background: transparent;
+  color: var(--text); font-size: .85em; text-align: center;
+}
+.func-cell .pattern-input {
+  width: 44px; padding: 3px; border: none; background: transparent;
+  color: var(--accent); font-size: .78em; text-transform: uppercase;
+  text-align: center;
+}
+.func-cell:focus-within { border-color: var(--accent); }
+
+.structured-status {
+  font-size: .75em; color: var(--muted); margin-top: 8px;
+  padding: 6px 10px; background: #1a1a38; border-radius: 6px;
+}
+</style>
+<script src="tesseract.min.js"></script>
+<script>
+window.TESSERACT_CONFIG = {
+  workerPath: 'tesseract/worker.min.js',
+  langPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/',
+};
+</script>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-top">
+    <div class="hero-logo">🧬</div>
+    <div class="hero-brand">
+      <div class="hero-name">SEE 生命印迹</div>
+      <div class="hero-subtitle">元认知训练系统</div>
+    </div>
+  </div>
+  <div class="features">
+    <div class="feature" onclick="location.href='index.html'"><div class="feature-icon">🧠</div><div class="feature-text">思维画像报告</div></div>
+    <div class="feature" style="background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3)"><div class="feature-icon">🌿</div><div class="feature-text">先天思维特质报告</div></div>
+    <div class="feature" onclick="location.href='insight.html'"><div class="feature-icon">🪞</div><div class="feature-text">自我觉察陪伴</div></div>
+  </div>
+  <div class="hero-bg"><img src="hero_talent.jpg" alt=""></div>
+</div>
+
+<div class="container">
+
+<!-- ====== STEP 1: Upload ====== -->
+<div class="card">
+  <h2><span class="step-badge">1</span> 上传你的先天天赋特质报告</h2>
+  <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <label style="font-size:.85em;color:var(--muted);white-space:nowrap">🔑 用户码</label>
+    <input type="text" id="userCode" placeholder="输入你的用户码" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.85em;background:#1a1a38;color:#e0dcd4;flex:1;max-width:240px" onchange="loadUserReports()">
+    <button class="btn btn-outline btn-sm" onclick="loadUserReports()">加载</button>
+    <label style="font-size:.85em;color:var(--muted);white-space:nowrap">👤 姓名 *</label>
+    <input type="text" id="userName" placeholder="输入姓名" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.85em;background:#1a1a38;color:#e0dcd4;flex:1;max-width:220px" onchange="saveUserName()">
+    <span style="font-size:.75em;color:var(--muted)">报告保存在当前设备浏览器，刷新不丢失；跨设备请重新生成或下载保存</span>
+  </div>
+  <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" style="flex:1;min-width:200px;position:relative;overflow:hidden">
+      <div id="uploadPlaceholder">
+        <div class="icon">📸</div>
+        <p>点击或拖拽上传报告照片</p>
+        <p style="font-size:.75em;margin-top:4px">支持 JPG/PNG，请拍摄清晰</p>
+      </div>
+      <img id="preview" class="preview-img" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain">
+    </div>
+    <div style="flex-shrink:0;text-align:center">
+      <div style="font-size:.75em;color:var(--muted);margin-bottom:4px">📋 上传样本参考</div>
+      <img src="talent_sample.jpg" style="max-width:200px;max-height:200px;border-radius:8px;border:1px solid var(--border);cursor:pointer;object-fit:contain" onclick="window.open(this.src)" title="点击查看大图">
+    </div>
+  </div>
+  <div class="hidden" id="savedReportsSection" style="margin-top:12px;padding:10px 14px;background:#1a1a38;border-radius:8px;font-size:.85em">
+    <div style="color:var(--accent);margin-bottom:6px">📂 已保存的报告</div>
+    <div id="savedReportsList"></div>
+  </div>
+  <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFile(this.files[0])">
+  <div class="flex-row" style="margin-top:10px;align-items:center;gap:12px">
+    <label style="font-size:.8em;color:var(--muted);white-space:nowrap">🎂 年龄 *</label>
+    <input type="number" id="reportAge" value="" min="0" max="120" placeholder="必填" required style="width:60px;padding:5px 8px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em">
+    <label style="font-size:.8em;color:var(--muted);white-space:nowrap;margin-left:8px">👤 对象</label>
+    <select id="reportTarget" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em;cursor:pointer">
+      <option value="self">🙋 本人</option>
+      <option value="parent">👨‍👩‍👧 父母</option>
+      <option value="global">🌍 全局视角</option>
+    </select>
+  </div>
+  <div class="flex-row" style="margin-top:6px">
+    <button class="btn btn-primary" id="btnBaiduOcr" disabled onclick="startBaiduOcrDraft()">☁️ 百度云识别文字草稿</button>
+
+    <select id="reportStyle" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.8em;cursor:pointer">
+      <option value="gentle">🌿 温和顾问</option>
+      <option value="parent">💝 亲子顾问</option>
+      <option value="direct">🎯 专业规划师</option>
+      <option value="educator">📚 教育分析师</option>
+      <option value="coach">⚡ 成长教练</option>
+    </select>
+    <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
+  </div>
+  <div style="margin-top:8px;padding:10px 14px;background:#1a1a35;border:1px solid #3a3a55;border-radius:10px">
+    <button class="btn btn-outline btn-sm" onclick="startManualStructured()" style="font-size:.75em">✏️ 手动填写结构化数据</button>
+    <textarea id="directOcrInput" class="hidden" placeholder="在此粘贴先天测评报告的完整文字内容..."></textarea>
+  </div>
+</div>
+
+<!-- ====== STRUCTURED EDITING PANEL ====== -->
+<div class="card hidden" id="structuredPanelCard">
+  <h2><span class="step-badge">📋</span> 核对结构化指标</h2>
+
+  <!-- Structured-only view (raw text available via scroll to textarea) -->
+
+  <!-- Structured view -->
+  <div class="structured-panel" style="display:block" id="structuredView">
+    <div id="structuredLoading" style="text-align:center;padding:20px;color:var(--muted)">
+      ⏳ 正在解析结构化数据...
+    </div>
+    <div id="structuredContent" style="display:none">
+      <!-- Filled dynamically by JS -->
+    </div>
+    <div id="structuredActions" style="display:none;margin-top:14px;text-align:center">
+      <button class="btn btn-primary" onclick="generateFromStructured()" style="padding:12px 32px;font-size:.95em">📊 生成解读报告</button>
+      <div style="font-size:.75em;color:var(--muted);margin-top:6px">使用上方编辑后的结构化数据生成报告</div>
+    </div>
+  </div>
+
+  <div class="structured-status" id="structuredStatus"></div>
+</div>
+
+<!-- ====== STEP 2: Report ====== -->
+<div class="card hidden" id="reportCard">
+  <h2><span class="step-badge">2</span> 你的解读报告 <span style="float:right;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="downloadReport(null,'doc')" style="font-size:.65em;padding:3px 8px">📥 Word</button><button class="btn btn-outline btn-sm" onclick="downloadReport(null,'pdf')" style="font-size:.65em;padding:3px 8px">🖨️ PDF</button><span style="font-size:.6em;color:var(--muted)">📱推荐</span></span></h2>
+  <div id="ocrProgress" style="font-size:.8em;color:var(--muted);margin-bottom:8px"></div>
+  <div class="report-content loading" id="reportContent">正在生成...</div>
+</div>
+<!-- ====== Chat ====== -->
+<div class="card" id="chatSection">
+  <h2>💬 个性化补充与报告整合</h2>
+  <div id="chatMessages" style="max-height:350px;overflow-y:auto;margin-bottom:10px;font-size:.85em;line-height:1.6"></div>
+  <div class="flex-row" style="gap:8px;margin-bottom:10px">
+    <input type="text" id="chatInput" placeholder="输入个性化补充或修正意见，将整合进最终报告" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:#1a1a38;color:#e0dcd4;font-size:.85em" onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn btn-primary btn-sm" onclick="sendChat()">发送</button>
+  </div>
+  <button class="btn btn-primary" onclick="summarizeChat()" id="btnSummarize" style="display:block;width:100%;padding:14px;font-size:1em">📝 生成整合报告</button>
+</div>
+<div class="card">
+  <h2>💫 关系合盘</h2>
+  <div style="font-size:.82em;color:var(--muted);margin-bottom:10px">上传对方报告，生成双人关系解读</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+    <div class="extra-card" onclick="startComposite('parent')" id="compositeParent">
+      <div class="icon">👨‍👧</div><div class="title">亲子关系合盘</div>
+      <div class="desc">上传孩子的报告</div>
+      <div class="hidden" id="compositeParentStatus" style="font-size:.75em;margin-top:4px"></div>
+    </div>
+    <div class="extra-card" onclick="startComposite('partner')" id="compositePartner">
+      <div class="icon">💑</div><div class="title">亲密关系合盘</div>
+      <div class="desc">上传伴侣的报告</div>
+      <div class="hidden" id="compositePartnerStatus" style="font-size:.75em;margin-top:4px"></div>
+    </div>
+    <div class="extra-card" onclick="startComposite('family')" id="compositeFamily">
+      <div class="icon">👨‍👩‍👧</div><div class="title">家庭合盘</div>
+      <div class="desc">上传家人的报告</div>
+      <div class="hidden" id="compositeFamilyStatus" style="font-size:.75em;margin-top:4px"></div>
+    </div>
+  </div>
+  <input type="file" id="compositeFile" accept="image/*" class="hidden" onchange="handleCompositeFile(this.files[0])">
+</div>
+
+</div>
+
+
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+let state = {
+  imageData: null, ocrText: '',
+  reports: {}, reportOrder: [],
+  totalCost: 0, recognitionDone: false,
+  userCode: '',
+  editMode: 'structured', structuredMetrics: null
+};
+
+function getUserCode() {
+  var urlCode = new URLSearchParams(window.location.search).get('code') || '';
+  if (urlCode) {
+    sessionStorage.setItem('see_code_shared', urlCode);
+    var inp = document.getElementById('userCode');
+    if (inp) { inp.value = urlCode; inp.parentElement.classList.add('hidden'); }
+    return urlCode;
+  }
+  return document.getElementById('userCode').value.trim() || sessionStorage.getItem('see_code_shared') || '';
+}
+
+function getUserName() {
+  var el = document.getElementById('userName');
+  return (el ? el.value.trim() : '') || sessionStorage.getItem('see_name_shared') || '';
+}
+
+function saveUserName() {
+  var name = getUserName();
+  if (name) sessionStorage.setItem('see_name_shared', name);
+}
+
+function getFileNameBase(fallback) {
+  var name = getUserName();
+  var code = getUserCode();
+  var base = [name, code].filter(Boolean).join('_') || fallback || 'SEE_报告';
+  return base.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_');
+}
+
+function saveReports() {
+  const code = getUserCode();
+  if (!code) return;
+  let versions = [];
+  try { const s = localStorage.getItem('see_talent_reports_v2_' + code); if(s) versions = JSON.parse(s).versions||[]; } catch(e){}
+  versions.push({
+    time: new Date().toLocaleDateString('zh-CN') + ' ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}),
+    hasTalent: !!state.reports.portrait,
+    portrait: state.reports.portrait||'', learning: state.reports.learning||'', emotion: state.reports.emotion||'', potential: state.reports.potential||''
+  });
+  if (versions.length > 20) versions = versions.slice(-20);
+  localStorage.setItem('see_talent_reports_v2_' + code, JSON.stringify({versions, time: new Date().toISOString()}));
+  sessionStorage.setItem('see_code_shared', code);
+}
+
+function loadUserReports() {
+  const code = getUserCode();
+  if (!code) return;
+  sessionStorage.setItem('see_code_shared', code);
+  // Migrate old data
+  try {
+    const old = localStorage.getItem('see_talent_reports_' + code);
+    if (old && !localStorage.getItem('see_talent_reports_v2_' + code)) {
+      const d = JSON.parse(old);
+      localStorage.setItem('see_talent_reports_v2_' + code, JSON.stringify({versions: [{
+        time: d.time ? new Date(d.time).toLocaleDateString('zh-CN') : '历史报告',
+        hasTalent: !!(d.reports||{}).portrait,
+        portrait: (d.reports||{}).portrait||'',
+        learning: (d.reports||{}).learning||'', emotion: (d.reports||{}).emotion||'', potential: (d.reports||{}).potential||''
+      }], time: d.time||new Date().toISOString()}));
+    }
+  } catch(e){}
+  const saved = localStorage.getItem('see_talent_reports_v2_' + code);
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      const versions = data.versions || [];
+      if (versions.length > 0) {
+        const last = versions[versions.length-1];
+        state.reports = {portrait: last.portrait||'', learning: last.learning||'', emotion: last.emotion||'', potential: last.potential||''};
+        state.reportOrder = Object.keys(state.reports).filter(k => state.reports[k]);
+      }
+      showSavedReports();
+    } catch(e) {}
+  } else {
+    document.getElementById('savedReportsSection').classList.add('hidden');
+  }
+}
+
+function showSavedReports() {
+  const keys = Object.keys(state.reports);
+  if (keys.length === 0) return;
+  document.getElementById('savedReportsSection').classList.remove('hidden');
+  const names = {portrait:'🧬 先天特质画像', learning:'📖 学习风格', emotion:'💫 情绪模式', potential:'🎯 潜能发展'};
+  let html = '';
+  keys.forEach(k => {
+    html += `<span style="cursor:pointer;margin-right:12px;color:var(--accent)" onclick="viewSavedReport('${k}')">${names[k]||k}</span>`;
+  });
+  document.getElementById('savedReportsList').innerHTML = html;
+}
+
+function viewSavedReport(key) {
+  if (state.reports[key]) {
+    document.getElementById('reportCard').classList.remove('hidden');
+    document.getElementById('reportContent').classList.remove('loading');
+    document.getElementById('reportContent').innerHTML = parseMD(state.reports[key]);
+    document.getElementById('chatSection').style.display='block';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Auto-load if code in session
+  const savedCode = sessionStorage.getItem('see_code_shared');
+  if (savedCode) {
+    document.getElementById('userCode').value = savedCode;
+    loadUserReports();
+  }
+  const savedName = sessionStorage.getItem('see_name_shared');
+  if (savedName) document.getElementById('userName').value = savedName;
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+});
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.imageData = e.target.result;
+    document.getElementById('uploadPlaceholder').style.display = 'none';
+    var pv = document.getElementById('preview');
+    pv.src = state.imageData;
+    pv.style.display = 'block';
+    document.getElementById('btnBaiduOcr').disabled = false;
+    document.getElementById('uploadStatus').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+var STRUCTURED_FIELDS = [
+  {id:'trc', label:'学习潜能 TRC', type:'number', group:'basic'},
+  {id:'atd', label:'反应速度 ATD', type:'number', group:'basic'},
+  {id:'personality_type', label:'性格类型', type:'text', group:'basic'},
+  {id:'behavior_mode', label:'行为模式', type:'text', group:'basic'},
+  {id:'brain_balance', label:'左右脑分布', type:'text', group:'basic'},
+  {id:'auditory', label:'听觉型 %', type:'number', group:'channel'},
+  {id:'visual', label:'视觉型 %', type:'number', group:'channel'},
+  {id:'kinesthetic', label:'体觉型 %', type:'number', group:'channel'}
+];
+
+var FUNCTION_FIELD_ROWS = [
+  ['精神功能', 'spirit_left', '沟通管理/计划判断', 'spirit_right', '创造领导/目标憧憬'],
+  ['思维功能', 'thinking_left', '逻辑推理/语言功能', 'thinking_right', '空间心像/构思拟想'],
+  ['体觉功能', 'kinesthetic_left', '体觉辨识/操作理解', 'kinesthetic_right', '体觉感受/艺术欣赏'],
+  ['听觉功能', 'auditory_left', '听觉辨识/语言理解', 'auditory_right', '听觉感受/音乐欣赏'],
+  ['视觉功能', 'visual_left', '视觉辨识/观察理解', 'visual_right', '视觉感受/图像欣赏']
+];
+
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(ch) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+
+function metricValue(metrics, id) {
+  metrics = metrics || {};
+  if (id === 'auditory' || id === 'visual' || id === 'kinesthetic') {
+    return (metrics.learning_channels || {})[id] || '';
+  }
+  return metrics[id] == null ? '' : metrics[id];
+}
+
+function renderStructuredPanel(metrics) {
+  metrics = metrics || {};
+  var scores = metrics.function_scores || {};
+  var patterns = metrics.function_patterns || {};
+  var basicHtml = STRUCTURED_FIELDS.filter(function(f){ return f.group === 'basic'; }).map(function(f) {
+    return '<div class="field-row"><label for="f-' + f.id + '">' + esc(f.label) + '</label>' +
+      '<input id="f-' + f.id + '" type="' + f.type + '" value="' + esc(metricValue(metrics, f.id)) + '" oninput="updateStructuredCompletionState()"></div>';
+  }).join('');
+  var channelHtml = STRUCTURED_FIELDS.filter(function(f){ return f.group === 'channel'; }).map(function(f) {
+    return '<div class="field-row"><label for="f-' + f.id + '">' + esc(f.label) + '</label>' +
+      '<div class="input-with-unit"><input id="f-' + f.id + '" type="number" value="' + esc(metricValue(metrics, f.id)) + '" oninput="updateStructuredCompletionState()"><span>%</span></div></div>';
+  }).join('');
+  var funcHtml = '<div class="func-grid"><div class="func-header"><div class="func-label">区域</div><div class="func-left">左侧</div><div class="func-right">右侧</div></div>';
+  FUNCTION_FIELD_ROWS.forEach(function(row) {
+    funcHtml += '<div class="func-row"><div class="func-label">' + esc(row[0]) + '</div>' +
+      renderFuncCell(row[1], row[2], scores, patterns) +
+      renderFuncCell(row[3], row[4], scores, patterns) +
+      '</div>';
+  });
+  funcHtml += '</div>';
+
+  document.getElementById('structuredContent').innerHTML =
+    '<div class="structured-section"><div class="section-title">基础指标</div><div class="field-grid-2col">' + basicHtml + '</div></div>' +
+    '<div class="structured-section"><div class="section-title">学习通道</div><div class="field-grid-3col">' + channelHtml + '</div></div>' +
+    '<div class="structured-section"><div class="section-title">功能区分数与纹型</div>' + funcHtml + '</div>';
+
+  document.querySelectorAll('#structuredContent input').forEach(function(input) {
+    input.addEventListener('input', updateStructuredCompletionState);
+  });
+  updateStructuredCompletionState();
+}
+
+function renderFuncCell(key, label, scores, patterns) {
+  return '<div class="func-cell" title="' + esc(label) + '">' +
+    '<input id="score-' + key + '" type="number" min="0" max="99" value="' + esc(scores[key] == null ? '' : scores[key]) + '" placeholder="分">' +
+    '<input id="pattern-' + key + '" class="pattern-input" value="' + esc(patterns[key] || '') + '" placeholder="纹型">' +
+    '</div>';
+}
+
+function showStructuredPanelWithMetrics(metrics) {
+  state.structuredMetrics = metrics || {};
+  document.getElementById('structuredPanelCard').classList.remove('hidden');
+  document.getElementById('structuredLoading').style.display = 'none';
+  document.getElementById('structuredContent').style.display = 'block';
+  document.getElementById('structuredActions').style.display = 'block';
+  renderStructuredPanel(state.structuredMetrics);
+  switchEditMode('structured');
+  document.getElementById('structuredPanelCard').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function extractAndShowStructured(text) {
+  document.getElementById('structuredPanelCard').classList.remove('hidden');
+  document.getElementById('structuredLoading').style.display = 'block';
+  document.getElementById('structuredContent').style.display = 'none';
+  document.getElementById('structuredActions').style.display = 'none';
+  document.getElementById('structuredStatus').textContent = '正在从 OCR 文本提取结构化字段...';
+  try {
+    var resp = await fetch(API_BASE + '/api/extract-metrics', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ocrText: text || ''})
+    });
+    var data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || ('HTTP ' + resp.status));
+    showStructuredPanelWithMetrics(data.metrics || {});
+  } catch(e) {
+    document.getElementById('structuredLoading').style.display = 'none';
+    document.getElementById('structuredStatus').textContent = '结构化提取失败：' + e.message + '。可点击手动填写结构化数据。';
+  }
+}
+
+function switchEditMode(mode) {
+  state.editMode = mode || 'structured';
+  var structuredView = document.getElementById('structuredView');
+  if (structuredView) structuredView.style.display = 'block';
+}
+
+function collectStructuredMetrics() {
+  function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+  function num(id) { var v = val(id); var n = parseFloat(v); return isNaN(n) ? null : n; }
+  var metrics = {
+    trc: num('f-trc'),
+    atd: num('f-atd'),
+    personality_type: val('f-personality_type'),
+    behavior_mode: val('f-behavior_mode'),
+    brain_balance: val('f-brain_balance'),
+    learning_channels: {
+      auditory: num('f-auditory'),
+      visual: num('f-visual'),
+      kinesthetic: num('f-kinesthetic')
+    },
+    function_scores: {},
+    function_patterns: {}
+  };
+  FUNCTION_FIELD_ROWS.forEach(function(row) {
+    [row[1], row[3]].forEach(function(key) {
+      var score = num('score-' + key);
+      var pattern = val('pattern-' + key);
+      if (score !== null) metrics.function_scores[key] = score;
+      if (pattern) metrics.function_patterns[key] = pattern;
+    });
+  });
+  var chKeys = Object.keys(metrics.learning_channels).filter(function(k){ return metrics.learning_channels[k] !== null; });
+  if (chKeys.length) {
+    metrics.primary_channel = chKeys.sort(function(a,b){ return metrics.learning_channels[b] - metrics.learning_channels[a]; })[0];
+  }
+  var scoreKeys = Object.keys(metrics.function_scores);
+  if (scoreKeys.length) {
+    var sorted = scoreKeys.sort(function(a,b){ return metrics.function_scores[b] - metrics.function_scores[a]; });
+    metrics.top_three_areas = sorted.slice(0, 3);
+    metrics.lowest_area = sorted[sorted.length - 1];
+  }
+  return metrics;
+}
+
+function countExtractedFields(metrics) {
+  metrics = metrics || {};
+  var count = 0;
+  ['trc','atd','personality_type','behavior_mode','brain_balance'].forEach(function(k){ if (metrics[k] !== null && metrics[k] !== undefined && metrics[k] !== '') count++; });
+  count += Object.keys(metrics.learning_channels || {}).filter(function(k){ return metrics.learning_channels[k] !== null && metrics.learning_channels[k] !== ''; }).length;
+  count += Object.keys(metrics.function_scores || {}).length;
+  count += Object.keys(metrics.function_patterns || {}).length;
+  return count;
+}
+
+function getStructuredMissingFields() {
+  var missing = [];
+  STRUCTURED_FIELDS.forEach(function(f) {
+    var id = f.group === 'basic' ? 'f-' + f.id : 'f-' + f.id;
+    var el = document.getElementById(id);
+    if (!el || !el.value.trim()) missing.push(f.label);
+  });
+  FUNCTION_FIELD_ROWS.forEach(function(row) {
+    [row[1], row[3]].forEach(function(key, idx) {
+      var label = idx === 0 ? row[2] : row[4];
+      var s = document.getElementById('score-' + key);
+      var p = document.getElementById('pattern-' + key);
+      if (!s || !s.value.trim()) missing.push(label + ' 分数');
+      if (!p || !p.value.trim()) missing.push(label + ' 纹型');
+    });
+  });
+  return missing;
+}
+
+function updateStructuredCompletionState() {
+  var metrics;
+  try { metrics = collectStructuredMetrics(); } catch(_) { metrics = state.structuredMetrics || {}; }
+  var missing = getStructuredMissingFields();
+  var status = document.getElementById('structuredStatus');
+  if (status) {
+    status.textContent = missing.length
+      ? '已填写 ' + countExtractedFields(metrics) + ' 项，仍缺 ' + missing.length + ' 项。'
+      : '结构化字段已完整，可生成解读报告。';
+  }
+}
+
+// 将 Baidu OCR region_values → extract_metrics 格式
+function regionValuesToMetrics(rv) {
+  function parseNum(s) { var n = parseFloat(s); return isNaN(n) ? null : n; }
+  function parseScore(s) { var m = (s||'').match(/(\d+)/); return m ? parseInt(m[1]) : null; }
+  function parsePattern(s) { var m = (s||'').match(/([A-Z][a-z]*)/); return m ? m[1] : null; }
+
+  var m = {};
+  m.trc = parseNum(rv.trc || rv.learning_potential_trc_value);
+  m.atd = parseNum(rv.atd || rv.reaction_speed_atd_value);
+  m.personality_type = rv.personality_type || null;
+  m.behavior_mode = rv.behavior_mode || null;
+  m.brain_balance = rv.brain_balance || null;
+
+  var ch = {};
+  if (rv.auditory_pct) ch.auditory = parseNum(rv.auditory_pct);
+  if (rv.visual_pct) ch.visual = parseNum(rv.visual_pct);
+  if (rv.kinesthetic_pct) ch.kinesthetic = parseNum(rv.kinesthetic_pct);
+  if (Object.keys(ch).length) { m.learning_channels = ch; m.primary_channel = Object.keys(ch).reduce(function(a,b){return ch[a]>=ch[b]?a:b;}); }
+
+  var scores = {}, patterns = {};
+  var areaMap = [
+    ['spirit_communication', 'spirit_left'],
+    ['spirit_creative', 'spirit_right'],
+    ['thinking_logic', 'thinking_left'],
+    ['thinking_spatial', 'thinking_right'],
+    ['body_discrimination', 'kinesthetic_left'],
+    ['body_feeling', 'kinesthetic_right'],
+    ['auditory_discrimination', 'auditory_left'],
+    ['auditory_feeling', 'auditory_right'],
+    ['visual_discrimination', 'visual_left'],
+    ['visual_feeling', 'visual_right']
+  ];
+  for (var i = 0; i < areaMap.length; i++) {
+    var regionKey = areaMap[i][0], engKey = areaMap[i][1];
+    var val = rv[regionKey];
+    if (!val) continue;
+    var sc = parseScore(val), pt = parsePattern(val);
+    if (sc !== null) scores[engKey] = sc;
+    if (pt) patterns[engKey] = pt;
+  }
+  if (Object.keys(scores).length) {
+    m.function_scores = scores;
+    m.function_patterns = patterns;
+    var sorted = Object.keys(scores).sort(function(a,b){return scores[b]-scores[a];});
+    m.top_three_areas = sorted.slice(0,3);
+    m.lowest_area = sorted[sorted.length-1];
+  }
+  return m;
+}
+
+function fillOcrDraft(text, sourceLabel, regionValues) {
+  var draft = (text || '').trim();
+  if (draft) document.getElementById('directOcrInput').value = draft;
+  var hasRegions = regionValues && Object.keys(regionValues).length > 0;
+
+  if (hasRegions) {
+    document.getElementById('ocrProgress').style.display = 'block';
+    document.getElementById('ocrProgress').textContent = '✅ ' + sourceLabel + '区域识别完成';
+    var metrics = regionValuesToMetrics(regionValues);
+    state.structuredMetrics = metrics;
+    showStructuredPanelWithMetrics(metrics);
+  } else {
+    document.getElementById('ocrProgress').style.display = 'block';
+    document.getElementById('ocrProgress').textContent = draft
+      ? '✅ ' + sourceLabel + '草稿已生成: ' + draft.length + '字，正在提取结构化字段'
+      : '❌ ' + sourceLabel + '未识别到可用文字';
+    if (draft) {
+      extractAndShowStructured(draft);
+    } else {
+      startManualStructured();
+    }
+  }
+}
+
+async function startBaiduOcrDraft() {
+  if (!state.imageData) return;
+  var btn = document.getElementById('btnBaiduOcr');
+  btn.disabled = true;
+  btn.textContent = '☁️ 百度云识别中...';
+  document.getElementById('reportCard').classList.remove('hidden');
+  document.getElementById('reportContent').classList.add('loading');
+  document.getElementById('reportContent').textContent = '正在调用百度云识别图片文字（手机端约需10-30秒）...';
+  document.getElementById('ocrProgress').style.display = 'block';
+  document.getElementById('ocrProgress').textContent = '';
+  var controller = new AbortController();
+  var timer = setTimeout(function(){ controller.abort(); }, 90000);
+  try {
+    var resp = await fetch(API_BASE + '/api/baidu-ocr', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({image: state.imageData}),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    var data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || ('HTTP ' + resp.status));
+    state.ocrText = data.text || '';
+    state.lastRegionValues = data.region_values || null;
+    fillOcrDraft(state.ocrText, '百度云OCR', data.region_values);
+  } catch(e) {
+    clearTimeout(timer);
+    document.getElementById('reportContent').classList.remove('loading');
+    var errMsg = e.name === 'AbortError' ? '请求超时(90s)，图片可能过大，请尝试压缩后重试' : e.message;
+    document.getElementById('reportContent').textContent = '百度云识别失败: ' + errMsg + '。请重新拍摄上传，或使用手动填写结构化数据。';
+    document.getElementById('ocrProgress').textContent = '❌ 百度云识别失败';
+  }
+  btn.disabled = false;
+  btn.textContent = '☁️ 百度云识别文字草稿';
+}
+
+async function runTesseractWithTimeout(imageData, onLog, timeoutMs) {
+  var cfg = window.TESSERACT_CONFIG || {};
+  var worker = null;
+  var timedOut = false;
+  var timer = null;
+  var task = (async function() {
+    var options = {
+      workerPath: cfg.workerPath,
+      langPath: cfg.langPath
+    };
+    if (onLog) options.logger = onLog;
+    worker = await Tesseract.createWorker('chi_sim+eng', 1, options);
+    if (timedOut) {
+      try { await worker.terminate(); } catch(_) {}
+      throw new Error('OCR超时(20s)');
+    }
+    return await worker.recognize(imageData);
+  })();
+  var timeout = new Promise(function(_, reject) {
+    timer = setTimeout(function() {
+      timedOut = true;
+      if (worker) { try { worker.terminate(); } catch(_) {} }
+      reject(new Error('OCR超时(20s)'));
+    }, timeoutMs || 20000);
+  });
+  try {
+    return await Promise.race([task, timeout]);
+  } finally {
+    clearTimeout(timer);
+    if (worker) { try { await worker.terminate(); } catch(_) {} }
+    task.catch(function(){});
+  }
+}
+
+async function generateFromText() {
+  var text = document.getElementById('directOcrInput').value.trim();
+  if (!text) { alert('请先粘贴报告文本'); return; }
+  document.getElementById('reportCard').classList.remove('hidden');
+  document.getElementById('reportContent').classList.add('loading');
+  document.getElementById('reportContent').textContent = '正在生成报告...';
+  document.getElementById('ocrProgress').textContent = '📄 文本输入: ' + text.length + '字';
+  state.ocrText = text;
+  try {
+    var payload = {ocrText: text, type: 'portrait', style: document.getElementById('reportStyle').value, age: parseInt(document.getElementById('reportAge').value), target: document.getElementById('reportTarget').value};
+    var panelVisible = !document.getElementById('structuredPanelCard').classList.contains('hidden');
+    if (panelVisible && document.getElementById('structuredContent').style.display !== 'none') {
+      try {
+        payload.structuredMetrics = collectStructuredMetrics();
+        document.getElementById('ocrProgress').textContent = '📊 结构化模式: ' + countExtractedFields(payload.structuredMetrics) + ' 个字段';
+      } catch(_) {}
+    }
+    await runTalentReportJob(payload, '正在生成报告...');
+  } catch(e) {
+    document.getElementById('reportContent').textContent = '生成失败: ' + e.message;
+  }
+}
+
+async function generateFromStructured() {
+  var metrics = collectStructuredMetrics();
+  var age = parseInt(document.getElementById('reportAge').value);
+  if (!age || age < 0) { alert('请先填写年龄'); return; }
+
+  var missing = getStructuredMissingFields();
+  if (missing.length > 0) {
+    alert('还有未填写字段，无法生成报告：\n' + missing.slice(0, 12).join('\n') + (missing.length > 12 ? '\n...' : ''));
+    updateStructuredCompletionState();
+    return;
+  }
+
+  document.getElementById('reportCard').classList.remove('hidden');
+  document.getElementById('reportContent').classList.add('loading');
+  document.getElementById('reportContent').textContent = '正在使用结构化数据生成报告...';
+  document.getElementById('ocrProgress').style.display = 'block';
+  document.getElementById('ocrProgress').textContent = '📊 结构化数据模式 · 共 ' + countExtractedFields(metrics) + ' 个字段';
+
+  try {
+    await runTalentReportJob({
+      ocrText: state.ocrText || '',
+      structuredMetrics: metrics,
+      type: 'portrait',
+      style: document.getElementById('reportStyle').value,
+      age: age,
+      target: document.getElementById('reportTarget').value
+    }, '正在使用结构化数据生成报告...');
+  } catch(e) {
+    document.getElementById('reportContent').classList.remove('loading');
+    document.getElementById('reportContent').textContent = '生成失败: ' + e.message;
+  }
+}
+
+async function runTalentReportJob(payload, loadingText) {
+  document.getElementById('reportCard').classList.remove('hidden');
+  document.getElementById('reportContent').classList.add('loading');
+  document.getElementById('reportContent').textContent = loadingText || '正在生成报告...';
+  document.getElementById('ocrProgress').style.display = 'block';
+  document.getElementById('ocrProgress').textContent = '⏳ 报告生成中，请保持页面打开';
+
+  var submit = await fetch(API_BASE + '/api/talent-job', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  var submitData = await submit.json();
+  if (!submit.ok || submitData.error) throw new Error(submitData.error || ('HTTP ' + submit.status));
+
+  var jobId = submitData.jobId;
+  var startedAt = Date.now();
+  var lastAge = -1;
+
+  while (true) {
+    if (Date.now() - startedAt > 180000) throw new Error('生成超时，请稍后重试');
+    await new Promise(function(resolve){ setTimeout(resolve, 2000); });
+    var resp = await fetch(API_BASE + '/api/talent-job?id=' + encodeURIComponent(jobId));
+    var data = await resp.json();
+    if (!resp.ok || (data.status !== 'running' && data.error)) throw new Error(data.error || ('HTTP ' + resp.status));
+    if (data.status === 'running') {
+      if (data.age != null && data.age !== lastAge) {
+        lastAge = data.age;
+        document.getElementById('ocrProgress').textContent = '⏳ 报告生成中，已等待 ' + data.age + ' 秒';
+      }
+      continue;
+    }
+    if (data.status === 'error') throw new Error(data.error || '报告生成失败');
+
+    var result = data.result || {};
+    state.reports = {portrait: result.content || ''};
+    state.reportOrder = ['portrait'];
+    state.lastDebug = result.debug || null;
+    saveReports();
+    document.getElementById('reportContent').classList.remove('loading');
+    document.getElementById('reportContent').innerHTML = renderStack();
+    document.getElementById('ocrProgress').textContent = '✅ 解读报告已生成';
+    showDebug(result.debug);
+    document.getElementById('reportCard').scrollIntoView({behavior:'smooth', block:'start'});
+    document.getElementById('chatSection').style.display = 'block';
+    state.conversation = [];
+    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('btnSummarize').style.display = 'block';
+    return result;
+  }
+}
+
+function generateFromRawText() {
+  var text = document.getElementById('directOcrInput').value.trim();
+  if (!text) { alert('请先在文本框中粘贴或编辑报告文本'); return; }
+  document.getElementById('directOcrInput').value = text;
+  state.ocrText = text;
+  generateFromText();
+}
+
+function reExtractMetrics() {
+  var text = document.getElementById('directOcrInput').value.trim();
+  if (!text) { alert('请先在文本框中粘贴报告文本'); return; }
+  document.getElementById('directOcrInput').value = text;
+  state.ocrText = text;
+  extractAndShowStructured(text);
+}
+
+function startManualStructured() {
+  state.ocrText = '';
+  state.structuredMetrics = {};
+  var emptyMetrics = {};
+  document.getElementById('structuredPanelCard').classList.remove('hidden');
+  renderStructuredPanel(emptyMetrics);
+  document.getElementById('structuredContent').style.display = 'block';
+  document.getElementById('structuredActions').style.display = 'block';
+  document.getElementById('structuredLoading').style.display = 'none';
+  document.getElementById('structuredStatus').textContent = '✏️ 手动输入模式：请填写上述字段后点击「生成解读报告」';
+  switchEditMode('structured');
+  document.getElementById('structuredPanelCard').scrollIntoView({behavior:'smooth', block:'start'});
+  updateStructuredCompletionState();
+}
+
+// === 笨笨 2026-07-06 从 commit 1af0800 恢复的聊天/合盘/导出/渲染函数 ===
+async function sendChat() {
+  var input = document.getElementById('chatInput');
+  var msg = input.value.trim();
+  if (!msg) return;
+  if (!state.conversation) state.conversation = [];
+  var btn = document.querySelector('#chatSection .btn-primary');
+  if (btn) btn.disabled = true;
+
+  // 自动触发整合
+  if (/可以整合|出报告|生成.*报告|整合/.test(msg)) {
+    state.conversation.push({role:'user',content:msg});
+    appendChat('user', msg + ' ✅');
+    input.value = '';
+    if (btn) btn.disabled = false;
+    document.getElementById('btnSummarize').click();
+    return;
+  }
+
+  appendChat('user', msg);
+  input.value = '';
+  var loadingId = 'loading_' + Date.now();
+  appendChat('assistant', '⏳ 思考中...', loadingId);
+
+  var controller = new AbortController();
+  var timeout = setTimeout(function(){ controller.abort(); }, 90000);
+
+  try {
+    var resp = await fetch(API_BASE + '/api/talent-chat', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        reportText: state.reports.portrait||'',
+        conversation: state.conversation,
+        userMessage: msg,
+        action: 'chat',
+        ocrText: state.ocrText,
+        age: parseInt(document.getElementById('reportAge').value),
+        persona: {
+          target: document.getElementById('reportTarget').value,
+          style: document.getElementById('reportStyle').value
+        }
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    var data = await resp.json();
+    var loadingEl = document.getElementById(loadingId);
+    if (!resp.ok || data.error) {
+      var errMsg = data.error || ('HTTP ' + resp.status);
+      if (loadingEl) loadingEl.innerHTML = '❌ ' + errMsg + '<br><span style=\"font-size:.75em;color:var(--muted)\">本次讨论没有成功保存，请重试。</span>';
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    if (loadingEl) loadingEl.innerHTML = '<b>顾问：</b>' + data.reply.replace(/\n/g,'<br>');
+
+    state.conversation.push({role:'user',content:msg});
+    state.conversation.push({role:'assistant',content:data.reply});
+  } catch(e) {
+    clearTimeout(timeout);
+    var loadingEl = document.getElementById(loadingId);
+    if (loadingEl) loadingEl.innerHTML = '❌ ' + (e.name === 'AbortError' ? '请求超时，请重试' : e.message) + '<br><span style=\"font-size:.75em;color:var(--muted)\">本次讨论没有成功保存，请重试。</span>';
+  }
+  if (btn) btn.disabled = false;
+}
+
+
+function appendChat(role, text, id) {
+  var container = document.getElementById('chatMessages');
+  var div = document.createElement('div');
+  if (id) div.id = id;
+  div.style.cssText = 'padding:8px 12px;margin-bottom:6px;border-radius:8px;' +
+    (role === 'user' ? 'background:#1e2a3a;text-align:right;' : 'background:#1a1a35;');
+  var prefix = role === 'user' ? '<b style="color:var(--accent2)">你：</b>' : '<b style="color:var(--accent)">顾问：</b>';
+  div.innerHTML = prefix + text.replace(/\n/g,'<br>');
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+
+async function summarizeChat() {
+  var convLen = state.conversation ? state.conversation.length : 0;
+  var hasReport = !!state.reports.portrait;
+  var hasOcr = !!state.ocrText;
+  if (!state.conversation || convLen === 0) {
+    alert('无法整合：尚无对话记录。请先在聊天框与顾问讨论。');
+    return;
+  }
+  if (!hasReport) {
+    alert('无法整合：原始报告丢失。请重新生成报告。');
+    return;
+  }
+  var btn = document.getElementById('btnSummarize');
+  btn.disabled = true; btn.textContent = '⏳ 整合中...';
+
+  var controller = new AbortController();
+  var timeout = setTimeout(function(){ controller.abort(); }, 90000);
+
+  try {
+    var resp = await fetch(API_BASE + '/api/talent-chat', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        reportText: state.reports.portrait||'',
+        conversation: state.conversation,
+        action: 'summarize',
+        ocrText: state.ocrText,
+        age: parseInt(document.getElementById('reportAge').value),
+        persona: {
+          target: document.getElementById('reportTarget').value,
+          style: document.getElementById('reportStyle').value
+        }
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    var data = await resp.json();
+    if (!resp.ok || data.error) {
+      var errMsg = data.error || ('HTTP ' + resp.status);
+      alert('整合失败: ' + errMsg);
+      btn.disabled = false; btn.textContent = '📝 重新整合';
+      return;
+    }
+
+    // 追加整合版（不覆盖原报告）
+    var v = (state.reportOrder.filter(function(k){return k.startsWith('final')}).length) + 1;
+    var key = 'final_' + v;
+    state.reports[key] = data.reply;
+    state.reportOrder.push(key);
+    saveReports();
+    var rc = document.getElementById('reportCard');
+    rc.classList.remove('hidden');
+    var content = document.getElementById('reportContent');
+    content.innerHTML = renderStack();
+    content.classList.remove('loading');
+    rc.scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(function(){ content.scrollTop = content.scrollHeight; }, 300);
+    alert('✅ 整合报告已生成！请向上滚动查看原报告，向下查看新报告。');
+  } catch(e) {
+    clearTimeout(timeout);
+    btn.disabled = false; btn.textContent = '📝 生成整合报告';
+    if (e.name === 'AbortError') alert('整合请求超时，请检查网络后重试');
+    else alert('整合失败: ' + e.message);
+    return;
+  }
+  btn.disabled = false; btn.textContent = '📝 生成整合报告';
+}
+
+// ===== 合盘 =====
+let compositeType = '';
+
+function startComposite(type) {
+  compositeType = type;
+  document.getElementById('compositeFile').click();
+}
+
+async function handleCompositeFile(file) {
+  if (!file) return;
+  const result = await new Promise(function(resolve) {
+    var r = new FileReader();
+    r.onload = function(e) { resolve(e.target.result); };
+    r.readAsDataURL(file);
+  });
+  const ids = {parent:'compositeParent',partner:'compositePartner',family:'compositeFamily'};
+  const status = document.getElementById(ids[compositeType]+'Status');
+  status.classList.remove('hidden');
+  status.textContent = '⏳ OCR识别中...';
+  try {
+    var ocrResult = await runTesseractWithTimeout(result, null);
+    var ocrText = ocrResult.data.text || '';
+    if (ocrText.length < 20) throw new Error('OCR文字不足');
+    // 解析答案
+    status.textContent = '⏳ 解析答案...';
+    var parseResp = await fetch(API_BASE + '/api/parse-answers', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ocrText: ocrText})
+    });
+    var parsed = await parseResp.json();
+    if (parsed.error) throw new Error(parsed.error);
+    // 生成合盘
+    status.textContent = '⏳ 生成合盘报告...';
+    var compResp = await fetch(API_BASE + '/api/composite', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        type: compositeType,
+        myPortrait: state.reports.portrait||'',
+        partnerAnswers: parsed.answers||{},
+        partnerHandwritten: parsed.handwritten_fields||{}
+      })
+    });
+    var compData = await compResp.json();
+    if (compData.error) throw new Error(compData.error);
+    document.getElementById('reportContent').classList.remove('loading');
+    document.getElementById('reportContent').innerHTML = parseMD(compData.content);
+    document.getElementById('reportCard').classList.remove('hidden');
+    status.textContent = '✅';
+  } catch(e) {
+    status.textContent = '❌ ' + e.message;
+  }
+}
+
+
+function parseMD(md) {
+  md = (md || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  return md
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2 style="color:var(--accent2);margin-top:20px">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/^(?!<)(.+)$/gm,'<p>$1</p>');
+}
+
+
+function getReportLabel(k) {
+  if (k === 'portrait') return '📋 先天思维特质报告';
+  if (k.startsWith('final')) return '📋 综合解读报告 V' + k.split('_')[1];
+  var m = {action:'🌱 个人成长建议',communication:'💞 关系洞察',career:'🚀 事业发展'};
+  return m[k] || '📋 报告';
+}
+
+var REPORT_LABELS = {portrait:'📋 先天思维特质报告',action:'🌱 个人成长建议',communication:'💞 关系洞察',career:'🚀 事业发展'};
+
+function renderStack() {
+  var parts = [];
+  for (var i = 0; i < state.reportOrder.length; i++) {
+    var k = state.reportOrder[i];
+    if (state.reports[k]) {
+      parts.push(
+        '<div style="background:linear-gradient(135deg,#2a2a48,#1e1e40);padding:20px;border-radius:10px;margin-bottom:16px;border-left:3px solid var(--accent)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+        '<span style="font-weight:700;font-size:1em;color:var(--accent)">'+getReportLabel(k)+'</span>'+
+        '<span style="display:flex;gap:4px">'+
+        '<button class="btn btn-outline btn-sm" onclick="downloadReport(\''+k+'\',\'md\')" style="font-size:.65em;padding:3px 8px">MD</button>'+
+        '<button class="btn btn-outline btn-sm" onclick="downloadReport(\''+k+'\',\'doc\')" style="font-size:.65em;padding:3px 8px">Word</button>'+
+        '<button class="btn btn-outline btn-sm" onclick="downloadReport(\''+k+'\',\'pdf\')" style="font-size:.65em;padding:3px 8px">PDF</button>'+
+        '</span>'+
+        '</div>'+
+        '<div>'+parseMD(state.reports[k])+'</div>'+
+        '</div>'
+      );
+    }
+  }
+  return parts.join('<hr style="border-color:#2a2a45;margin:20px 0">');
+}
+
+
+function showDebug(debug) {
+  if (!debug) return;
+  var m = debug.metrics || {};
+  var s = debug.structure || {};
+  var trc = s.trc || {};
+  var atd = s.atd || {};
+  var ch = s.channel || {};
+  var bh = s.behavior || {};
+  var combos = s.combos || [];
+  var patterns = s.pattern_insights || [];
+  var rules = [];
+  if (trc.label) rules.push('TRC: '+trc.label+'(价值'+trc.value+') '+trc.capacity);
+  if (atd.label) rules.push('ATD: '+atd.label+'(价值'+atd.value+') '+atd.focus);
+  if (ch.label) rules.push('通道: '+ch.label);
+  if (bh.type) rules.push('行为: '+bh.type);
+  for (var i=0;i<combos.length;i++) rules.push('组合: '+combos[i].label);
+  var html = '<details style="margin-top:12px;font-size:.8em;color:var(--muted)"><summary style="cursor:pointer;padding:6px 0">🔍 引擎调试信息</summary><div style="padding:10px;background:#111;border-radius:8px;margin-top:6px;line-height:1.6;max-height:400px;overflow-y:auto"><b>指标提取:</b> TRC='+(m.trc||'?')+' ATD='+(m.atd||'?')+' 行为='+(m.behavior_mode||'?')+' 通道='+(m.primary_channel||'?')+'<br><b>命中规则 ('+rules.length+'):</b><br>'+rules.map(function(r,i){return '&nbsp;&nbsp;'+(i+1)+'. <b>'+r+'</b>'}).join('<br>')+'<br><b>纹型解读 ('+patterns.length+'):</b><br>'+patterns.map(function(p){return '&nbsp;&nbsp;'+p.area+'('+p.code+'): '+p.insight}).join('<br>')+'<br><b>检索:</b> 洞察'+(debug.insights_count||0)+'条 · 表达'+(debug.narratives_count||0)+'条 · 方案'+(debug.interventions_count||0)+'条<br><b>风格:</b> '+(debug.style||'?')+'<br><b>OCR原文:</b> <span style="word-break:break-all">'+(state.ocrText||'').substring(0,300)+'...</span></div></details>';
+  var reportCard = document.getElementById('reportCard');
+  var el = document.getElementById('debugPanel');
+  if (!el) { el = document.createElement('div'); el.id = 'debugPanel'; reportCard.appendChild(el); }
+  el.innerHTML = html;
+}
+
+
+function downloadServerPDF(md, filename) {
+  // Form-based POST: browser handles PDF response natively (works on mobile Safari)
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = API_BASE + '/api/export-pdf';
+  form.target = '_blank';
+  form.acceptCharset = 'UTF-8';
+  form.style.display = 'none';
+  var titleInput = document.createElement('input');
+  titleInput.name = 'title'; titleInput.value = filename;
+  form.appendChild(titleInput);
+  var mdInput = document.createElement('input');
+  mdInput.name = 'markdown'; mdInput.value = md;
+  form.appendChild(mdInput);
+  document.body.appendChild(form);
+  form.submit();
+  setTimeout(function(){ if (form.parentNode) form.parentNode.removeChild(form); }, 1500);
+}
+
+
+function downloadReport(key, format) {
+  var key = key || null;
+  var format = format || 'md';
+  var md = '';
+  var filename = 'SEE_报告';
+  if (key) {
+    md = '# ' + getReportLabel(key) + '\n\n' + (state.reports[key]||'');
+    filename = 'SEE_' + getReportLabel(key).replace(/[📋\s]/g,'_');
+  } else {
+    for (var i = 0; i < state.reportOrder.length; i++) {
+      var k = state.reportOrder[i];
+      if (state.reports[k]) {
+        md += '# ' + getReportLabel(k) + '\n\n' + state.reports[k] + '\n\n---\n\n';
+      }
+    }
+    filename = 'SEE_全部报告';
+  }
+  if (!md) return;
+  var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+  if (format === 'pdf') {
+    // Server-side PDF export (mobile Safari compatible)
+    downloadServerPDF(md, filename);
+    return;
+  }
+
+  if (format === 'md') {
+    // Markdown 纯文本下载
+    var blob0 = new Blob([md], {type: 'text/markdown;charset=utf-8'});
+    var url0 = URL.createObjectURL(blob0);
+    if (isMobile) {
+      if (navigator.canShare && navigator.share && window.File) {
+        try {
+          var file0 = new File([blob0], filename + '.md', {type: 'text/markdown;charset=utf-8'});
+          if (navigator.canShare({files:[file0]})) {
+            navigator.share({files:[file0], title: filename}).catch(function(){});
+            setTimeout(function(){ URL.revokeObjectURL(url0); }, 30000);
+            return;
+          }
+        } catch (e) {}
+      }
+      var a0m = document.createElement('a');
+      a0m.href = url0; a0m.target = '_blank'; a0m.rel = 'noopener';
+      document.body.appendChild(a0m); a0m.click(); document.body.removeChild(a0m);
+      setTimeout(function(){ URL.revokeObjectURL(url0); }, 30000);
+      return;
+    }
+    var a0 = document.createElement('a');
+    a0.href = url0; a0.download = filename + '.md';
+    document.body.appendChild(a0); a0.click(); document.body.removeChild(a0);
+    URL.revokeObjectURL(url0);
+    return;
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:serif;max-width:720px;margin:20px auto;padding:16px;line-height:1.9;color:#333;font-size:16px}h1{font-size:1.4em}h2{font-size:1.15em;margin-top:24px}h3{font-size:1em}p{margin:10px 0}li{margin:6px 0}</style></head><body><h1>' + getReportLabel(key||'report') + '</h1>' + parseMD(md) + '</body></html>';
+  var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+
+  if (isMobile) {
+    var w = window.open(url, '_blank');
+    if (!w) { alert('请允许弹出窗口，或使用浏览器分享/打印'); location.href = url; }
+    setTimeout(function(){
+      try { if (w) { w.focus(); w.print(); } } catch (e) {}
+    }, 800);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    return;
+  }
+
+  // 桌面端：直接下载
+  var a = document.createElement('a');
+  a.href = url; a.download = filename + (format === 'doc' ? '.doc' : '.html');
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  if (format === 'pdf') { setTimeout(function(){ window.open(url, '_blank'); }, 300); }
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+}
+
+</script>
+
+
+
+
+</body>
+</html>
