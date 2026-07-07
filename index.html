@@ -247,20 +247,26 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 // ===== 用户码管理（数据源：服务端 SQLite，localStorage 兜底）=====
 var _userCache = [];
 var _userFetchFailed = false;
+var _usersPromise = null;
 function _fetchUsers() {
+  if (_usersPromise) return _usersPromise;
   _userFetchFailed = false;
-  fetch(API_BASE + '/api/db/users').then(function(r){
+  _usersPromise = fetch(API_BASE + '/api/db/users').then(function(r){
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   }).then(function(d){
     _userCache = (d.users || []).map(function(u){ u.code = u.code || ''; return u; });
     var code = getUserCode();
     if (code) updateQuotaDisplay(code);
+    _usersPromise = null;
+    return _userCache;
   }).catch(function(err){
     _userFetchFailed = true;
+    _usersPromise = null;
     console.warn('用户码加载失败，1秒后重试: ' + err.message);
     setTimeout(function(){ _fetchUsers(); }, 1000);
   });
+  return _usersPromise;
 }
 function getUserCodes() {
   return _userCache;
@@ -401,8 +407,10 @@ function saveReports() {
   localStorage.setItem('see_reports_v2_' + code, JSON.stringify({versions, time: new Date().toISOString()}));
   sessionStorage.setItem('see_code_shared', code);
 }
-function loadUserReports() {
+async function loadUserReports() {
   const code = getUserCode();
+  if (!code) { updateQuotaDisplay(code); return; }
+  await _fetchUsers();
   // Migrate old data
   try {
     const old = localStorage.getItem('see_reports_' + code);
@@ -415,7 +423,7 @@ function loadUserReports() {
       }], time: d.time||new Date().toISOString()}));
     }
   } catch(e){}
-  if (!code || !isValidCode(code)) { updateQuotaDisplay(code); return; }
+  if (!isValidCode(code)) { updateQuotaDisplay(code); return; }
   sessionStorage.setItem('see_code_shared', code);
   updateQuotaDisplay(code);
   const saved = localStorage.getItem('see_reports_v2_' + code);
