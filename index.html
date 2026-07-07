@@ -192,7 +192,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 
 <!-- ====== Manual ====== -->
 <div class="card hidden" id="manualCard">
-  <h2><span class="step-badge">✏</span> 手动输入答案</h2>
+  <h2><span class="step-badge">✏</span> 手动输入答案 <span style="font-size:.7em;color:var(--muted);font-weight:normal">（5个板块，每板块输入5个字母）</span></h2>
   <div id="manualEntries"></div>
   <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">✅ 确认答案</button>
 </div>
@@ -593,18 +593,12 @@ function overviewToggle(qid, el) {
 // ============ MANUAL ============
 function toggleManual() { document.getElementById('manualCard').classList.toggle('hidden'); }
 function initManualEntries() {
-  let html = '';
+  let html = '<p style="font-size:.85em;color:var(--muted);margin-bottom:12px">每个板块连续输入 5 个字母（如 <b>ABCAD</b>），代表该板块 5 道题的答案。</p>';
   MODULES.forEach(m => {
-    html += `<div class="module-title">${m.name} ${m.sub}</div><div style="display:flex;flex-direction:column;gap:6px">`;
-    for (let i=m.range[0];i<=m.range[1];i++) {
-      const qid='q'+String(i).padStart(2,'0');
-      const q = QUESTIONS.find(x=>x.id===qid);
-      html += `<div style="display:flex;align-items:center;gap:8px;font-size:.85em">
-        <span style="flex:1">${q?q.text:qid}</span>
-        <select id="man_${qid}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85em;width:60px">
-          <option value="">-</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
-      </div>`;
-    }
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:rgba(255,255,255,.04);border-radius:8px">';
+    html += '<span style="font-weight:600;min-width:90px">' + m.name + m.sub + '</span>';
+    html += '<span style="color:var(--muted);font-size:.75em;min-width:40px">题' + m.range[0] + '-' + m.range[1] + '</span>';
+    html += '<input id="man_' + m.dimension + '" type="text" maxlength="5" placeholder="如: ABCAD" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:1em;letter-spacing:4px;text-transform:uppercase;background:#1a1a38;color:#e0dcd4" autocomplete="off" autocorrect="off" autocapitalize="characters">';
     html += '</div>';
   });
   document.getElementById('manualEntries').innerHTML = html;
@@ -612,13 +606,15 @@ function initManualEntries() {
 function applyManual() {
   var answers = {};
   var allFilled = true;
-  for (var i = 1; i <= 25; i++) {
-    var qid = 'q' + String(i).padStart(2, '0');
-    var v = (document.getElementById('man_' + qid)?.value || '').trim();
-    if (v && v !== '-') { answers[qid] = v; }
-    else { allFilled = false; }
-  }
-  if (!allFilled) { alert('请填写所有 25 个字段后才能确认'); return; }
+  MODULES.forEach(function(m) {
+    var val = (document.getElementById('man_' + m.dimension)?.value || '').trim().toUpperCase();
+    if (val.length !== 5 || !/^[ABCD]{5}$/.test(val)) { allFilled = false; return; }
+    for (var i = 0; i < 5; i++) {
+      var qid = 'q' + String(m.range[0] + i).padStart(2, '0');
+      answers[qid] = val[i];
+    }
+  });
+  if (!allFilled) { alert('请在每个板块输入恰好 5 个字母（A/B/C/D），如: ABCAD'); return; }
   state.answers = answers;
   state.handwritten = {self_label: '我', strategy_result: '深度', receiver_result: '结果', output_result: '分析'};
   state.confidence = {overall: 0.85, items: []};
