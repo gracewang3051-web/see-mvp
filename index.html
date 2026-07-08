@@ -800,9 +800,16 @@ function downloadPDF(){
     }).then(function(r){ return r.blob(); }).then(function(blob){
       var file = new File([blob], filename + '.pdf', { type: 'application/pdf' });
       if (navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], title: filename });
+        navigator.share({ files: [file], title: filename }).catch(function(){});
       }
-    }).catch(function(){});
+    }).catch(function(){
+      // Share API 失败 → form.submit _self 回退
+      var fb = document.createElement('form');
+      fb.method = 'POST'; fb.action = API_BASE + '/api/export-pdf'; fb.target = '_self'; fb.style.display = 'none';
+      var fbt = document.createElement('input'); fbt.type = 'hidden'; fbt.name = 'title'; fbt.value = filename; fb.appendChild(fbt);
+      var fbm = document.createElement('input'); fbm.type = 'hidden'; fbm.name = 'markdown'; fbm.value = md; fb.appendChild(fbm);
+      document.body.appendChild(fb); fb.submit(); document.body.removeChild(fb);
+    });
     return;
   }
 

@@ -437,105 +437,90 @@ def _trim_incomplete(text):
     return text
 
 
-def _generate_pdf(title, markdown):
-    """Generate Chinese PDF from markdown using fpdf."""
-    import io, re
-    from fpdf import FPDF
+def _markdown_to_html(title, markdown):
+    """Convert markdown to a styled HTML page for wkhtmltopdf."""
+    import re as _re
 
-    # 确保输入是纯字符串（CentOS 7 Python 3.6 兼容）
     if isinstance(markdown, bytes):
         markdown = markdown.decode('utf-8', errors='ignore')
     markdown = str(markdown)
 
-    pdf = FPDF(orientation='P', unit='mm', format='A4')
-    pdf.set_left_margin(15)
-    pdf.set_right_margin(15)
-    # Chinese font: bundled → env var → system paths
-    project_root = os.path.dirname(os.path.abspath(__file__))
-    candidates = [
-        os.path.join(project_root, 'fonts', 'CJK.ttf'),
-        os.path.join(project_root, 'fonts', 'CJK.ttc'),
-        os.environ.get('SEE_FONT_PATH', ''),
-        '/System/Library/Fonts/STHeiti Light.ttc',
-        '/Library/Fonts/Arial Unicode.ttf',
-        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-        '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-    ]
-    font_path = next((p for p in candidates if p and os.path.exists(p)), '')
-    if not font_path:
-        raise RuntimeError('No CJK font found. Place a Chinese font at fonts/CJK.ttf, or set SEE_FONT_PATH, or install a system CJK font.')
-    pdf.add_font('CJK', '', font_path)
-    pdf.add_page()
-    pdf.set_auto_page_break(True, 20)
+    html_body = markdown.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    html_body = _re.sub(r'```(\w*)\n(.*?)```', r'<pre><code>\2</code></pre>', html_body, flags=_re.DOTALL)
+    html_body = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_body)
+    html_body = _re.sub(r'`(.+?)`', r'<code>\1</code>', html_body)
+    html_body = _re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2">\1</a>', html_body)
+    html_body = _re.sub(r'^#### (.+)$', r'<h4>\1</h4>', html_body, flags=_re.MULTILINE)
+    html_body = _re.sub(r'^### (.+)$', r'<h3>\1</h3>', html_body, flags=_re.MULTILINE)
+    html_body = _re.sub(r'^## (.+)$', r'<h2>\1</h2>', html_body, flags=_re.MULTILINE)
+    html_body = _re.sub(r'^# (.+)$', r'<h1>\1</h1>', html_body, flags=_re.MULTILINE)
+    html_body = _re.sub(r'^- (.+)$', r'<li>\1</li>', html_body, flags=_re.MULTILINE)
+    html_body = _re.sub(r'(<li>.*?</li>\n?)+', r'<ul>\g<0></ul>', html_body)
+    paragraphs = []
+    for block in _re.split(r'\n\s*\n', html_body):
+        block = block.strip()
+        if block and not block.startswith('<'):
+            paragraphs.append('<p>' + block.replace('\n', '<br>') + '</p>')
+        elif block:
+            paragraphs.append(block)
+    html_body = '\n'.join(paragraphs)
 
-    def write_wrapped(text, line_height=5.5):
-        """Write text with hard width guards for very narrow or unbreakable runs."""
-        max_width = getattr(pdf, 'epw', pdf.w - pdf.l_margin - pdf.r_margin)
-        if max_width <= 0:
-            max_width = pdf.w - pdf.l_margin - pdf.r_margin
-        if max_width <= 0:
-            max_width = pdf.w - 2 * pdf.l_margin
+    title_safe = str(title or 'SEE Report').replace('&', '&amp;').replace('<', '&lt;')
 
-        for para in text.split('\n'):
-            if not para:
-                pdf.ln(line_height)
-                continue
+    return '''<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>''' + title_safe + '''</title>
+<style>
+  body { font-family: "WenQuanYi Zen Hei", "Noto Sans CJK SC", "PingFang SC",
+         "Microsoft YaHei", sans-serif; max-width: 720px; margin: 30px auto;
+         padding: 20px; line-height: 1.9; color: #333; font-size: 14px; }
+  h1 { font-size: 1.5em; border-bottom: 2px solid #333; padding-bottom: 6px; }
+  h2 { font-size: 1.2em; margin-top: 24px; }
+  h3 { font-size: 1.05em; }
+  pre { background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; }
+  code { background: #f0f0f0; padding: 1px 4px; border-radius: 2px; }
+  pre code { background: none; padding: 0; }
+  li { margin: 4px 0; }
+</style></head>
+<body><h1>''' + title_safe + '''</h1>
+''' + html_body + '''
+</body></html>'''
 
-            buf = ''
-            for ch in para:
-                candidate = buf + ch
-                if pdf.get_string_width(candidate) <= max_width:
-                    buf = candidate
-                else:
-                    if buf:
-                        pdf.multi_cell(max_width, line_height, buf)
-                    if pdf.get_string_width(ch) > max_width:
-                        pdf.set_x(pdf.l_margin)
-                        pdf.multi_cell(max_width, line_height, ch)
-                        buf = ''
-                    else:
-                        buf = ch
-            if buf:
-                pdf.multi_cell(max_width, line_height, buf)
 
-    lines = markdown.split('\n')
-    for line in lines:
-        line = line.rstrip()
-        if not line:
-            pdf.ln(2)
-            continue
-        clean = re.sub(r'\*\*(.+?)\*\*', r'\1', line)
-        clean = re.sub(r'`(.+?)`', r'\1', clean)
-        clean = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', clean)
-        clean = re.sub(r'^#+\s*', '', clean)
-        clean = re.sub(r'^- ', '  - ', clean)
-        if not clean.strip():
-            continue
-        if line.startswith('# '):
-            pdf.set_font('CJK', '', 14)
-            pdf.ln(2)
-            write_wrapped(clean, 8)
-            pdf.ln(2)
-        elif line.startswith('## '):
-            pdf.set_font('CJK', '', 11)
-            pdf.ln(2)
-            write_wrapped(clean, 7)
-        elif line.startswith('### '):
-            pdf.set_font('CJK', '', 10)
-            write_wrapped(clean, 6.5)
-        elif line.startswith('```'):
-            continue
-        elif len(clean) < 80:
-            pdf.set_font('CJK', '', 9)
-            write_wrapped(clean, 5.5)
-        else:
-            pdf.set_font('CJK', '', 9)
-            write_wrapped(clean, 5.5)
+def _generate_pdf(title, markdown):
+    """Generate Chinese PDF from markdown using wkhtmltopdf (system fonts)."""
+    html = _markdown_to_html(title, markdown)
 
-    buf = io.BytesIO()
-    pdf.output(buf)
-    return buf.getvalue()
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.html',
+                                     delete=False, encoding='utf-8') as f:
+        f.write(html)
+        html_path = f.name
+
+    try:
+        result = subprocess.run(
+            ['wkhtmltopdf', '--encoding', 'UTF-8',
+             '--page-size', 'A4',
+             '--margin-top', '15mm', '--margin-bottom', '15mm',
+             '--margin-left', '15mm', '--margin-right', '15mm',
+             '--no-stop-slow-scripts', '--quiet',
+             html_path, '-'],
+            capture_output=True, check=True, timeout=30
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError('wkhtmltopdf failed: ' + (e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)))
+    except FileNotFoundError:
+        raise RuntimeError(
+            'wkhtmltopdf not found. Install it:\n'
+            '  CentOS: yum install -y wkhtmltopdf\n'
+            '  Ubuntu: apt install -y wkhtmltopdf\n'
+            '  macOS:  brew install wkhtmltopdf'
+        )
+    finally:
+        try:
+            os.unlink(html_path)
+        except OSError:
+            pass
 
 
 def _pdf_content_disposition(title):
