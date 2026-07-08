@@ -363,6 +363,7 @@ if isinstance(markdown, bytes):
 | **2026-07-07 用户码加载竞态条件** | **5 处** | **✅ 全部修复** |
 | **2026-07-07 下载 async/await 丢失用户手势** | **5 处** | **✅ 全部修复** |
 | **2026-07-07 下载风险排查（_blank拦截/DOC体积）** | **2 项** | **✅ 全部修复** |
+| **2026-07-08 wkhtmltopdf 替换 fpdf + 下载回退** | **5 处** | **✅ 全部修复** |
 
 ---
 
@@ -1082,59 +1083,489 @@ iOS Safari "阻止弹窗" 开启时，即使 `form.submit()` 是同步调用，`
 
 ---
 
-## ✅ P0 — `see-mvp/` 部署目录未同步最新修复（2026-07-07 20:58）[已验证：已同步]
+## ✅ P0 — `see-mvp/` 部署目录未同步最新修复（2026-07-07 20:58）→ [废弃，建议删除]（2026-07-07 21:11）
 
-> 主目录已完成 6 轮修复，但 `see-mvp/` 部署子目录（实际运行在服务端）的代码停留在旧版本。
+> 最初误认为 `see-mvp/` 子目录是部署目录。经核实：**实际运行时入口是根目录 `server.py`**（PROGRESS.md 确认 PID 41060），README 启动命令也是 `python3 server.py`。PITFALLS.md 早已将其标记为"坑"（代码差异导致不知道修哪个）。PROGRESS.md 明确：**root files are authoritative**。
 
-### 文件大小对比
+### 结论：两个子目录均为过期副本，不参与部署，建议删除
 
-| 文件 | 主目录（最新） | see-mvp/（部署） | 差距 |
+| 目录 | 内容 | 大小 | 状态 |
 |------|------|------|:---:|
-| `index.html` | 43573B | 42467B | -1106B |
-| `talent.html` | 67372B | 67008B | -364B |
-| `server.py` | 83331B | 83461B | +130B（有重复行） |
+| 根目录 | `server.py`, `index.html`, `talent.html` 等 | — | ✅ 权威源，实际运行 |
+| `see-mvp/` | `server.py`, `index.html`, `talent.html`, `engine/`, `fonts/`, kb | ~33 文件 | ❌ 过期副本 |
+| `see_deploy_副本/` | `server.py`, `index.html`, `talent.html` | 11 文件 | ❌ 远古版本（server.py 仅 22KB） |
 
-### 📋 缺失修复清单
+### 删除操作
 
-| # | 修复项 | 主目录 | see-mvp/ | 修复来源 |
-|---|--------|:---:|:---:|------|
-| 1 | `downloadPDF()` 同步 form.submit | ✅ line 784 | ❌ 仍是 async (line 772) | 手机端下载修复 |
-| 2 | `downloadServerPDF()` 删除 | ✅ 已删除 | ❌ 仍在 (line 1298, 1349) | 手机端下载修复 |
-| 3 | `downloadReport()` PDF → form.submit | ✅ | ❌ 调用旧 downloadServerPDF | 手机端下载修复 |
-| 4 | `downloadReport()` DOC → form.submit | ✅ | ❌ 未同步 | 手机端下载修复 |
-| 5 | `_usersPromise` 竞态修复 | ✅ 有 | ❌ 无 | 用户码加载竞态 |
-| 6 | `_userFetchFailed` 声明 | ✅ 有 | ❌ 无 | 用户码加载竞态 |
-| 7 | server.py CORS 去重 | ✅ 3 处 | ❌ 5 处（line 1505, 1530 多余） | server CORS 清理 |
-| 8 | server.py `errors='ignore'` | ✅ | ✅ 已有 | PDF UTF-8 修复 |
+```bash
+rm -rf see-mvp/
+rm -rf see_deploy_副本/
+rm -f see_deploy_副本.tar.gz see_deploy_副本2.tar.gz see_deploy.tar.gz
+```
 
-### 📋 需要同步的操作
+---
 
-#### index.html
+## ✅ P0 — 云服务器 PDF 无法生成 + 手机端 DOC/PDF 下载缺陷（2026-07-08 10:46）[已修复]
 
-| 改动 | 行号（主目录） | 详情 |
-|------|------|------|
-| `downloadPDF()` async→sync | 784-826 | `async function` → `function`，fetch+blob → form.submit |
-| `_usersPromise` 变量 + `_fetchUsers()` 返回 Promise | 250-270 | 防重复请求 + await 支持 |
-| `loadUserReports()` async + await | 404-408 | 等待用户码加载完成再校验 |
+> 综合修复包，包含 3 个文件、5 处改动。
 
-#### talent.html
+### 背景
 
-| 改动 | 行号（主目录） | 详情 |
-|------|------|------|
-| 删除 `downloadServerPDF()` | 1298-1345 | 整个函数删除 |
-| `downloadReport()` PDF 分支 → form.submit | ~1335 | 替换 downloadServerPDF 调用 |
-| `downloadReport()` DOC 分支 → form.submit | ~1381 | data URL → 同步 form.submit |
-| `_usersPromise` + `_userFetchFailed` 声明 | ~407 | 补充缺失变量 |
-| `_fetchUsers()` 返回 Promise | ~408-428 | 同 index.html |
-| `loadUserReports()` async + await | ~472 | 同 index.html |
+| 问题 | 根因 |
+|------|------|
+| 云服务器 PDF 无法生成 | CentOS 7 Python 3.6 + pyfpdf 1.7.2 不兼容 CJK 字体 |
+| 手机 PDF 下载无回退 | Share API 失败后静默吞错，用户什么都拿不到 |
+| 手机 DOC 无法下载 | `location.href = blob:URL` 在手机上不触发下载 |
 
-#### server.py
+### 📋 修复索引
 
-| 改动 | 行号（主目录） | 详情 |
-|------|------|------|
-| 删除 `_export_pdf` 中的 CORS header | 1505 | 删除 `self.send_header('Access-Control-Allow-Origin', '*')` |
-| 删除 `_export_doc` 中的 CORS header | 1530 | 同上 |
+| # | 文件 | 改动 | 类型 |
+|---|------|------|:---:|
+| 1 | `server.py` | `_generate_pdf` 重写为 wkhtmltopdf | 新方案 |
+| 2 | `server.py` | 新增 `_markdown_to_html` 辅助函数 | 新增 |
+| 3 | `requirements.txt` | 删除 `fpdf>=1.7.2` | 删除 |
+| 4 | `index.html` | `downloadPDF()` 手机端加 `_self` 回退 | 修改 |
+| 5 | `talent.html` | `downloadReport()` PDF 手机端加 `_self` 回退 | 修改 |
+| 6 | `talent.html` | `downloadReport()` DOC 手机端重写 | 修改 |
 
-### 📊 see_deploy_副本/ 状态
+---
 
-完全过期（server.py 22KB vs 主目录 83KB），不再维护此目录。
+### 修复 1：`server.py` — `_generate_pdf` 重写为 wkhtmltopdf
+
+**当前代码**（440-538 行，整段替换）：
+
+```python
+def _generate_pdf(title, markdown):
+    """Generate Chinese PDF from markdown using fpdf."""
+    import io, re
+    from fpdf import FPDF
+
+    # 确保输入是纯字符串（CentOS 7 Python 3.6 兼容）
+    if isinstance(markdown, bytes):
+        markdown = markdown.decode('utf-8', errors='ignore')
+    markdown = str(markdown)
+
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.set_left_margin(15)
+    pdf.set_right_margin(15)
+    # Chinese font: bundled → env var → system paths
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(project_root, 'fonts', 'CJK.ttf'),
+        os.path.join(project_root, 'fonts', 'CJK.ttc'),
+        os.environ.get('SEE_FONT_PATH', ''),
+        '/System/Library/Fonts/STHeiti Light.ttc',
+        '/Library/Fonts/Arial Unicode.ttf',
+        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+        '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    ]
+    font_path = next((p for p in candidates if p and os.path.exists(p)), '')
+    if not font_path:
+        raise RuntimeError('No CJK font found. Place a Chinese font at fonts/CJK.ttf, or set SEE_FONT_PATH, or install a system CJK font.')
+    pdf.add_font('CJK', '', font_path)
+    pdf.add_page()
+    pdf.set_auto_page_break(True, 20)
+
+    def write_wrapped(text, line_height=5.5):
+        """Write text with hard width guards for very narrow or unbreakable runs."""
+        max_width = getattr(pdf, 'epw', pdf.w - pdf.l_margin - pdf.r_margin)
+        if max_width <= 0:
+            max_width = pdf.w - pdf.l_margin - pdf.r_margin
+        if max_width <= 0:
+            max_width = pdf.w - 2 * pdf.l_margin
+
+        for para in text.split('\n'):
+            if not para:
+                pdf.ln(line_height)
+                continue
+
+            buf = ''
+            for ch in para:
+                candidate = buf + ch
+                if pdf.get_string_width(candidate) <= max_width:
+                    buf = candidate
+                else:
+                    if buf:
+                        pdf.multi_cell(max_width, line_height, buf)
+                    if pdf.get_string_width(ch) > max_width:
+                        pdf.set_x(pdf.l_margin)
+                        pdf.multi_cell(max_width, line_height, ch)
+                        buf = ''
+                    else:
+                        buf = ch
+            if buf:
+                pdf.multi_cell(max_width, line_height, buf)
+
+    lines = markdown.split('\n')
+    for line in lines:
+        line = line.rstrip()
+        if not line:
+            pdf.ln(2)
+            continue
+        clean = re.sub(r'\*\*(.+?)\*\*', r'\1', line)
+        clean = re.sub(r'`(.+?)`', r'\1', clean)
+        clean = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', clean)
+        clean = re.sub(r'^#+\s*', '', clean)
+        clean = re.sub(r'^- ', '  - ', clean)
+        if not clean.strip():
+            continue
+        if line.startswith('# '):
+            pdf.set_font('CJK', '', 14)
+            pdf.ln(2)
+            write_wrapped(clean, 8)
+            pdf.ln(2)
+        elif line.startswith('## '):
+            pdf.set_font('CJK', '', 11)
+            pdf.ln(2)
+            write_wrapped(clean, 7)
+        elif line.startswith('### '):
+            pdf.set_font('CJK', '', 10)
+            write_wrapped(clean, 6.5)
+        elif line.startswith('```'):
+            continue
+        elif len(clean) < 80:
+            pdf.set_font('CJK', '', 9)
+            write_wrapped(clean, 5.5)
+        else:
+            pdf.set_font('CJK', '', 9)
+            write_wrapped(clean, 5.5)
+
+    buf = io.BytesIO()
+    pdf.output(buf)
+    return buf.getvalue()
+```
+
+**改为**：
+
+```python
+def _markdown_to_html(title, markdown):
+    """Convert markdown to a styled HTML page for wkhtmltopdf."""
+    import re
+
+    if isinstance(markdown, bytes):
+        markdown = markdown.decode('utf-8', errors='ignore')
+    markdown = str(markdown)
+
+    # Escape HTML entities
+    html_body = markdown.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+    # Basic markdown → HTML
+    # Code blocks (must be before inline)
+    html_body = re.sub(r'```(\w*)\n(.*?)```', r'<pre><code>\2</code></pre>', html_body, flags=re.DOTALL)
+    # Bold
+    html_body = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_body)
+    # Inline code
+    html_body = re.sub(r'`(.+?)`', r'<code>\1</code>', html_body)
+    # Links
+    html_body = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2">\1</a>', html_body)
+    # Headers
+    html_body = re.sub(r'^#### (.+)$', r'<h4>\1</h4>', html_body, flags=re.MULTILINE)
+    html_body = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html_body, flags=re.MULTILINE)
+    html_body = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html_body, flags=re.MULTILINE)
+    html_body = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html_body, flags=re.MULTILINE)
+    # List items
+    html_body = re.sub(r'^- (.+)$', r'<li>\1</li>', html_body, flags=re.MULTILINE)
+    # Wrap consecutive <li> in <ul>
+    html_body = re.sub(r'(<li>.*?</li>\n?)+', r'<ul>\g<0></ul>', html_body)
+    # Paragraphs: blank-line-separated blocks
+    paragraphs = []
+    for block in re.split(r'\n\s*\n', html_body):
+        block = block.strip()
+        if block and not block.startswith('<'):
+            paragraphs.append('<p>' + block.replace('\n', '<br>') + '</p>')
+        elif block:
+            paragraphs.append(block)
+    html_body = '\n'.join(paragraphs)
+
+    title_safe = str(title or 'SEE Report').replace('&', '&amp;').replace('<', '&lt;')
+
+    return '''<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>''' + title_safe + '''</title>
+<style>
+  body { font-family: "WenQuanYi Zen Hei", "Noto Sans CJK SC", "PingFang SC",
+         "Microsoft YaHei", sans-serif; max-width: 720px; margin: 30px auto;
+         padding: 20px; line-height: 1.9; color: #333; font-size: 14px; }
+  h1 { font-size: 1.5em; border-bottom: 2px solid #333; padding-bottom: 6px; }
+  h2 { font-size: 1.2em; margin-top: 24px; }
+  h3 { font-size: 1.05em; }
+  pre { background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; }
+  code { background: #f0f0f0; padding: 1px 4px; border-radius: 2px; }
+  pre code { background: none; padding: 0; }
+  li { margin: 4px 0; }
+</style></head>
+<body><h1>''' + title_safe + '''</h1>
+''' + html_body + '''
+</body></html>'''
+
+
+def _generate_pdf(title, markdown):
+    """Generate Chinese PDF from markdown using wkhtmltopdf (system fonts)."""
+    import subprocess, tempfile
+
+    html = _markdown_to_html(title, markdown)
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.html',
+                                     delete=False, encoding='utf-8') as f:
+        f.write(html)
+        html_path = f.name
+
+    try:
+        result = subprocess.run(
+            ['wkhtmltopdf', '--encoding', 'UTF-8',
+             '--page-size', 'A4',
+             '--margin-top', '15mm', '--margin-bottom', '15mm',
+             '--margin-left', '15mm', '--margin-right', '15mm',
+             '--no-stop-slow-scripts', '--quiet',
+             html_path, '-'],
+            capture_output=True, check=True, timeout=30
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError('wkhtmltopdf failed: ' + (e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)))
+    except FileNotFoundError:
+        raise RuntimeError(
+            'wkhtmltopdf not found. Install it:\n'
+            '  CentOS: yum install -y wkhtmltopdf\n'
+            '  Ubuntu: apt install -y wkhtmltopdf\n'
+            '  macOS:  brew install wkhtmltopdf'
+        )
+    finally:
+        try:
+            os.unlink(html_path)
+        except OSError:
+            pass
+```
+
+**服务器前置操作**：
+
+```bash
+# CentOS 7 安装 wkhtmltopdf
+yum install -y wkhtmltopdf
+
+# 同时安装中文字体（wkhtmltopdf 需要系统字体渲染）
+yum install -y wqy-zenhei-fonts
+```
+
+---
+
+### 修复 2：`requirements.txt` — 删除 fpdf 依赖
+
+**当前**：
+
+```
+fpdf>=1.7.2
+Pillow>=10.0.0
+```
+
+**改为**：
+
+```
+Pillow>=10.0.0
+```
+
+> 改用 wkhtmltopdf 后不再需要 fpdf 库。
+
+---
+
+### 修复 3：`index.html` — `downloadPDF()` 手机端加回退
+
+**当前代码**（794-807 行）：
+
+```javascript
+  if (isMobile && navigator.share && navigator.canShare) {
+    // 移动端：优先 Share API
+    fetch(API_BASE + '/api/export-pdf', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'title=' + encodeURIComponent(filename) + '&markdown=' + encodeURIComponent(md)
+    }).then(function(r){ return r.blob(); }).then(function(blob){
+      var file = new File([blob], filename + '.pdf', { type: 'application/pdf' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: filename });
+      }
+    }).catch(function(){});
+    return;
+  }
+```
+
+**改为**（Share API 失败后回退到 form.submit `_self`）：
+
+```javascript
+  if (isMobile && navigator.share && navigator.canShare) {
+    // 移动端：优先 Share API
+    fetch(API_BASE + '/api/export-pdf', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'title=' + encodeURIComponent(filename) + '&markdown=' + encodeURIComponent(md)
+    }).then(function(r){ return r.blob(); }).then(function(blob){
+      var file = new File([blob], filename + '.pdf', { type: 'application/pdf' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: filename }).catch(function(){});
+      }
+    }).catch(function(){
+      // Share API 失败 → 回退 form.submit _self（当前页打开 PDF）
+      var fallbackForm = document.createElement('form');
+      fallbackForm.method = 'POST';
+      fallbackForm.action = API_BASE + '/api/export-pdf';
+      fallbackForm.target = '_self';
+      fallbackForm.style.display = 'none';
+      var ft = document.createElement('input');
+      ft.type = 'hidden'; ft.name = 'title'; ft.value = filename;
+      fallbackForm.appendChild(ft);
+      var fm = document.createElement('input');
+      fm.type = 'hidden'; fm.name = 'markdown'; fm.value = md;
+      fallbackForm.appendChild(fm);
+      document.body.appendChild(fallbackForm);
+      fallbackForm.submit();
+      document.body.removeChild(fallbackForm);
+    });
+    return;
+  }
+```
+
+---
+
+### 修复 4：`talent.html` — `downloadReport()` PDF 手机端加回退
+
+**当前代码**（1336-1349 行）：
+
+```javascript
+    if (isMobile && navigator.share && navigator.canShare) {
+      // 移动端：优先 Share API
+      fetch(API_BASE + '/api/export-pdf', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'title=' + encodeURIComponent(filename) + '&markdown=' + encodeURIComponent(md)
+      }).then(function(r){ return r.blob(); }).then(function(blob){
+        var file = new File([blob], filename + '.pdf', { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: filename });
+        }
+      }).catch(function(){});
+      return;
+    }
+```
+
+**改为**：
+
+```javascript
+    if (isMobile && navigator.share && navigator.canShare) {
+      // 移动端：优先 Share API
+      fetch(API_BASE + '/api/export-pdf', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'title=' + encodeURIComponent(filename) + '&markdown=' + encodeURIComponent(md)
+      }).then(function(r){ return r.blob(); }).then(function(blob){
+        var file = new File([blob], filename + '.pdf', { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: filename }).catch(function(){});
+        }
+      }).catch(function(){
+        // Share API 失败 → 回退 form.submit _self
+        var fbForm = document.createElement('form');
+        fbForm.method = 'POST';
+        fbForm.action = API_BASE + '/api/export-pdf';
+        fbForm.target = '_self';
+        fbForm.style.display = 'none';
+        var fbt = document.createElement('input');
+        fbt.type = 'hidden'; fbt.name = 'title'; fbt.value = filename;
+        fbForm.appendChild(fbt);
+        var fbm = document.createElement('input');
+        fbm.type = 'hidden'; fbm.name = 'markdown'; fbm.value = md;
+        fbForm.appendChild(fbm);
+        document.body.appendChild(fbForm);
+        fbForm.submit();
+        document.body.removeChild(fbForm);
+      });
+      return;
+    }
+```
+
+---
+
+### 修复 5：`talent.html` — `downloadReport()` DOC 手机端重写
+
+**当前代码**（1396-1409 行）：
+
+```javascript
+  // DOC: 纯前端 <a download>，无需服务端往返
+  var html = '<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:serif;max-width:720px;margin:20px auto;padding:16px;line-height:1.9;color:#333;font-size:16px}h1{font-size:1.4em}h2{font-size:1.15em;margin-top:24px}h3{font-size:1em}p{margin:10px 0}li{margin:6px 0}</style></head><body><h1>' + getReportLabel(key||'report') + '</h1>' + parseMD(md) + '</body></html>';
+  var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  if (isMobile) {
+    window.location.href = url;
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+    return;
+  }
+  var a = document.createElement('a');
+  a.href = url; a.download = filename + (format === 'doc' ? '.doc' : '.html');
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+  return;
+```
+
+**改为**：
+
+```javascript
+  // DOC: 纯前端 <a download>，无需服务端往返
+  var html = '<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:serif;max-width:720px;margin:20px auto;padding:16px;line-height:1.9;color:#333;font-size:16px}h1{font-size:1.4em}h2{font-size:1.15em;margin-top:24px}h3{font-size:1em}p{margin:10px 0}li{margin:6px 0}</style></head><body><h1>' + getReportLabel(key||'report') + '</h1>' + parseMD(md) + '</body></html>';
+  var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var docFilename = filename + (format === 'doc' ? '.doc' : '.html');
+  if (isMobile) {
+    // 移动端：优先 Share API
+    if (navigator.share && navigator.canShare && window.File) {
+      try {
+        var docFile = new File([blob], docFilename, { type: 'application/msword' });
+        if (navigator.canShare({ files: [docFile] })) {
+          navigator.share({ files: [docFile], title: filename }).catch(function(){});
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+          return;
+        }
+      } catch (e) { if (e.name === 'AbortError') { return; } }
+    }
+    // 回退：新窗口打开 blob URL
+    window.open(url, '_blank');
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+    return;
+  }
+  var a = document.createElement('a');
+  a.href = url; a.download = docFilename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+  return;
+```
+
+---
+
+### 📊 服务器部署 checklist
+
+在服务器上依次执行：
+
+```bash
+# 1. 安装 wkhtmltopdf（PDF 渲染引擎）
+yum install -y wkhtmltopdf
+
+# 2. 安装中文字体（wkhtmltopdf 渲染必需）
+yum install -y wqy-zenhei-fonts
+
+# 3. 升级 Python 依赖（不再需要 fpdf）
+pip uninstall -y fpdf    # 删掉旧 pyfpdf
+# requirements.txt 已更新，无需额外安装
+
+# 4. 重启服务
+pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
+```
+
+### 📊 各端兼容性总表
+
+| 平台 | PDF | DOC/MD |
+|------|-----|--------|
+| 桌面 Chrome | form.submit `_blank` ✅ | `<a download>` ✅ |
+| iOS Safari | Share API → `_self` 回退 ✅ | Share API → `window.open` 回退 ✅ |
+| Android Chrome | Share API → `_self` 回退 ✅ | Share API → `window.open` 回退 ✅ |
+| 服务器 | wkhtmltopdf + wqy-zenhei ✅ | 纯前端，不经过服务端 ✅ |
+
+> 删除后不存在同步问题，所有代码以根目录为准。
