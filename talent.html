@@ -1331,26 +1331,51 @@ function downloadReport(key, format) {
   }
   if (!md) return;
   var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  var isWechat = /MicroMessenger/i.test(navigator.userAgent || '');
 
   if (format === 'pdf') {
+    // 微信浏览器：隐藏 iframe（不支持 Share API）
+    if (isWechat) {
+      var wxFrm = document.createElement('form');
+      wxFrm.method = 'POST'; wxFrm.action = API_BASE + '/api/export-pdf'; wxFrm.style.display = 'none';
+      var wxIframe = document.createElement('iframe');
+      wxIframe.style.display = 'none'; wxIframe.name = 'wx-pdf-' + Date.now();
+      wxFrm.target = wxIframe.name;
+      var wxt = document.createElement('input'); wxt.type = 'hidden'; wxt.name = 'title'; wxt.value = filename; wxFrm.appendChild(wxt);
+      var wxm = document.createElement('input'); wxm.type = 'hidden'; wxm.name = 'markdown'; wxm.value = md; wxFrm.appendChild(wxm);
+      document.body.appendChild(wxIframe); document.body.appendChild(wxFrm);
+      wxFrm.submit();
+      setTimeout(function(){ document.body.removeChild(wxFrm); document.body.removeChild(wxIframe); }, 5000);
+      return;
+    }
+
     if (isMobile && navigator.share && navigator.canShare) {
-      // 移动端：优先 Share API
+      // 移动端：优先 Share API（30 秒超时）
+      var controller = new AbortController();
+      var timeout = setTimeout(function(){ controller.abort(); }, 30000);
       fetch(API_BASE + '/api/export-pdf', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'title=' + encodeURIComponent(filename) + '&markdown=' + encodeURIComponent(md)
-      }).then(function(r){ return r.blob(); }).then(function(blob){
+        body: 'title=' + encodeURIComponent(filename) + '&markdown=' + encodeURIComponent(md),
+        signal: controller.signal
+      }).then(function(r){ clearTimeout(timeout); return r.blob(); }).then(function(blob){
         var file = new File([blob], filename + '.pdf', { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
           navigator.share({ files: [file], title: filename }).catch(function(){});
         }
-      }).catch(function(){
-        // Share API 失败 → form.submit _self 回退
+      }).catch(function(err){
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') { alert('PDF 生成超时，请稍后重试'); return; }
+        // Share API 失败 → 隐藏 iframe 回退（不丢页面数据）
+        var fbIframe = document.createElement('iframe');
+        fbIframe.style.display = 'none'; fbIframe.name = 'pdf-dl-' + Date.now();
         var fb = document.createElement('form');
-        fb.method = 'POST'; fb.action = API_BASE + '/api/export-pdf'; fb.target = '_self'; fb.style.display = 'none';
+        fb.method = 'POST'; fb.action = API_BASE + '/api/export-pdf'; fb.target = fbIframe.name; fb.style.display = 'none';
         var fbt = document.createElement('input'); fbt.type = 'hidden'; fbt.name = 'title'; fbt.value = filename; fb.appendChild(fbt);
         var fbm = document.createElement('input'); fbm.type = 'hidden'; fbm.name = 'markdown'; fbm.value = md; fb.appendChild(fbm);
-        document.body.appendChild(fb); fb.submit(); document.body.removeChild(fb);
+        document.body.appendChild(fbIframe); document.body.appendChild(fb);
+        fb.submit();
+        setTimeout(function(){ document.body.removeChild(fb); document.body.removeChild(fbIframe); }, 5000);
       });
       return;
     }
@@ -1376,7 +1401,7 @@ function downloadReport(key, format) {
     // Markdown 纯文本下载
     var blob0 = new Blob([md], {type: 'text/markdown;charset=utf-8'});
     var url0 = URL.createObjectURL(blob0);
-    if (isMobile) {
+    if (isMobile || isWechat) {
       if (navigator.canShare && navigator.share && window.File) {
         try {
           var file0 = new File([blob0], filename + '.md', {type: 'text/markdown;charset=utf-8'});
@@ -1385,7 +1410,7 @@ function downloadReport(key, format) {
             setTimeout(function(){ URL.revokeObjectURL(url0); }, 30000);
             return;
           }
-        } catch (e) { if (e.name === 'AbortError') return; }
+        } catch (e) { /* canShare files 不支持 → 走下方回退 */ }
       }
       var a0m = document.createElement('a');
       a0m.href = url0; a0m.target = '_blank'; a0m.rel = 'noopener';
@@ -1405,8 +1430,8 @@ function downloadReport(key, format) {
   var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
   var url = URL.createObjectURL(blob);
   var docFilename = filename + (format === 'doc' ? '.doc' : '.html');
-  if (isMobile) {
-    // 移动端：优先 Share API
+  if (isMobile || isWechat) {
+    // 移动端/微信：优先 Share API
     if (navigator.share && navigator.canShare && window.File) {
       try {
         var docFile = new File([blob], docFilename, { type: 'application/msword' });
@@ -1415,10 +1440,18 @@ function downloadReport(key, format) {
           setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
           return;
         }
-      } catch (e) { if (e.name === 'AbortError') { return; } }
+      } catch (e) { /* canShare files 不支持 → 走下方服务端回退 */ }
     }
-    // 回退：新窗口打开 blob URL
-    window.open(url, '_blank');
+    // 回退：服务端 /api/export-doc + 隐藏 iframe
+    var docIframe = document.createElement('iframe');
+    docIframe.style.display = 'none'; docIframe.name = 'doc-dl-' + Date.now();
+    var docForm = document.createElement('form');
+    docForm.method = 'POST'; docForm.action = API_BASE + '/api/export-doc'; docForm.target = docIframe.name; docForm.style.display = 'none';
+    var dt = document.createElement('input'); dt.type = 'hidden'; dt.name = 'title'; dt.value = filename; docForm.appendChild(dt);
+    var dh = document.createElement('input'); dh.type = 'hidden'; dh.name = 'html'; dh.value = html; docForm.appendChild(dh);
+    document.body.appendChild(docIframe); document.body.appendChild(docForm);
+    docForm.submit();
+    setTimeout(function(){ document.body.removeChild(docForm); document.body.removeChild(docIframe); }, 5000);
     setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
     return;
   }

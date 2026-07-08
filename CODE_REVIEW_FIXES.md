@@ -1572,6 +1572,222 @@ pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
 
 ---
 
+## 🔴 P0 — 移动端下载 5 个剩余缺陷（2026-07-08 12:40 补充审查）→ [x] 全部修复（2026-07-08 12:50）
+
+> ⚠️ 以上 6 处修复已应用到代码中，但以下场景在真实手机上仍会失败。
+> 验证表 #10-12 标 ✅ **属于误判**，实际存在以下问题。
+
+---
+
+### [x] 缺陷 1：PDF `_self` 回退导致页面跳转，报告数据全部丢失 🔴
+
+**现状**：index.html 和 talent.html 的 PDF catch 回退都用 `form.target = '_self'`
+
+```javascript
+fb.target = '_self';  // ← 浏览器直接跳转到 PDF URL
+fb.submit();
+```
+
+**后果**：
+- 浏览器离开当前页面去加载 PDF
+- 用户按返回后，页面**完全重新加载**
+- 所有通过 API 逐次拉取的报告数据消失（无 localStorage 持久化）
+- 用户需要重新上传图片、重新生成
+
+**修复**：`_self` → 隐藏 iframe
+
+```javascript
+// 替换 fb.target = '_self'
+var iframe = document.createElement('iframe');
+iframe.style.display = 'none';
+iframe.name = 'pdf-dl-' + Date.now();
+fb.target = iframe.name;
+document.body.appendChild(iframe);
+fb.submit();
+setTimeout(function(){
+  document.body.removeChild(fb);
+  document.body.removeChild(iframe);
+}, 3000);
+```
+
+> 适用于 index.html 和 talent.html 两处。
+
+---
+
+### [x] 缺陷 2：微信内置浏览器全链路不可用 🔴
+
+**现状**：无 `MicroMessenger` 检测。
+
+**微信实际能力限制**：
+
+| 能力 | 微信 iOS | 微信 Android |
+|------|:---:|:---:|
+| `navigator.share()` | ❌ | ❌ |
+| `navigator.canShare({files})` | ❌ | ❌ |
+| form.submit `_blank`（当前桌面回退） | ❌ 拦截 | ⚠️ 可能拦截 |
+| 隐藏 iframe + `_self` | ✅ | ✅ |
+
+**当前各路径在微信中的实际结果**：
+
+| 格式 | 代码路径 | 微信结果 |
+|------|---------|:---:|
+| PDF | `isMobile && navigator.share` → false → 落到桌面 `_blank` | ❌ 拦截 |
+| DOC | `navigator.share` → false → `window.open(url, '_blank')` | ❌ 拦截 |
+| MD | `navigator.share` → false → `<a>` _blank | ❌ 大概率拦截 |
+
+**修复**：在移动端分支前插入微信检测
+
+```javascript
+var isWechat = /MicroMessenger/i.test(navigator.userAgent || '');
+
+// PDF/DOC/所有下载的通用微信回退：隐藏 iframe + form.submit
+if (isWechat) {
+  var wxIframe = document.createElement('iframe');
+  wxIframe.style.display = 'none';
+  wxIframe.name = 'wx-dl-' + Date.now();
+
+  var wxForm = document.createElement('form');
+  wxForm.method = 'POST';
+  wxForm.action = API_BASE + (format === 'doc' ? '/api/export-doc' : '/api/export-pdf');
+  wxForm.target = wxIframe.name;
+  wxForm.style.display = 'none';
+  // 添加 input 字段...
+  document.body.appendChild(wxIframe);
+  document.body.appendChild(wxForm);
+  wxForm.submit();
+  setTimeout(function(){
+    document.body.removeChild(wxForm);
+    document.body.removeChild(wxIframe);
+  }, 5000);
+  return;
+}
+```
+
+---
+
+### [x] 缺陷 3：DOC 移动端 blob URL 回退不可靠 + 漏掉服务端端点 🔴
+
+**现状**：
+```javascript
+window.open(url, '_blank');  // ← url 是 blob:https://...
+```
+
+**问题**：
+- iOS Safari: `window.open` 被弹窗拦截器拦截 → 无反应
+- Android Chrome: 可能拦截或打开空白页
+- blob URL 在新标签页中无法触发下载
+
+**且服务端已有 `/api/export-doc` 端点**（server.py 1511 行，返回正确的 `Content-Disposition: attachment`），完全没被用上。
+
+**修复**：DOC 移动端和微信分支走服务端 `/api/export-doc` + 隐藏 iframe
+
+```javascript
+// DOC 移动端/微信：走服务端 + 隐藏 iframe
+var docHtml = '<!DOCTYPE html>...' + parseMD(md) + '...';
+
+var docIframe = document.createElement('iframe');
+docIframe.style.display = 'none';
+docIframe.name = 'doc-dl-' + Date.now();
+
+var docForm = document.createElement('form');
+docForm.method = 'POST';
+docForm.action = API_BASE + '/api/export-doc';
+docForm.target = docIframe.name;
+docForm.style.display = 'none';
+
+var dt = document.createElement('input');
+dt.type = 'hidden'; dt.name = 'title'; dt.value = filename;
+docForm.appendChild(dt);
+var dh = document.createElement('input');
+dh.type = 'hidden'; dh.name = 'html'; dh.value = docHtml;
+docForm.appendChild(dh);
+
+document.body.appendChild(docIframe);
+document.body.appendChild(docForm);
+docForm.submit();
+setTimeout(function(){
+  document.body.removeChild(docForm);
+  document.body.removeChild(docIframe);
+}, 5000);
+```
+
+---
+
+### [x] 缺陷 4：`navigator.canShare({files})` 旧 iOS 抛 TypeError 🔴
+
+**现状**：
+```javascript
+} catch (e) { if (e.name === 'AbortError') return; }
+```
+
+iOS 14 及以下 `canShare({files})` 抛出 `TypeError`，不是 AbortError → **未被 catch → JS 报错中断执行 → 回退逻辑不触发**。
+
+**修复**：catch 所有异常
+
+```javascript
+// 改前
+} catch (e) { if (e.name === 'AbortError') return; }
+
+// 改后
+} catch (e) { /* canShare files 不支持 → 走下方回退 */ }
+```
+
+> 适用于：index.html `downloadReport()` 840 行、talent.html MD 分支 1381 行、talent.html DOC 分支 1418 行。
+
+---
+
+### [x] 缺陷 5：fetch 请求无超时控制 🟡
+
+**现状**：
+```javascript
+fetch(API_BASE + '/api/export-pdf', {
+  method: 'POST',
+  ...
+}).then(...).catch(...)
+```
+
+如果服务器 PDF 生成慢（wkhtmltopdf 渲染大报告），fetch 会一直等待，用户界面无反馈。
+
+**修复**：加 30 秒超时 AbortController
+
+```javascript
+var controller = new AbortController();
+var timeout = setTimeout(function(){ controller.abort(); }, 30000);
+
+fetch(API_BASE + '/api/export-pdf', {
+  method: 'POST',
+  signal: controller.signal,
+  ...
+}).then(function(r){ clearTimeout(timeout); return r.blob(); })
+  .then(...)
+  .catch(function(err){
+    clearTimeout(timeout);
+    if (err.name === 'AbortError') {
+      alert('PDF 生成超时，请稍后重试');
+      return;
+    }
+    // 原有回退逻辑...
+  });
+```
+
+> 适用于 index.html 和 talent.html 两处 fetch。
+
+---
+
+### 📊 修正后全端兼容性总表
+
+| 平台 | PDF | DOC | MD |
+|------|-----|-----|-----|
+| 桌面 Chrome | form.submit `_blank` ✅ | `<a download>` ✅ | `<a download>` ✅ |
+| iOS Safari | Share API → **隐藏 iframe** ✅ | **服务端导出 + iframe** ✅ | Share API → `<a>` _blank ✅ |
+| Android Chrome | Share API → **隐藏 iframe** ✅ | **服务端导出 + iframe** ✅ | Share API → `<a>` _blank ✅ |
+| 微信 iOS | **隐藏 iframe 专用分支** ✅ | **服务端 + iframe 专用分支** ✅ | `<a>` _blank ⚠️ |
+| 微信 Android | **隐藏 iframe 专用分支** ✅ | **服务端 + iframe 专用分支** ✅ | `<a>` _blank ⚠️ |
+
+> ⚠️ 微信 MD：建议后续也走服务端 `/api/export-doc` 包装成 HTML 下载。
+
+---
+
 ## 🔧 2026-07-08 收尾 — `_json()` 重复 CORS header + 全面验证
 
 ### 🟢 P2 — `_json()` 方法重复添加 CORS header
@@ -1595,9 +1811,9 @@ pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
 | 7 | `errors='ignore'` (PDF UTF-8 fix) | server.py | ✅ |
 | 8 | `_fetchUsers()` 返回 Promise + `_usersPromise` | index.html, talent.html | ✅ |
 | 9 | `loadUserReports()` async + await | index.html, talent.html | ✅ |
-| 10 | download PDF 同步 form.submit | index.html, talent.html | ✅ |
-| 11 | download DOC Share API + window.open 回退 | talent.html | ✅ |
-| 12 | Share API AbortError 判断 | index.html, talent.html | ✅ |
+| 10 | download PDF 同步 form.submit | index.html, talent.html | ✅ `_self`→隐藏iframe |
+| 11 | download DOC Share API + window.open 回退 | talent.html | ✅ 服务端+iframe |
+| 12 | Share API AbortError 判断 | index.html, talent.html | ✅ catch所有异常 |
 | 13 | 手动输入 25 下拉框 → 5 文本框 | index.html | ✅ |
 | 14 | 用户码去 localStorage 兜底 | index.html, talent.html | ✅ |
 | 15 | `_export_pdf` 无重复 CORS | server.py | ✅ |
@@ -1606,7 +1822,7 @@ pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
 | 18 | 部署目录 see-mvp/ see_deploy_副本/ | 项目根 | ✅ 已删除 |
 | 19 | see_data.db 不跟踪 | .gitignore | ✅ |
 
-**全部 19 项验证通过，零阻塞项。**
+**19 项全部通过。**
 
 ---
 
@@ -1630,5 +1846,6 @@ pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
 | wkhtmltopdf 替换 fpdf | 6 处 | ✅ 全部修复 |
 | 部署目录清理 | 3 项 | ✅ 全部删除 |
 | `_json()` CORS 去重 | 1 处 | ✅ 已修复 |
+| **移动端下载补漏** | **5 项** | ✅ **全部修复** |
 
-**总计 57 项，全部闭环。项目 MVP 阶段代码审查完成。**
+**总计 62 项，全部闭环。项目 MVP 阶段代码审查完成。**
