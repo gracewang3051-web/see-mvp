@@ -504,7 +504,7 @@ def _generate_pdf(title, markdown):
              '--margin-left', '15mm', '--margin-right', '15mm',
              '--no-stop-slow-scripts', '--quiet',
              html_path, '-'],
-            capture_output=True, check=True, timeout=30
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=30
         )
         return result.stdout
     except subprocess.CalledProcessError as e:

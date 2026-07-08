@@ -1847,5 +1847,30 @@ fetch(API_BASE + '/api/export-pdf', {
 | 部署目录清理 | 3 项 | ✅ 全部删除 |
 | `_json()` CORS 去重 | 1 处 | ✅ 已修复 |
 | **移动端下载补漏** | **5 项** | ✅ **全部修复** |
+| **capture_output 兼容性** | **1 处** | ✅ **已修复** |
 
-**总计 62 项，全部闭环。项目 MVP 阶段代码审查完成。**
+**总计 63 项，全部闭环。项目 MVP 阶段代码审查完成。**
+
+---
+
+## 🔴 2026-07-08 13:29 — `subprocess.run(capture_output=True)` Python 版本不兼容
+
+**文件**：`server.py` 第 507 行
+
+**现象**：
+```json
+{"error": "__init__() got an unexpected keyword argument 'capture_output'", "stage": "pdf"}
+```
+
+**原因**：`capture_output=True` 是 Python 3.7 新增的 subprocess 参数。服务端 Python 版本 < 3.7。
+
+**修复**（已应用）：
+```python
+# 改前（仅 Python 3.7+）
+capture_output=True, check=True, timeout=30
+
+# 改后（Python 3.5+ 兼容）
+stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=30
+```
+
+两行功能完全一致，`stdout=PIPE, stderr=PIPE` 在更早版本就支持。
