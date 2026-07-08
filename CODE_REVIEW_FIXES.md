@@ -1569,3 +1569,66 @@ pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
 | 服务器 | wkhtmltopdf + wqy-zenhei ✅ | 纯前端，不经过服务端 ✅ |
 
 > 删除后不存在同步问题，所有代码以根目录为准。
+
+---
+
+## 🔧 2026-07-08 收尾 — `_json()` 重复 CORS header + 全面验证
+
+### 🟢 P2 — `_json()` 方法重复添加 CORS header
+
+**文件**：`server.py`（691 行）
+
+**问题**：`end_headers()`（590 行）已全局添加 `Access-Control-Allow-Origin: *`，但 `_json()` 方法又手动加了一次，导致 JSON 错误响应携带重复 header。
+
+**修复**：删除 `_json()` 中的 `self.send_header('Access-Control-Allow-Origin', '*')`。
+
+### ✅ 全面验证结果（2026-07-08）
+
+| # | 检查项 | 文件 | 结果 |
+|---|--------|------|:---:|
+| 1 | wkhtmltopdf 替换 fpdf | server.py | ✅ |
+| 2 | `_markdown_to_html` 辅助函数 | server.py | ✅ |
+| 3 | fpdf 从 requirements.txt 删除 | requirements.txt | ✅ |
+| 4 | Tesseract 全面移除 | index.html, talent.html | ✅ |
+| 5 | `errors='replace'` → `errors='ignore'` | server.py (3处) | ✅ |
+| 6 | `_parse_post_body` JSON fail → `return {}` | server.py | ✅ |
+| 7 | `errors='ignore'` (PDF UTF-8 fix) | server.py | ✅ |
+| 8 | `_fetchUsers()` 返回 Promise + `_usersPromise` | index.html, talent.html | ✅ |
+| 9 | `loadUserReports()` async + await | index.html, talent.html | ✅ |
+| 10 | download PDF 同步 form.submit | index.html, talent.html | ✅ |
+| 11 | download DOC Share API + window.open 回退 | talent.html | ✅ |
+| 12 | Share API AbortError 判断 | index.html, talent.html | ✅ |
+| 13 | 手动输入 25 下拉框 → 5 文本框 | index.html | ✅ |
+| 14 | 用户码去 localStorage 兜底 | index.html, talent.html | ✅ |
+| 15 | `_export_pdf` 无重复 CORS | server.py | ✅ |
+| 16 | `_export_doc` 无重复 CORS | server.py | ✅ |
+| 17 | `_json()` 无重复 CORS | server.py | ✅ |
+| 18 | 部署目录 see-mvp/ see_deploy_副本/ | 项目根 | ✅ 已删除 |
+| 19 | see_data.db 不跟踪 | .gitignore | ✅ |
+
+**全部 19 项验证通过，零阻塞项。**
+
+---
+
+## 📊 最终状态（2026-07-08 终版）
+
+| 维度 | 数量 | 状态 |
+|------|------|:---:|
+| Code Review P0 | 3 项 | ✅ 全部修复 |
+| Code Review P1 | 3 项 | ✅ 2 修复 + 1 延后 |
+| Code Review P2 | 5 项 | ✅ 1 修复 + 4 延后/不采纳 |
+| 部署审查 P0 | 6 项 | ✅ 全部修复 |
+| 线上问题 | 4 项 | ✅ 全部修复 |
+| 部署包同步 | 6 项 | ✅ 全部修复 |
+| Tesseract 移除 | 2 页 | ✅ 全部完成 |
+| PDF UTF-8 第三方审核 | 2 项 | ✅ 全部修复 |
+| 手机 PDF 下载弹窗拦截 | 2 文件 | ✅ 全部修复 |
+| Blob URL iOS Safari | 3 函数 | ✅ 全部修复 |
+| 用户码加载竞态 | 5 处 | ✅ 全部修复 |
+| 下载 async/await 用户手势 | 5 处 | ✅ 全部修复 |
+| 下载风险排查 | 2 项 | ✅ 全部修复 |
+| wkhtmltopdf 替换 fpdf | 6 处 | ✅ 全部修复 |
+| 部署目录清理 | 3 项 | ✅ 全部删除 |
+| `_json()` CORS 去重 | 1 处 | ✅ 已修复 |
+
+**总计 57 项，全部闭环。项目 MVP 阶段代码审查完成。**

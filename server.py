@@ -688,7 +688,6 @@ class SEEHandler(SimpleHTTPRequestHandler):
     def _json(self, code, data):
         self.send_response(code)
         self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode())
 
