@@ -1853,7 +1853,7 @@ fetch(API_BASE + '/api/export-pdf', {
 
 ---
 
-## 🔴 2026-07-08 13:47 — wkhtmltopdf 替换为 weasyprint（已应用代码，需服务器安装）
+## ✅ 2026-07-08 15:09 — wkhtmltopdf 替换为 weasyprint（已部署验证通过）
 
 **问题**：服务器 `wkhtmltopdf not found`。
 
