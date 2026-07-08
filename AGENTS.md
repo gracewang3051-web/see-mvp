@@ -96,3 +96,32 @@ printf "\n## $TS [Claude→Codex] $TASK\n\n" > /tmp/wb.new
 cat AGENT_WHITEBOARD.md >> /tmp/wb.new
 mv /tmp/wb.new AGENT_WHITEBOARD.md
 ```
+
+## 🔧 Claude 专属操作规范（2026-07-08 新增）
+
+### 1. CODE_REVIEW_FIXES.md 阅读规则
+
+文件中 1-1574 行是已闭环的历史记录，**从 1575 行开始读**即可。每次用户说「读一下 Code Review Fixes」时，只读 1575 行以后的部分。
+
+### 2. 修复 → 文档 → 同步三步走
+
+每次修完代码后，必须完成以下步骤：
+
+```
+1. 修复代码文件（server.py / index.html / talent.html 等）
+2. 更新 CODE_REVIEW_FIXES.md（勾选 [x]、更新验证表、更新汇总）
+3. 同步到 Desktop 的 3 个位置：
+   - ~/Desktop/see-mvp/
+   - ~/Desktop/GitHub代码/see-mvp/
+   - ~/Desktop/CODE_REVIEW_FIXES.md
+```
+
+### 3. GitHub 上传铁律
+
+**所有 `git push` 必须在 Grace 明确确认后才能执行。** 任务完成后先列出待推送的 commits 和变更摘要，等待 Grace 回复确认再 push。参见 `memory/github-upload-requires-approval.md`。
+
+### 4. 权威源
+
+- 源代码权威位置：`~/.claude/projects/see-mvp/`
+- CODE_REVIEW_FIXES.md 以 `~/Desktop/GitHub代码/see-mvp/` 中的为最新版本（Grace 可能直接编辑）
+- GitHub 仓库：`git@github.com:gracewang3051-web/see-mvp.git`
