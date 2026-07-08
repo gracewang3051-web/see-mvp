@@ -221,7 +221,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 
 <!-- ====== STEP 3: Report ====== -->
 <div class="card hidden" id="reportCard">
-  <h2><span class="step-badge">3</span> 你的解读报告 <span style="float:right;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="downloadReport()" style="font-size:.65em;padding:3px 8px">📥 MD</button><button class="btn btn-outline btn-sm" onclick="downloadPDF()" style="font-size:.65em;padding:3px 8px">🖨️ PDF</button></span></h2>
+  <h2><span class="step-badge">3</span> 你的解读报告 <span style="float:right;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="downloadReport('md')" style="font-size:.65em;padding:3px 8px">📥 MD</button><button class="btn btn-outline btn-sm" onclick="downloadReport('doc')" style="font-size:.65em;padding:3px 8px">📝 Word</button><button class="btn btn-outline btn-sm" onclick="downloadPDF()" style="font-size:.65em;padding:3px 8px">🖨️ PDF</button></span></h2>
   <div class="report-content loading" id="reportContent">正在生成...</div>
 </div>
 
@@ -865,43 +865,83 @@ function downloadPDF(){
   document.body.removeChild(form);
 }
 
-function downloadReport(){
+function downloadReport(format){
+  format = format || 'md';
   var md='';
   for(var i=0;i<state.reportOrder.length;i++){
     var k=state.reportOrder[i];
     if(state.reports[k]) md+='# '+(REPORT_LABELS[k]||'报告')+'\n\n'+state.reports[k]+'\n\n---\n\n';
   }
   if(!md) return;
-  var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var name=getFileNameBase('SEE_报告')+'.md';
+  var filename = getFileNameBase('SEE_思维画像报告');
   var isMobile=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
   var isWechat=/MicroMessenger/i.test(navigator.userAgent||'');
+
+  if (format === 'doc') {
+    // Word: 生成 HTML → 移动端/微信走服务端 /api/export-doc + 隐藏 iframe
+    var docHtml = '<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:serif;max-width:720px;margin:20px auto;padding:16px;line-height:1.9;color:#333;font-size:16px}h1{font-size:1.4em}h2{font-size:1.15em;margin-top:24px}h3{font-size:1em}p{margin:10px 0}li{margin:6px 0}</style></head><body>' + parseMD(md) + '</body></html>';
+    var blob = new Blob([docHtml], {type: 'text/html;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var docFilename = filename + '.doc';
+    if (isMobile || isWechat) {
+      if (navigator.share && navigator.canShare && window.File) {
+        try {
+          var docFile = new File([blob], docFilename, { type: 'application/msword' });
+          if (navigator.canShare({ files: [docFile] })) {
+            navigator.share({ files: [docFile], title: filename }).catch(function(){});
+            setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+            return;
+          }
+        } catch (e) { /* canShare files 不支持 → 走下方服务端回退 */ }
+      }
+      var docIframe = document.createElement('iframe');
+      docIframe.style.display = 'none'; docIframe.name = 'doc-dl-' + Date.now();
+      var docForm = document.createElement('form');
+      docForm.method = 'POST'; docForm.action = API_BASE + '/api/export-doc'; docForm.target = docIframe.name; docForm.style.display = 'none';
+      var dt = document.createElement('input'); dt.type = 'hidden'; dt.name = 'title'; dt.value = filename; docForm.appendChild(dt);
+      var dh = document.createElement('input'); dh.type = 'hidden'; dh.name = 'html'; dh.value = docHtml; docForm.appendChild(dh);
+      document.body.appendChild(docIframe); document.body.appendChild(docForm);
+      docForm.submit();
+      setTimeout(function(){ document.body.removeChild(docForm); document.body.removeChild(docIframe); }, 5000);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+      return;
+    }
+    var a = document.createElement('a');
+    a.href = url; a.download = docFilename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+    return;
+  }
+
+  // MD download
+  var blob0=new Blob([md],{type:'text/markdown;charset=utf-8'});
+  var url0=URL.createObjectURL(blob0);
+  var name=filename+'.md';
   if (isMobile || isWechat) {
     if (navigator.canShare && navigator.share && window.File) {
       try {
-        var file=new File([blob], name, {type:'text/markdown;charset=utf-8'});
-        if (navigator.canShare({files:[file]})) {
-          navigator.share({files:[file], title:name}).catch(function(){});
-          setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+        var file0=new File([blob0], name, {type:'text/markdown;charset=utf-8'});
+        if (navigator.canShare({files:[file0]})) {
+          navigator.share({files:[file0], title:name}).catch(function(){});
+          setTimeout(function(){ URL.revokeObjectURL(url0); }, 30000);
           return;
         }
       } catch(e) {}
     }
     var mobileLink=document.createElement('a');
-    mobileLink.href=url;
+    mobileLink.href=url0;
     mobileLink.target='_blank';
     mobileLink.rel='noopener';
     document.body.appendChild(mobileLink);
     mobileLink.click();
     document.body.removeChild(mobileLink);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    setTimeout(function(){ URL.revokeObjectURL(url0); }, 30000);
     return;
   }
-  var a=document.createElement('a');
-  a.href=url; a.download=name;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  var a0=document.createElement('a');
+  a0.href=url0; a0.download=name;
+  document.body.appendChild(a0); a0.click(); document.body.removeChild(a0);
+  URL.revokeObjectURL(url0);
 }
 </script>
 
