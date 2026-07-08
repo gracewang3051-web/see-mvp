@@ -1872,3 +1872,56 @@ pip install weasyprint
 # 重启
 pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
 ```
+
+---
+
+## ✅ 2026-07-08 15:12 — 全平台 PWA 图标 & 手机主屏幕适配
+
+**问题**：手机添加网站到主屏幕时显示默认小星星图标，无品牌标识。
+
+**修复**：
+1. `generate_icons.py` — 生成 16~512 全尺寸图标脚本
+2. `manifest.json` — PWA standalone 模式 + maskable 声明
+3. `index.html` / `talent.html` — apple-mobile-web-app meta + favicon + manifest link
+4. 图标设计：深蓝紫渐变 + 「SEE」暖白 + 「生命印迹」亮蓝 + 金色 tagline
+
+**覆盖平台**：iPhone (180+152) / iPad (152) / Android (72~512) / 华为 (maskable)
+
+---
+
+## ✅ 2026-07-08 15:20 — index.html 新增 Word 格式下载
+
+**问题**：思维画像报告页面仅有 MD 和 PDF 下载，缺少 Word 格式。
+
+**修复**：`downloadReport()` 支持 `format` 参数（md/doc），DOC 逻辑与 talent.html 完全一致：
+- 桌面：`<a download>`
+- 手机/微信：Share API → 服务端 `/api/export-doc` + 隐藏 iframe
+
+---
+
+## 📊 最终状态（2026-07-08 终版 v2）
+
+| 维度 | 数量 | 状态 |
+|------|------|:---:|
+| Code Review P0 | 3 项 | ✅ 全部修复 |
+| Code Review P1 | 3 项 | ✅ 2 修复 + 1 延后 |
+| Code Review P2 | 5 项 | ✅ 1 修复 + 4 延后/不采纳 |
+| 部署审查 P0 | 6 项 | ✅ 全部修复 |
+| 线上问题 | 4 项 | ✅ 全部修复 |
+| 部署包同步 | 6 项 | ✅ 全部修复 |
+| Tesseract 移除 | 2 页 | ✅ 全部完成 |
+| PDF UTF-8 第三方审核 | 2 项 | ✅ 全部修复 |
+| 手机 PDF 下载弹窗拦截 | 2 文件 | ✅ 全部修复 |
+| Blob URL iOS Safari | 3 函数 | ✅ 全部修复 |
+| 用户码加载竞态 | 5 处 | ✅ 全部修复 |
+| 下载 async/await 用户手势 | 5 处 | ✅ 全部修复 |
+| 下载风险排查 | 2 项 | ✅ 全部修复 |
+| wkhtmltopdf 替换 fpdf | 6 处 | ✅ 全部修复 |
+| 部署目录清理 | 3 项 | ✅ 全部删除 |
+| `_json()` CORS 去重 | 1 处 | ✅ 已修复 |
+| 移动端下载补漏 | 5 项 | ✅ 全部修复 |
+| wkhtmltopdf → weasyprint | 4 处 | ✅ 已修复 |
+| **PWA 全平台图标** | **6 文件** | ✅ **已完成** |
+| **index.html Word 下载** | **1 功能** | ✅ **已完成** |
+
+**总计 69 项，全部闭环。**
