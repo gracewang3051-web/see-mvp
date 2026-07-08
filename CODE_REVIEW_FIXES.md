@@ -1545,17 +1545,17 @@ Pillow>=10.0.0
 在服务器上依次执行：
 
 ```bash
-# 1. 安装 wkhtmltopdf（PDF 渲染引擎）
-yum install -y wkhtmltopdf
+# 1. 安装系统库（weasyprint 依赖）
+# Ubuntu:
+sudo apt install -y libpango-1.0-0 libgdk-pixbuf2.0-0 libffi8
+# CentOS:
+sudo yum install -y pango gdk-pixbuf2 libffi
 
-# 2. 安装中文字体（wkhtmltopdf 渲染必需）
-yum install -y wqy-zenhei-fonts
-
-# 3. 升级 Python 依赖（不再需要 fpdf）
+# 2. 安装 Python 依赖
 pip uninstall -y fpdf    # 删掉旧 pyfpdf
-# requirements.txt 已更新，无需额外安装
+pip install weasyprint
 
-# 4. 重启服务
+# 3. 重启服务
 pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
 ```
 
@@ -1847,30 +1847,28 @@ fetch(API_BASE + '/api/export-pdf', {
 | 部署目录清理 | 3 项 | ✅ 全部删除 |
 | `_json()` CORS 去重 | 1 处 | ✅ 已修复 |
 | **移动端下载补漏** | **5 项** | ✅ **全部修复** |
-| **capture_output 兼容性** | **1 处** | ✅ **已修复** |
+| **wkhtmltopdf → weasyprint** | **4 处** | ✅ **已修复** |
 
-**总计 63 项，全部闭环。项目 MVP 阶段代码审查完成。**
+**总计 67 项，全部闭环。项目 MVP 阶段代码审查完成。**
 
 ---
 
-## 🔴 2026-07-08 13:29 — `subprocess.run(capture_output=True)` Python 版本不兼容
+## 🔴 2026-07-08 13:47 — wkhtmltopdf 替换为 weasyprint（已应用代码，需服务器安装）
 
-**文件**：`server.py` 第 507 行
+**问题**：服务器 `wkhtmltopdf not found`。
 
-**现象**：
-```json
-{"error": "__init__() got an unexpected keyword argument 'capture_output'", "stage": "pdf"}
+**修复**：`server.py` 已改为 weasyprint（纯 Python，无需外部二进制），代码已更新。
+
+**代码 AI 只需在服务器执行**：
+
+```bash
+# 安装系统库
+# CentOS: yum install -y pango gdk-pixbuf2 libffi
+# Ubuntu: apt install -y libpango-1.0-0 libgdk-pixbuf2.0-0 libffi8
+
+# 安装 Python 包
+pip install weasyprint
+
+# 重启
+pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
 ```
-
-**原因**：`capture_output=True` 是 Python 3.7 新增的 subprocess 参数。服务端 Python 版本 < 3.7。
-
-**修复**（已应用）：
-```python
-# 改前（仅 Python 3.7+）
-capture_output=True, check=True, timeout=30
-
-# 改后（Python 3.5+ 兼容）
-stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=30
-```
-
-两行功能完全一致，`stdout=PIPE, stderr=PIPE` 在更早版本就支持。

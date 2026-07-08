@@ -1,5 +1,6 @@
 """SEE 生命印迹 - 本地测试服务端（保护 API Key）"""
-import json, base64, re, ssl, os, subprocess, tempfile, sys, threading, time, uuid, sqlite3, traceback
+import json, base64, re, ssl, os, io, tempfile, sys, threading, time, uuid, sqlite3, traceback
+from weasyprint import HTML
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http.client import HTTPSConnection
 from urllib.parse import urlparse, urlencode
@@ -488,39 +489,12 @@ def _markdown_to_html(title, markdown):
 
 
 def _generate_pdf(title, markdown):
-    """Generate Chinese PDF from markdown using wkhtmltopdf (system fonts)."""
+    """Generate Chinese PDF from markdown using weasyprint (zero system deps)."""
     html = _markdown_to_html(title, markdown)
-
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.html',
-                                     delete=False, encoding='utf-8') as f:
-        f.write(html)
-        html_path = f.name
-
-    try:
-        result = subprocess.run(
-            ['wkhtmltopdf', '--encoding', 'UTF-8',
-             '--page-size', 'A4',
-             '--margin-top', '15mm', '--margin-bottom', '15mm',
-             '--margin-left', '15mm', '--margin-right', '15mm',
-             '--no-stop-slow-scripts', '--quiet',
-             html_path, '-'],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=30
-        )
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError('wkhtmltopdf failed: ' + (e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)))
-    except FileNotFoundError:
-        raise RuntimeError(
-            'wkhtmltopdf not found. Install it:\n'
-            '  CentOS: yum install -y wkhtmltopdf\n'
-            '  Ubuntu: apt install -y wkhtmltopdf\n'
-            '  macOS:  brew install wkhtmltopdf'
-        )
-    finally:
-        try:
-            os.unlink(html_path)
-        except OSError:
-            pass
+    buf = io.BytesIO()
+    HTML(string=html).write_pdf(buf)
+    buf.seek(0)
+    return buf.read()
 
 
 def _pdf_content_disposition(title):
