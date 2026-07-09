@@ -201,7 +201,7 @@ def _extract_region_values(words, image_b64):
         # 常规值块：数字/字母/纹型编码/百分比
         return bool(re.match(r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh%+\-]+$', text))
 
-    # 2. 标签 + 下方值合并
+    # 2. 标签 + 值块合并（同时尝试左右和上下，取最佳匹配）
     merged_pairs = []  # [(label_text, value_text)]
     used = set()
     for i, (cur, loc) in enumerate(word_list):
@@ -211,46 +211,34 @@ def _extract_region_values(words, image_b64):
         cx, cy = loc.get('left', 0), loc.get('top', 0)
         cw = loc.get('width', 0)
 
-        is_horizontal_label = cur in _HORIZONTAL_LABELS
         is_personality_label = (cur == '性格类型')
         allow_cjk = is_personality_label
 
-        best_j, best_dist = None, 999
+        best_j, best_score = None, 999  # lower px distance = better
         for j, (nxt, loc2) in enumerate(word_list):
             if j in used:
                 continue
             ny = loc2.get('top', 0)
             nx = loc2.get('left', 0)
 
-            if is_horizontal_label:
-                # 左右排列：值块在同行右侧，Y 差 ≤ 15px
-                if abs(ny - cy) > 15:
-                    continue
-                if nx <= cx + cw - 5:
-                    continue  # 值块必须在标签右侧
+            # Strategy A: 左右排列（值块在同行右侧）
+            if abs(ny - cy) <= 20 and nx > cx + cw - 5:
                 dx = nx - (cx + cw)
-                if dx > 120:
-                    continue
-                if not _is_value_block(nxt, allow_cjk=allow_cjk):
-                    continue
-                if dx < best_dist:
-                    best_dist = dx
-                    best_j = j
-            else:
-                # 上下排列：值块在标签正下方，Y 差 5~120px
-                if ny <= cy + 5:
-                    continue
+                if dx <= 150:
+                    if _is_value_block(nxt, allow_cjk=allow_cjk):
+                        if dx < best_score:
+                            best_score = dx
+                            best_j = j
+
+            # Strategy B: 上下排列（值块在标签下方）
+            if ny > cy + 5:
                 dy = ny - cy
-                if dy > 120:
-                    continue
-                if not _is_value_block(nxt, allow_cjk=allow_cjk):
-                    continue
-                # X 对齐容差放宽到 100px
-                if abs(nx - cx) > 100:
-                    continue
-                if dy < best_dist:
-                    best_dist = dy
-                    best_j = j
+                if dy <= 120:
+                    if abs(nx - cx) <= 100:
+                        if _is_value_block(nxt, allow_cjk=allow_cjk):
+                            if dy < best_score:
+                                best_score = dy
+                                best_j = j
 
         if best_j is not None:
             merged_pairs.append((cur, word_list[best_j][0]))
