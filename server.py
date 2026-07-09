@@ -173,9 +173,8 @@ def _extract_region_values(words, image_b64):
     对未能合并的独立行，尝试直接匹配标签文本。
 
     2026-07-09 修复：
-    - 区分上下排列（思维/听觉）和左右排列（体觉/精神/视觉）的配对策略
-    - 性格类型允许含中文的值块（最多6-7字+字母组合）
-    - 放宽 dy 上限从 80→120，X 容差从 60→100
+    - 只搜索下方（不再区分左右排列），dy 上限 80→160，X 容差 60→120
+    - 性格类型允许含中文的值块
     """
     result = {}
 
@@ -186,22 +185,13 @@ def _extract_region_values(words, image_b64):
     ))
     word_list = [(w.get('words', '').strip(), w.get('location', {})) for w in sorted_w if w.get('words', '').strip()]
 
-    # 定义左右排列的功能标签（值块在同行右侧，不在下方）
-    _HORIZONTAL_LABELS = {
-        '体觉辨识', '操作理解', '体觉感受', '艺术欣赏', '休觉感受', '休觉辨识',
-        '沟通管理', '计划判断', '创造领导', '目标憧憬',
-        '视觉辨识', '观察理解', '视觉感受', '图像欣赏',
-    }
-
     def _is_value_block(text, allow_cjk=False):
         """判断是否为值块。allow_cjk=True 时允许中文（用于性格类型等）。"""
         if allow_cjk:
-            # 性格类型值：纯中文 2-7 字，或中文+字母组合 2-7 字
-            return bool(re.match(r'^[\u4e00-\u9fffA-Za-z\d\s]{2,7}$', text))
-        # 常规值块：数字/字母/纹型编码/百分比
+            return bool(re.match(r'^[一-鿿A-Za-z\d\s]{2,7}$', text))
         return bool(re.match(r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh%+\-]+$', text))
 
-    # 2. 标签 + 值块合并（同时尝试左右和上下，取最佳匹配）
+    # 2. 标签 + 值块合并（统一在下方搜，扩大范围）
     merged_pairs = []  # [(label_text, value_text)]
     used = set()
     for i, (cur, loc) in enumerate(word_list):
@@ -209,36 +199,30 @@ def _extract_region_values(words, image_b64):
             continue
         used.add(i)
         cx, cy = loc.get('left', 0), loc.get('top', 0)
-        cw = loc.get('width', 0)
 
         is_personality_label = (cur == '性格类型')
         allow_cjk = is_personality_label
 
-        best_j, best_score = None, 999  # lower px distance = better
+        best_j, best_dy = None, 999
         for j, (nxt, loc2) in enumerate(word_list):
             if j in used:
                 continue
             ny = loc2.get('top', 0)
             nx = loc2.get('left', 0)
 
-            # Strategy A: 左右排列（值块在同行右侧）
-            if abs(ny - cy) <= 20 and nx > cx + cw - 5:
-                dx = nx - (cx + cw)
-                if dx <= 150:
-                    if _is_value_block(nxt, allow_cjk=allow_cjk):
-                        if dx < best_score:
-                            best_score = dx
-                            best_j = j
-
-            # Strategy B: 上下排列（值块在标签下方）
-            if ny > cy + 5:
-                dy = ny - cy
-                if dy <= 120:
-                    if abs(nx - cx) <= 100:
-                        if _is_value_block(nxt, allow_cjk=allow_cjk):
-                            if dy < best_score:
-                                best_score = dy
-                                best_j = j
+            # 只搜下方：dy 5~160px，X 对齐 ±120px
+            if ny <= cy + 5:
+                continue
+            dy = ny - cy
+            if dy > 160:
+                continue
+            if abs(nx - cx) > 120:
+                continue
+            if not _is_value_block(nxt, allow_cjk=allow_cjk):
+                continue
+            if dy < best_dy:
+                best_dy = dy
+                best_j = j
 
         if best_j is not None:
             merged_pairs.append((cur, word_list[best_j][0]))
@@ -246,15 +230,15 @@ def _extract_region_values(words, image_b64):
         else:
             merged_pairs.append((cur, None))
 
-    # 3. 按标签文字映射到 key
+        # 3. 按标签文字映射到 key
     for label, value in merged_pairs:
         key = _LABEL_TO_KEY.get(label)
         if key:
             if value:
                 result[key] = value
 
-    # 3b. 拆分多值串（如「20 Wsc 22 Wc」→ 两个独立值）
-    #     上下排列按 Y 坐标分配（上方=第一个值），左右排列按 X 坐标分配（左边=第一个值）
+    # 3b. 拆分多值串（如「20 Wsc 22 Wc」→ 两个独立值），按 X 就近分配
+    #     按 X 坐标分配（左边=第一个值）
     multi_val_pattern = re.compile(r'^(\d+\s*\w+)\s+(\d+\s*\w+)$')
     for i, (label, value) in enumerate(merged_pairs):
         if not value:
@@ -272,7 +256,6 @@ def _extract_region_values(words, image_b64):
         if label_x is None:
             continue
 
-        is_h_label = label in _HORIZONTAL_LABELS
 
         # 找同行未匹配 label（Y 差 ≤ 40px），选 X 最近的
         best_j, best_dx = None, 999
@@ -299,22 +282,12 @@ def _extract_region_values(words, image_b64):
         if best_j is not None:
             other_label, _ = merged_pairs[best_j]
             val1, val2 = m.group(1), m.group(2)
-            if is_h_label:
-                # 左右排列：X 小的拿 val1（左边=左脑），X 大的拿 val2
-                if label_x < other_x_for_split:
-                    merged_pairs[i] = (label, val1)
-                    merged_pairs[best_j] = (other_label, val2)
-                else:
-                    merged_pairs[i] = (label, val2)
-                    merged_pairs[best_j] = (other_label, val1)
+            if label_x < other_x_for_split:
+                merged_pairs[i] = (label, val1)
+                merged_pairs[best_j] = (other_label, val2)
             else:
-                # 上下排列：Y 小的拿 val1（上方=左脑），Y 大的拿 val2
-                if label_y < other_y_for_split:
-                    merged_pairs[i] = (label, val1)
-                    merged_pairs[best_j] = (other_label, val2)
-                else:
-                    merged_pairs[i] = (label, val2)
-                    merged_pairs[best_j] = (other_label, val1)
+                merged_pairs[i] = (label, val2)
+                merged_pairs[best_j] = (other_label, val1)
             break
 
     # 4. 处理本身就是中文值的情况（行为模式、脑平衡、性格类型）
@@ -1114,7 +1087,6 @@ class SEEHandler(SimpleHTTPRequestHandler):
             ))
 
             # 文字锁定：中文标签 + 正下方值块（X轴对齐，Y轴近距）
-            # 2026-07-09 修复：区分上下/左右排列，放宽容差，性格类型允许中文值
             words = [(w.get('words', '').strip(), w.get('location', {})) for w in sorted_words]
             words = [(t, l) for t, l in words if t]
             merged = []
@@ -1130,8 +1102,8 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 is_personality = (cur == '性格类型')
                 allow_cjk_val = is_personality
 
-                # 双策略：同时尝试左右和上下，取最佳匹配
-                best_j, best_score = None, 999
+                # 统一在下方搜，dy 5~160px，X对齐±120px
+                best_j, best_dy = None, 999
                 for j, (nxt, loc2) in enumerate(words):
                     if j in used:
                         continue
@@ -1143,20 +1115,17 @@ class SEEHandler(SimpleHTTPRequestHandler):
                     if not nxt_is_value:
                         continue
 
-                    # Strategy A: 左右排列（同行右侧，Y差≤20）
-                    if abs(ny - cy) <= 20 and nx > cx + cw - 5:
-                        dx = nx - (cx + cw)
-                        if dx <= 150 and dx < best_score:
-                            best_score = dx
-                            best_j = j
-
-                    # Strategy B: 上下排列（下方，X对齐）
-                    if ny > cy + 5:
-                        dy = ny - cy
-                        if dy <= 120 and abs(nx - cx) <= 100:
-                            if dy < best_score:
-                                best_score = dy
-                                best_j = j
+                    # 只搜下方：dy 5~160px，X对齐±120px
+                    if ny <= cy + 5:
+                        continue
+                    dy = ny - cy
+                    if dy > 160:
+                        continue
+                    if abs(nx - cx) > 120:
+                        continue
+                    if dy < best_dy:
+                        best_dy = dy
+                        best_j = j
                 if best_j is not None:
                     nxt_word, _ = words[best_j]
                     merged.append(cur + '  ' + nxt_word)
