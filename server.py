@@ -191,7 +191,7 @@ def _extract_region_values(words, image_b64):
             return bool(re.match(r'^[一-鿿A-Za-z\d\s]{2,7}$', text))
         return bool(re.match(r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh%+\-]+$', text))
 
-    # 2. 标签 + 值块合并（统一在下方搜，扩大范围）
+    # 2. 标签 + 值块合并（统一在下方搜）
     merged_pairs = []  # [(label_text, value_text)]
     used = set()
     for i, (cur, loc) in enumerate(word_list):
@@ -210,13 +210,13 @@ def _extract_region_values(words, image_b64):
             ny = loc2.get('top', 0)
             nx = loc2.get('left', 0)
 
-            # 只搜下方：dy 5~160px，X 对齐 ±120px
+            # 只搜下方：dy 5~80px，X 对齐 ±60px
             if ny <= cy + 5:
                 continue
             dy = ny - cy
-            if dy > 160:
+            if dy > 120:
                 continue
-            if abs(nx - cx) > 120:
+            if abs(nx - cx) > 60:
                 continue
             if not _is_value_block(nxt, allow_cjk=allow_cjk):
                 continue
@@ -1102,7 +1102,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 is_personality = (cur == '性格类型')
                 allow_cjk_val = is_personality
 
-                # 统一在下方搜，dy 5~160px，X对齐±120px
+                # 统一在下方搜，dy 5~80px，X对齐±60px
                 best_j, best_dy = None, 999
                 for j, (nxt, loc2) in enumerate(words):
                     if j in used:
@@ -1115,13 +1115,13 @@ class SEEHandler(SimpleHTTPRequestHandler):
                     if not nxt_is_value:
                         continue
 
-                    # 只搜下方：dy 5~160px，X对齐±120px
+                    # 只搜下方：dy 5~80px，X对齐±60px
                     if ny <= cy + 5:
                         continue
                     dy = ny - cy
-                    if dy > 160:
+                    if dy > 120:
                         continue
-                    if abs(nx - cx) > 120:
+                    if abs(nx - cx) > 60:
                         continue
                     if dy < best_dy:
                         best_dy = dy
