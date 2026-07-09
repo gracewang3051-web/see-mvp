@@ -1127,55 +1127,36 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 cw = loc.get('width', 0)
                 cur_has_cjk = bool(re.search(r'[一-鿿]', cur))
 
-                is_h_label = cur in ('体觉辨识', '操作理解', '体觉感受', '艺术欣赏', '休觉感受', '休觉辨识',
-                                     '沟通管理', '计划判断', '创造领导', '目标憧憬',
-                                     '视觉辨识', '观察理解', '视觉感受', '图像欣赏')
                 is_personality = (cur == '性格类型')
                 allow_cjk_val = is_personality
 
-                # 找正下方X对齐最近的值块
-                best_j, best_dist = None, 999
+                # 双策略：同时尝试左右和上下，取最佳匹配
+                best_j, best_score = None, 999
                 for j, (nxt, loc2) in enumerate(words):
                     if j in used:
                         continue
                     ny = loc2.get('top', 0)
                     nx = loc2.get('left', 0)
+                    nxt_is_value = bool(re.match(
+                        r'^[一-鿿A-Za-z\d\s]{2,7}$' if allow_cjk_val else
+                        r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh+-]+$', nxt))
+                    if not nxt_is_value:
+                        continue
 
-                    if is_h_label:
-                        # 左右排列：值块在同行右侧
-                        if abs(ny - cy) > 15:
-                            continue
-                        if nx <= cx + cw - 5:
-                            continue
+                    # Strategy A: 左右排列（同行右侧，Y差≤20）
+                    if abs(ny - cy) <= 20 and nx > cx + cw - 5:
                         dx = nx - (cx + cw)
-                        if dx > 120:
-                            continue
-                        nxt_is_value = bool(re.match(
-                            r'^[\u4e00-\u9fffA-Za-z\d\s]{2,7}$' if allow_cjk_val else
-                            r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh+-]+$', nxt))
-                        if not nxt_is_value:
-                            continue
-                        if dx < best_dist:
-                            best_dist = dx
+                        if dx <= 150 and dx < best_score:
+                            best_score = dx
                             best_j = j
-                    else:
-                        # 上下排列：值块在下方
-                        if ny <= cy + 5:
-                            continue
+
+                    # Strategy B: 上下排列（下方，X对齐）
+                    if ny > cy + 5:
                         dy = ny - cy
-                        if dy > 120:
-                            continue
-                        nxt_is_value = bool(re.match(
-                            r'^[\u4e00-\u9fffA-Za-z\d\s]{2,7}$' if allow_cjk_val else
-                            r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh+-]+$', nxt))
-                        if not nxt_is_value:
-                            continue
-                        # X对齐：值块left在文字块left±100px内
-                        if abs(nx - cx) > 100:
-                            continue
-                        if dy < best_dist:
-                            best_dist = dy
-                            best_j = j
+                        if dy <= 120 and abs(nx - cx) <= 100:
+                            if dy < best_score:
+                                best_score = dy
+                                best_j = j
                 if best_j is not None:
                     nxt_word, _ = words[best_j]
                     merged.append(cur + '  ' + nxt_word)
