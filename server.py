@@ -216,7 +216,7 @@ def _extract_region_values(words, image_b64):
             dy = ny - cy
             if dy > 120:
                 continue
-            if abs(nx - cx) > 60:
+            if abs(nx - cx) > 100:
                 continue
             if not _is_value_block(nxt, allow_cjk=allow_cjk):
                 continue
@@ -1121,7 +1121,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
                     dy = ny - cy
                     if dy > 120:
                         continue
-                    if abs(nx - cx) > 60:
+                    if abs(nx - cx) > 100:
                         continue
                     if dy < best_dy:
                         best_dy = dy
