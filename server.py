@@ -1135,6 +1135,18 @@ class SEEHandler(SimpleHTTPRequestHandler):
             text = '\n'.join(merged).strip()
             # 区域驱动提取
             region_values = _extract_region_values(sorted_words, image_b64)
+            # Debug: 列出每个识别字符及其坐标
+            debug_words = []
+            for w in sorted_words:
+                loc = w.get('location', {})
+                debug_words.append({
+                    'word': w.get('words', ''),
+                    'x': loc.get('left', 0),
+                    'y': loc.get('top', 0),
+                    'w': loc.get('width', 0),
+                    'h': loc.get('height', 0),
+                })
+
             self._json(200, {
                 "text": text,
                 "lines": merged,
@@ -1142,6 +1154,7 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 "direction": result.get('direction'),
                 "region_values": region_values,
                 "region_count": len(region_values),
+                "debug_words": debug_words,
                 "stage": "baidu_ocr"
             })
         except Exception as e:
