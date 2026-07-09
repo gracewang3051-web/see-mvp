@@ -442,12 +442,13 @@ function getUserCodes() {
 }
 function isValidCode(code) { return getUserCodes().some(function(u){ return u.code === code; }); }
 function getReportCount(code) {
+  // 优先服务端 SQLite 计数（跨设备共享），localStorage 兜底
   var cached = _cacheReportCount(code);
   if (cached > 0) return cached;
   var total = 0;
   try { var s = localStorage.getItem('see_reports_v2_' + code); if (s) total += (JSON.parse(s).versions||[]).length; } catch(e) {}
   try { var t = localStorage.getItem('see_talent_reports_v2_' + code); if (t) total += (JSON.parse(t).versions||[]).length; } catch(e) {}
-  return total;
+  return Math.max(cached, total);
 }
 function getMaxReports(code) { var u = getUserCodes().find(function(x){ return x.code === code; }); return u ? (u.maxReports || 20) : 20; }
 function _cacheReportCount(code) { var u = _userCache.find(function(x){ return x.code === code; }); return u ? (u.reports || 0) : 0; }

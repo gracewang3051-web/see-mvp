@@ -140,8 +140,26 @@ function getUserCodes() {
 }
 function isValidCode(code) { return getUserCodes().some(function(u){ return u.code === code; }); }
 function getMaxReports(code) { var u = getUserCodes().find(function(x){ return x.code === code; }); return u ? (u.maxReports || 20) : 20; }
-function getPortraitCount(code) { try { var s = localStorage.getItem('see_reports_v2_' + code); return s ? (JSON.parse(s).versions||[]).length : 0; } catch(e) { return 0; } }
-function getTalentCount(code) { try { var s = localStorage.getItem('see_talent_reports_v2_' + code); return s ? (JSON.parse(s).versions||[]).length : 0; } catch(e) { return 0; } }
+// ===== 配额计数：优先服务端 SQLite（跨设备共享），localStorage 兜底 =====
+var _serverQuota = {}; // {code: {portraitCount, talentCount, total}}
+function _fetchServerQuota(code) {
+  // 从服务端 /api/db/reports 获取跨设备统一的报告数量
+  fetch('/api/db/reports?code=' + encodeURIComponent(code)).then(function(r){ return r.json(); }).then(function(d){
+    var versions = d.versions || [];
+    var pc = 0, tc = 0;
+    versions.forEach(function(v){ if (v.type === 'portrait') pc++; else if (v.type === 'talent') tc++; });
+    _serverQuota[code] = {portraitCount: pc, talentCount: tc, total: pc + tc};
+    updateQuotaDisplay(code);
+  }).catch(function(){});
+}
+function getPortraitCount(code) {
+  if (_serverQuota[code]) return _serverQuota[code].portraitCount;
+  try { var s = localStorage.getItem('see_reports_v2_' + code); return s ? (JSON.parse(s).versions||[]).length : 0; } catch(e) { return 0; }
+}
+function getTalentCount(code) {
+  if (_serverQuota[code]) return _serverQuota[code].talentCount;
+  try { var s = localStorage.getItem('see_talent_reports_v2_' + code); return s ? (JSON.parse(s).versions||[]).length : 0; } catch(e) { return 0; }
+}
 function updateQuotaDisplay(code) {
   var el = document.getElementById('quotaDisplay');
   if (!el) return;
@@ -173,6 +191,7 @@ function loadAll() {
   const code = document.getElementById('userCode').value.trim();
   if (!code || !isValidCode(code)) { updateQuotaDisplay(code); if (code) alert('无效的用户码，请联系管理员获取'); return; }
   sessionStorage.setItem('see_code_shared', code);
+  _fetchServerQuota(code);
   updateQuotaDisplay(code);
 
   // Migrate old data
@@ -192,6 +211,8 @@ function loadAll() {
     time: d.time ? new Date(d.time).toLocaleDateString('zh-CN') : '历史报告',
     content: Object.values(d.reports||{})[0]||''
   }));
+
+  // 先从 localStorage 加载（快速显示）
   const s1 = localStorage.getItem('see_reports_v2_' + code);
   const s2 = localStorage.getItem('see_talent_reports_v2_' + code);
   const sg = localStorage.getItem('see_growth_reports_v2_' + code);
@@ -200,8 +221,57 @@ function loadAll() {
   try { if(s2) allReports.talentVersions = JSON.parse(s2).versions||[]; } catch(e){}
   try { if(sg) allReports.growthVersions = JSON.parse(sg).versions||[]; } catch(e){}
 
-  // Portrait versions
+  // 从服务端 SQLite 拉取报告列表（跨设备同步核心）
+  fetch('/api/db/reports?code=' + encodeURIComponent(code)).then(function(r){ return r.json(); }).then(function(d){
+    var versions = d.versions || [];
+    // 合并服务端数据到 allReports，去重（按时间）
+    var localPortraitTimes = new Set(allReports.portraitVersions.map(function(v){ return v.time; }));
+    var localTalentTimes = new Set(allReports.talentVersions.map(function(v){ return v.time; }));
+    versions.forEach(function(v){
+      var sec = v.sections || {};
+      var timeLabel = v.time ? v.time.substring(0,16).replace('T',' ') : '历史报告';
+      if (v.type === 'portrait') {
+        if (!localPortraitTimes.has(timeLabel)) {
+          allReports.portraitVersions.push({
+            time: timeLabel,
+            hasPortrait: !!sec.portrait,
+            portrait: sec.portrait||'',
+            action: sec.action||'', communication: sec.communication||'', career: sec.career||''
+          });
+        }
+      } else if (v.type === 'talent') {
+        if (!localTalentTimes.has(timeLabel)) {
+          allReports.talentVersions.push({
+            time: timeLabel,
+            hasTalent: !!sec.portrait,
+            portrait: sec.portrait||'',
+            learning: sec.learning||'', emotion: sec.emotion||'', potential: sec.potential||''
+          });
+        }
+      }
+    });
+    // 刷新显示
+    renderDashboard();
+    // 同步服务端数据回 localStorage（让本设备也缓存）
+    if (allReports.portraitVersions.length) localStorage.setItem('see_reports_v2_' + code, JSON.stringify({versions: allReports.portraitVersions, time: new Date().toISOString()}));
+    if (allReports.talentVersions.length) localStorage.setItem('see_talent_reports_v2_' + code, JSON.stringify({versions: allReports.talentVersions, time: new Date().toISOString()}));
+    updateQuotaDisplay(code);
+  }).catch(function(e){
+    // 服务端不可用时，仅用 localStorage 数据
+    console.log('服务端报告加载失败，使用本地缓存:', e);
+    renderDashboard();
+  });
+
+  // 先用已有数据渲染（如果有），服务端数据到达后会再次渲染
+  renderDashboard();
+}
+
+function renderDashboard() {
   const pvs = allReports.portraitVersions;
+  const tvs = allReports.talentVersions;
+  const gvs = allReports.growthVersions;
+
+  // Portrait versions
   if (pvs.length) {
     let h = '<div class="items">';
     pvs.forEach((v,i) => {
@@ -214,7 +284,6 @@ function loadAll() {
   }
 
   // Talent versions
-  const tvs = allReports.talentVersions;
   if (tvs.length) {
     let h = '<div class="items">';
     tvs.forEach((v,i) => {
@@ -227,16 +296,15 @@ function loadAll() {
   }
 
   // Growth section
-  const hasAnyPortrait = pvs.some(v => v.hasPortrait);
-  const hasAnyTalent = tvs.some(v => v.hasTalent);
-  const gvs = allReports.growthVersions;
+  const hasAnyPortrait = pvs.some(function(v){ return v.hasPortrait; });
+  const hasAnyTalent = tvs.some(function(v){ return v.hasTalent; });
   let gHtml = gvs.length
-    ? '<div class="items">'+gvs.map((v,i) => `<span class="item" onclick="viewR(\'growth\','+i+')">📈 ${v.time||'第'+(i+1)+'次'}</span>`).join('')+'</div>'
+    ? '<div class="items">'+gvs.map(function(v,i){ return '<span class="item" onclick="viewR(\'growth\','+i+')">📈 '+(v.time||'第'+(i+1)+'次')+'</span>'; }).join('')+'</div>'
     : '';
   if (hasAnyPortrait && hasAnyTalent) {
     gHtml += '<div style="font-size:.78em;color:var(--muted);margin:6px 0">选择两份报告进行比对：</div>';
-    gHtml += '<select id="growthSrc1" style="width:100%;margin-bottom:4px;padding:4px;background:#1a1a38;color:#e0dcd4;border:1px solid var(--border);border-radius:6px">'+pvs.filter(v=>v.hasPortrait).map((v,i)=>'<option value="'+i+'">🧠 思维画像 第'+(i+1)+'次 '+v.time+'</option>').join('')+'</select>';
-    gHtml += '<select id="growthSrc2" style="width:100%;margin-bottom:4px;padding:4px;background:#1a1a38;color:#e0dcd4;border:1px solid var(--border);border-radius:6px">'+tvs.filter(v=>v.hasTalent).map((v,i)=>'<option value="'+i+'">🌿 先天特质 第'+(i+1)+'次 '+v.time+'</option>').join('')+'</select>';
+    gHtml += '<select id="growthSrc1" style="width:100%;margin-bottom:4px;padding:4px;background:#1a1a38;color:#e0dcd4;border:1px solid var(--border);border-radius:6px">'+pvs.filter(function(v){return v.hasPortrait}).map(function(v,i){return '<option value="'+i+'">🧠 思维画像 第'+(i+1)+'次 '+v.time+'</option>';}).join('')+'</select>';
+    gHtml += '<select id="growthSrc2" style="width:100%;margin-bottom:4px;padding:4px;background:#1a1a38;color:#e0dcd4;border:1px solid var(--border);border-radius:6px">'+tvs.filter(function(v){return v.hasTalent}).map(function(v,i){return '<option value="'+i+'">🌿 先天特质 第'+(i+1)+'次 '+v.time+'</option>';}).join('')+'</select>';
     gHtml += '<button class="action-btn" onclick="generateGrowth()" id="btnGrowth">📈 生成成长比对报告</button><span style="font-size:.75em;color:var(--muted);margin-left:6px" id="growthStatus"></span>';
   } else {
     gHtml += '<div class="action-hint">⚠️ 需要思维画像和先天特质报告各至少一份</div>';
@@ -247,19 +315,14 @@ function loadAll() {
   document.getElementById('growthBlock').innerHTML = gHtml;
 
   // Belief
-  document.getElementById('beliefBlock').innerHTML = `
-    <div class="action-hint">探索你的深层信念系统，识别限制性信念与赋能信念</div>
-    <div class="action-hint" style="margin-top:6px">此功能即将上线</div>
-    <div class="action-hint"><span style="color:var(--accent);cursor:pointer" onclick="alert('请添加微信 SEElife2026 预约信念系统探索')">📲 预约信念系统探索</span></div>
-  `;
+  document.getElementById('beliefBlock').innerHTML = '<div class="action-hint">探索你的深层信念系统，识别限制性信念与赋能信念</div><div class="action-hint" style="margin-top:6px">此功能即将上线</div><div class="action-hint"><span style="color:var(--accent);cursor:pointer" onclick="alert(\'请添加微信 SEElife2026 预约咨询顾问\')">📲 预约信念系统探索</span></div>';
 
   document.getElementById('dashboard').classList.remove('hidden');
-  // Debug info
   console.log('加载完成:', {
     portraitVersions: allReports.portraitVersions.length,
     talentVersions: allReports.talentVersions.length,
     growthVersions: allReports.growthVersions.length,
-    code: code
+    code: document.getElementById('userCode').value.trim()
   });
 }
 

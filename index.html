@@ -379,12 +379,15 @@ function getFileNameBase(fallback) {
 }
 
 function getReportCount(code) {
+  // 优先服务端 SQLite 计数（跨设备共享），localStorage 兜底
   var cached = _cacheReportCount(code);
   if (cached > 0) return cached;
+  // 如果服务端返回 0 但有 localStorage 数据（服务端数据可能丢失），也用 localStorage
   var total = 0;
   try { var s = localStorage.getItem('see_reports_v2_' + code); if (s) total += (JSON.parse(s).versions||[]).length; } catch(e) {}
   try { var t = localStorage.getItem('see_talent_reports_v2_' + code); if (t) total += (JSON.parse(t).versions||[]).length; } catch(e) {}
-  return total;
+  // 用 localStorage 和 cached 中较大的值
+  return Math.max(cached, total);
 }
 function updateQuotaDisplay(code) {
   var el = document.getElementById('quotaDisplay');

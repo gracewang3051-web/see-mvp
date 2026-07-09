@@ -1925,3 +1925,160 @@ pkill -f "python3 server.py" && nohup python3 server.py > /dev/null 2>&1 &
 | **index.html Word 下载** | **1 功能** | ✅ **已完成** |
 
 **总计 69 项，全部闭环。**
+
+---
+
+## ✅ 2026-07-09 10:45 — OCR 区域识别修复：左右脑配对、性格类型、容差
+
+### 问题描述
+
+1. **思维/听觉功能左右脑偶尔识别反了**：部分报告显示正确、部分错误
+2. **体觉功能右侧（体觉感受）识别不了**
+3. **性格类型无法识别**（中文值被排除）
+4. **部分纹型识别失败**
+
+### 根因分析
+
+`_extract_region_values()` 和 `_proxy_baidu_ocr()` 中的「标签→值块」配对逻辑存在三个核心缺陷：
+
+| 缺陷 | 影响 |
+|---|---|
+| 不区分上下排列和左右排列，统一按「下方找值块」| 体觉是左右排列，值在同行右侧不在下方，导致配对失败 |
+| 多值串拆分统一按 X 坐标分配 | 思维/听觉是上下排列，X 坐标相同但 OCR 偏移导致随机分配错误 |
+| 硬编码 `dy>80` 和 `abs(nx-cx)>60` | 不同报告排版间距不同，容差太小导致值块被丢弃 |
+| 值块正则排除含中文的文本 | 性格类型值就是中文（认知型、逆思型等），被直接跳过 |
+
+### 修复内容
+
+#### 1. `_extract_region_values()` — 区分上下/左右排列配对策略
+
+**文件**：`server.py` 第 168-260 行
+
+```python
+# 定义左右排列的功能标签（值块在同行右侧）
+_HORIZONTAL_LABELS = {
+    '体觉辨识', '操作理解', '体觉感受', '艺术欣赏', '休觉感受', '休觉辨识',
+    '沟通管理', '计划判断', '创造领导', '目标憧憬',
+    '视觉辨识', '观察理解', '视觉感受', '图像欣赏',
+}
+```
+
+- **左右排列**：值块在同行右侧（`abs(ny-cy) ≤ 15px`），X 距离 ≤ 120px
+- **上下排列**：值块在正下方（`dy: 5~120px`），X 容差放宽至 100px
+- 性格类型（`性格类型`标签）开 `allow_cjk=True` 例外
+
+#### 2. `_extract_region_values()` — 多值串拆分按排列方向分配
+
+**文件**：`server.py` 第 268-330 行
+
+- **上下排列**（思维/听觉）：按 **Y 坐标**分配（Y 小=上方=左脑 拿 val1，Y 大=下方=右脑 拿 val2）
+- **左右排列**（体觉/精神/视觉）：按 **X 坐标**分配（X 小=左边=左脑 拿 val1，X 大=右边=右脑 拿 val2）
+
+#### 3. 性格类型值块匹配放宽
+
+**文件**：`server.py` 第 188-196 行
+
+- `_is_value_block(text, allow_cjk=True)`：支持纯中文 2-7 字，或中文+字母组合 2-7 字
+- 第 5 步 fallback 增加复合型性格类型（认知模仿型、开放整合型等）
+- 最终兜底：匹配含「型」字的短文本
+
+#### 4. `_proxy_baidu_ocr()` — 同步修复合并逻辑
+
+**文件**：`server.py` 第 1065-1130 行
+
+- 同样区分左右排列和上下排列
+- dy 上限 80→120，X 容差 60→100
+- 性格类型允许中文值块
+
+### 容差参数变更汇总
+
+| 参数 | 旧值 | 新值 |
+|---|---|---|
+| 上下排列 dy 上限 | 80px | 120px |
+| 上下排列 X 容差 | ±60px | ±100px |
+| 左右排列 X 距离上限 | N/A（之前不支持）| 120px |
+| 左右排列 Y 容差 | N/A | ±15px |
+
+### 验证
+
+- [ ] 多份不同排版报告测试思维/听觉左右脑识别一致性
+- [ ] 体觉功能左右两侧均能识别
+- [ ] 性格类型（认知型/逆思型/模仿型/开放型/整合型及复合型）均能识别
+- [ ] 纹型编码（Wsc/Wc/Ws/Wl 等）识别率提升
+
+---
+
+## 🔧 2026-07-09 跨设备同步修复（报告列表 + 配额共享）
+
+### 问题描述
+
+手机端和电脑端使用同一用户码生成的报告无法互通：
+1. 手机端生成的报告在电脑端"自我觉察陪伴"页看不到
+2. 配额计数各设备独立计算，不能共享
+3. `insight.html` 只读 `localStorage`，不查服务端 SQLite
+
+### 根因分析
+
+```
+数据流现状（修复前）:
+  生成报告 (index.html/talent.html)
+    ├── localStorage.setItem()   ← 主存储
+    └── POST /api/db/reports     ← 已保存到 SQLite（但未被读取）
+
+  查看报告 (insight.html)
+    ├── GET /api/db/users        ← 仅验证用户码
+    ├── localStorage.getItem()   ← 实际读取（仅本设备）
+    └── GET /api/db/reports      ← 未被调用！
+```
+
+`GET /api/db/reports?code=XXX` 接口早已存在，但前端从未调用。
+
+### 修复内容
+
+#### 1. `insight.html` — 报告列表从服务端加载
+
+- 新增 `_fetchServerQuota()` 函数：调用 `/api/db/reports?code=xxx` 获取跨设备统一的报告计数
+- `loadAll()` 函数改为两步：
+  1. 先从 localStorage 快速显示（用户体验）
+  2. 异步从 `/api/db/reports` 拉取服务端数据，合并去重后渲染
+- 提取 `renderDashboard()` 独立函数，服务端数据到达后重新渲染
+- 服务端数据同步回 localStorage（缓存更新）
+- 服务端不可用时 fallback 到 localStorage（离线兜底）
+- 配额计数函数 `getPortraitCount/getTalentCount` 优先用 `_serverQuota`
+
+#### 2. `index.html` — 配额计数增强
+
+- `getReportCount()` 改为：服务端计数优先，但用 `Math.max(cached, localStorage)` 避免数据不一致时误判
+
+#### 3. `talent.html` — 配额计数增强
+
+- 同上，`getReportCount()` 使用 `Math.max(cached, localStorage)`
+
+### 修复后数据流
+
+```
+生成报告 (index.html/talent.html)
+  ├── POST /api/db/reports     ← 保存到 SQLite
+  ├── localStorage.setItem()   ← 本地缓存
+  └── _fetchUsers()            ← 刷新服务端配额计数
+
+查看报告 (insight.html)
+  ├── GET /api/db/reports?code=xxx  ← ★ 新增：从服务端加载报告列表和内容
+  ├── localStorage.getItem()   ← 快速首屏显示
+  └── GET /api/db/users        ← 验证用户码
+```
+
+### 影响范围
+
+| 文件 | 修改内容 | 行数变化 |
+|---|---|---|
+| `insight.html` | 新增 `_fetchServerQuota`、`renderDashboard`；重写 `loadAll` 异步加载逻辑 | ~60 行 |
+| `index.html` | `getReportCount` 改用 Math.max | 2 行 |
+| `talent.html` | `getReportCount` 改用 Math.max | 2 行 |
+
+### 验证
+
+- [ ] 手机端生成报告后，电脑端"自我觉察陪伴"可看到该报告
+- [ ] 配额计数两端一致
+- [ ] 服务端不可用时仍能通过 localStorage 查看历史报告
+- [ ] 旧数据迁移正常（v1→v2 格式）
