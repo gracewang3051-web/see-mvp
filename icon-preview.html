@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEE Icon Preview</title>
+<style>
+body { font-family: -apple-system, sans-serif; background: #1a1a2e; color: #e0dcd4; padding: 40px; text-align: center; }
+h2 { margin-bottom: 30px; }
+.grid { display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; align-items: flex-start; }
+.item { text-align: center; }
+.item p { margin-top: 10px; font-size: 13px; color: #8a8590; }
+.icon-wrap { border-radius: 24px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.4); display: inline-block; background: #333; }
+.icon-wrap.phone { width: 180px; height: 180px; }
+.icon-wrap.small { width: 64px; height: 64px; }
+.icon-wrap img { width: 100%; height: 100%; display: block; }
+.phone-mock { background: #222; border-radius: 36px; padding: 20px 12px 30px; display: inline-block; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+.phone-mock .icons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; padding: 12px 4px; background: #111; border-radius: 20px; }
+.phone-mock .icons .app { text-align: center; width: 64px; }
+.phone-mock .icons .app img { width: 52px; height: 52px; border-radius: 12px; display: block; margin: 0 auto 4px; }
+.phone-mock .icons .app span { font-size: 9px; color: #ccc; white-space: nowrap; }
+</style>
+</head>
+<body>
+<h2>SEE 生命印迹 · App 图标预览</h2>
+
+<div class="grid">
+  <div class="item">
+    <div class="icon-wrap phone"><img src="apple-touch-icon.png" alt="180x180"></div>
+    <p>iPhone 主屏幕 (180×180)</p>
+  </div>
+  <div class="item">
+    <div class="icon-wrap small"><img src="favicon-32.png" alt="32x32"></div>
+    <p>浏览器标签页 (32×32)</p>
+  </div>
+</div>
+
+<h3 style="margin-top:50px">📱 手机主屏幕模拟</h3>
+<div class="phone-mock">
+  <div class="icons">
+    <div class="app"><img src="apple-touch-icon.png"><span>SEE 生命印迹</span></div>
+    <div class="app"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52'%3E%3Crect fill='%23333' width='52' height='52' rx='12'/%3E%3C/svg%3E"><span>其他 App</span></div>
+    <div class="app"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52'%3E%3Crect fill='%23333' width='52' height='52' rx='12'/%3E%3C/svg%3E"><span>其他 App</span></div>
+    <div class="app"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52'%3E%3Crect fill='%23333' width='52' height='52' rx='12'/%3E%3C/svg%3E"><span>其他 App</span></div>
+  </div>
+</div>
+
+</body>
+</html>
