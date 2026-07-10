@@ -171,10 +171,6 @@ def _extract_region_values(words, image_b64):
     先用现有 merge 逻辑把「标签 + 下方值」合并成对，
     再按中文标签文本映射到 field key。
     对未能合并的独立行，尝试直接匹配标签文本。
-
-    2026-07-09 修复：
-    - 只搜索下方（不再区分左右排列），dy 上限 80→160，X 容差 60→120
-    - 性格类型允许含中文的值块
     """
     result = {}
 
@@ -185,13 +181,7 @@ def _extract_region_values(words, image_b64):
     ))
     word_list = [(w.get('words', '').strip(), w.get('location', {})) for w in sorted_w if w.get('words', '').strip()]
 
-    def _is_value_block(text, allow_cjk=False):
-        """判断是否为值块。allow_cjk=True 时允许中文（用于性格类型等）。"""
-        if allow_cjk:
-            return bool(re.match(r'^[一-鿿A-Za-z\d\s]{2,7}$', text))
-        return bool(re.match(r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh%+\-]+$', text))
-
-    # 2. 标签 + 值块合并（统一在下方搜）
+    # 2. 标签 + 下方值合并
     merged_pairs = []  # [(label_text, value_text)]
     used = set()
     for i, (cur, loc) in enumerate(word_list):
@@ -199,46 +189,42 @@ def _extract_region_values(words, image_b64):
             continue
         used.add(i)
         cx, cy = loc.get('left', 0), loc.get('top', 0)
-
-        is_personality_label = (cur == '性格类型')
-        allow_cjk = is_personality_label
-
         best_j, best_dy = None, 999
         for j, (nxt, loc2) in enumerate(word_list):
             if j in used:
                 continue
             ny = loc2.get('top', 0)
-            nx = loc2.get('left', 0)
-
-            # 只搜下方：dy 5~80px，X 对齐 ±60px
             if ny <= cy + 5:
                 continue
             dy = ny - cy
             if dy > 120:
                 continue
-            if abs(nx - cx) > 100:
+            # 值块：数字/字母/符号/百分比（排除纯中文）
+            nxt_has_cjk = bool(re.search(r'[一-鿿]', nxt))
+            if nxt_has_cjk:
                 continue
-            if not _is_value_block(nxt, allow_cjk=allow_cjk):
+            if not re.match(r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh%+\-]+$', nxt):
+                continue
+            nx = loc2.get('left', 0)
+            if abs(nx - cx) > 100:
                 continue
             if dy < best_dy:
                 best_dy = dy
                 best_j = j
-
         if best_j is not None:
             merged_pairs.append((cur, word_list[best_j][0]))
             used.add(best_j)
         else:
             merged_pairs.append((cur, None))
 
-        # 3. 按标签文字映射到 key
+    # 3. 按标签文字映射到 key
     for label, value in merged_pairs:
         key = _LABEL_TO_KEY.get(label)
         if key:
             if value:
                 result[key] = value
 
-    # 3b. 拆分多值串（如「20 Wsc 22 Wc」→ 两个独立值），按 X 就近分配
-    #     按 X 坐标分配（左边=第一个值）
+    # 3b. 拆分多值串（如「20 Wsc 22 Wc」→ 两个独立值），按 X 就近重新分配
     multi_val_pattern = re.compile(r'^(\d+\s*\w+)\s+(\d+\s*\w+)$')
     for i, (label, value) in enumerate(merged_pairs):
         if not value:
@@ -246,20 +232,22 @@ def _extract_region_values(words, image_b64):
         m = multi_val_pattern.match(value)
         if not m:
             continue
-        # 找到该 label 的位置
-        label_x, label_y = None, None
+        # 找到该 label 的 X 位置
+        label_x = None
         for t, loc in word_list:
             if t == label:
                 label_x = loc.get('left', 0) + loc.get('width', 0) / 2
-                label_y = loc.get('top', 0)
                 break
         if label_x is None:
             continue
-
-
         # 找同行未匹配 label（Y 差 ≤ 40px），选 X 最近的
+        label_y = None
+        for t, loc in word_list:
+            if t == label:
+                label_y = loc.get('top', 0)
+                break
         best_j, best_dx = None, 999
-        other_x_for_split, other_y_for_split = None, None
+        other_x_for_split = None
         for j, (other_label, other_val) in enumerate(merged_pairs):
             if other_val or other_label == label:
                 continue
@@ -278,7 +266,6 @@ def _extract_region_values(words, image_b64):
                 best_dx = dx
                 best_j = j
                 other_x_for_split = other_x
-                other_y_for_split = other_y
         if best_j is not None:
             other_label, _ = merged_pairs[best_j]
             val1, val2 = m.group(1), m.group(2)
@@ -298,22 +285,11 @@ def _extract_region_values(words, image_b64):
             result.setdefault('brain_balance', label)
 
     # 5. 对未能匹配 personality_type 的情况，扫一遍找逆思/认知等类型词
-    #    同时支持更宽泛的性格类型值（如「认知模仿型」「开放整合型」等复合型）
     if 'personality_type' not in result:
-        _personality_types = [
-            '逆思型', '认知型', '模仿型', '开放型', '整合型',
-            '认知模仿型', '开放整合型', '逆思认知型', '模仿开放型',
-        ]
         for text, _ in word_list:
-            if text in _personality_types:
+            if text in ('逆思型', '认知型', '模仿型', '开放型', '整合型'):
                 result['personality_type'] = text
                 break
-        # fallback: 匹配含「型」字的短文本（2-7字）作为性格类型
-        if 'personality_type' not in result:
-            for text, _ in word_list:
-                if re.match(r'^[\u4e00-\u9fffA-Za-z]{2,7}$', text) and '型' in text:
-                    result['personality_type'] = text
-                    break
 
     # 5b. 拆分已分配的多值串（如 spirit_communication="20 Wsc 22 Wc" → split to spirit_creative）
     _split_keys = [('spirit_communication', 'spirit_creative'),
@@ -367,6 +343,7 @@ def _extract_region_values(words, image_b64):
             result[ch_key] = best_pct
 
     return result
+
 
 def proxy_request(url, payload, headers, timeout=180):
     """直连 API"""
@@ -1096,31 +1073,23 @@ class SEEHandler(SimpleHTTPRequestHandler):
                     continue
                 used.add(i)
                 cx, cy = loc.get('left', 0), loc.get('top', 0)
-                cw = loc.get('width', 0)
                 cur_has_cjk = bool(re.search(r'[一-鿿]', cur))
-
-                is_personality = (cur == '性格类型')
-                allow_cjk_val = is_personality
-
-                # 统一在下方搜，dy 5~80px，X对齐±60px
+                # 找正下方X对齐最近的值块
                 best_j, best_dy = None, 999
                 for j, (nxt, loc2) in enumerate(words):
                     if j in used:
                         continue
                     ny = loc2.get('top', 0)
-                    nx = loc2.get('left', 0)
-                    nxt_is_value = bool(re.match(
-                        r'^[一-鿿A-Za-z\d\s]{2,7}$' if allow_cjk_val else
-                        r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh+-]+$', nxt))
-                    if not nxt_is_value:
-                        continue
-
-                    # 只搜下方：dy 5~80px，X对齐±60px
                     if ny <= cy + 5:
                         continue
                     dy = ny - cy
                     if dy > 120:
                         continue
+                    nxt_is_value = bool(re.match(r'^[\d\s.WwLlRrXxNnSsCcPpTtDdIiEeFfAaKkUuHh+-]+$', nxt))
+                    if not nxt_is_value:
+                        continue
+                    # X对齐：值块left在文字块left±100px内
+                    nx = loc2.get('left', 0)
                     if abs(nx - cx) > 100:
                         continue
                     if dy < best_dy:
