@@ -188,6 +188,9 @@ def _extract_region_values(words, image_b64):
         if i in used:
             continue
         used.add(i)
+        # 只有 _LABEL_TO_KEY 中的标签才参与配对，其他词只作候选值
+        if cur not in _LABEL_TO_KEY:
+            continue
         cx, cy = loc.get('left', 0), loc.get('top', 0)
         best_j, best_dy = None, 999
         for j, (nxt, loc2) in enumerate(word_list):
@@ -214,11 +217,8 @@ def _extract_region_values(words, image_b64):
         if best_j is not None:
             merged_pairs.append((cur, word_list[best_j][0]))
             used.add(best_j)
-            print(f"[OCR pair] {cur} -> {word_list[best_j][0]}", file=sys.stderr, flush=True)
         else:
             merged_pairs.append((cur, None))
-            if re.search(r'[一-鿿]', cur) and not cur[0].isdigit():
-                print(f"[OCR pair] {cur} -> NONE", file=sys.stderr, flush=True)
 
     # 3. 按标签文字映射到 key
     for label, value in merged_pairs:
@@ -1075,8 +1075,10 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 if i in used:
                     continue
                 used.add(i)
+                # 只有 _LABEL_TO_KEY 中的标签才参与配对
+                if cur not in _LABEL_TO_KEY:
+                    continue
                 cx, cy = loc.get('left', 0), loc.get('top', 0)
-                cur_has_cjk = bool(re.search(r'[一-鿿]', cur))
                 # 找正下方X对齐最近的值块
                 best_j, best_dy = None, 999
                 for j, (nxt, loc2) in enumerate(words):
