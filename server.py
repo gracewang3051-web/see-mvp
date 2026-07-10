@@ -214,8 +214,11 @@ def _extract_region_values(words, image_b64):
         if best_j is not None:
             merged_pairs.append((cur, word_list[best_j][0]))
             used.add(best_j)
+            print(f"[OCR pair] {cur} -> {word_list[best_j][0]}", file=sys.stderr, flush=True)
         else:
             merged_pairs.append((cur, None))
+            if re.search(r'[一-鿿]', cur) and not cur[0].isdigit():
+                print(f"[OCR pair] {cur} -> NONE", file=sys.stderr, flush=True)
 
     # 3. 按标签文字映射到 key
     for label, value in merged_pairs:
