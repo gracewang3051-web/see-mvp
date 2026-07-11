@@ -2292,3 +2292,50 @@ Step 5b: 想拆分已来不及 → right key 已被 3c 污染 → 跳过 ❌
 ## 📊 最终状态（2026-07-11 终版）
 
 **总计 78 项（本次 +4），全部闭环。**
+
+## 🔴 P0 — 同 key 多标签抢值导致 thinking_spatial / auditory_feeling 始终缺失（2026-07-11）
+
+### 问题
+
+thinking_spatial 和 auditory_feeling 两个字段始终为空，之前的 step 3c 复制逻辑掩盖了这个 Bug。
+
+### 根因
+
+每个功能有两个标签映射到同一 key（如「逻辑推理」「语言功能」→ thinking_logic），但只有一个值块。
+两个标签各自在 step 2 抢走不同的值块 → 对侧标签无值可用：
+
+```
+逻辑推理 → 抢走 "18Wc" ✅
+语言功能 → 同 key，但 "18Wc"已用 → 抢走 "17 Wc" ❌ (本属于 thinking_spatial)
+空间心像 → 没值了 → None ❌
+```
+
+听觉同理：「听觉辨识」「语言理解」都是 auditory_discrimination，抢光两个值块。
+
+### 修复
+
+**文件**: `server.py` `_extract_region_values()` step 2
+
+- 新增 `_claimed_keys` set：记录已经配对到值的 key
+- 同 key 后续标签直接跳过，不搜索新值块
+- 配对成功后 `_claimed_keys.add(cur_key)`
+
+### 修复后预期
+
+| 字段 | 修复前 | 修复后 |
+|------|--------|--------|
+| thinking_logic | "17 Wc"（被语言功能覆盖）| "18Wc" ✅ |
+| thinking_spatial | 缺失 | "17 Wc" ✅ |
+| auditory_discrimination | "20 Wc"（被语言理解覆盖）| "22Ws" ✅ |
+| auditory_feeling | 缺失 | "20 Wc" ✅ |
+
+### 涉及文件
+
+| 文件 | 变更 |
+|------|------|
+| `server.py` | step 2 加同 key 跳过逻辑，6 行 |
+---
+
+## 📊 最终状态（2026-07-11 终版 v2）
+
+**总计 82 项（本次 +4），全部闭环。**
