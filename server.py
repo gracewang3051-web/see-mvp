@@ -234,6 +234,7 @@ def _extract_region_values(words, image_b64):
                 result[key] = value
 
     # 3b. 拆分多值串（如「20 Wsc 22 Wc」→ 两个独立值），按 X 就近重新分配
+    # 修复：直接更新 result（不只是 merged_pairs），处理所有多值对（移除 break）
     multi_val_pattern = re.compile(r'^(\d+\s*\w+)\s+(\d+\s*\w+)$')
     for i, (label, value) in enumerate(merged_pairs):
         if not value:
@@ -260,6 +261,9 @@ def _extract_region_values(words, image_b64):
         for j, (other_label, other_val) in enumerate(merged_pairs):
             if other_val or other_label == label:
                 continue
+            # 确保 peer label 映射到不同的 key（避免拆分到同 key 的另一标签）
+            if _LABEL_TO_KEY.get(other_label) == _LABEL_TO_KEY.get(label):
+                continue
             other_x, other_y = None, None
             for t, loc in word_list:
                 if t == other_label:
@@ -278,27 +282,23 @@ def _extract_region_values(words, image_b64):
         if best_j is not None:
             other_label, _ = merged_pairs[best_j]
             val1, val2 = m.group(1), m.group(2)
+            this_key = _LABEL_TO_KEY.get(label)
+            other_key = _LABEL_TO_KEY.get(other_label)
             if label_x < other_x_for_split:
                 merged_pairs[i] = (label, val1)
                 merged_pairs[best_j] = (other_label, val2)
+                if this_key: result[this_key] = val1
+                if other_key: result[other_key] = val2
             else:
                 merged_pairs[i] = (label, val2)
                 merged_pairs[best_j] = (other_label, val1)
-            break
+                if this_key: result[this_key] = val2
+                if other_key: result[other_key] = val1
+            # 不再 break — 处理所有多值对
 
-    # 3c. 同功能区左右脑共享值（如果 left key 有值 right key 没有，使用同一组值）
-    _sibling_keys = [
-        ('thinking_logic', 'thinking_spatial'),
-        ('auditory_discrimination', 'auditory_feeling'),
-        ('body_discrimination', 'body_feeling'),
-        ('spirit_communication', 'spirit_creative'),
-        ('visual_discrimination', 'visual_feeling'),
-    ]
-    for _left, _right in _sibling_keys:
-        if _left in result and _right not in result:
-            result[_right] = result[_left]
-        elif _right in result and _left not in result:
-            result[_left] = result[_right]
+    # 3c. 已移除同功能区左右脑复制逻辑
+    # 左右脑各功能独立，各自的值必须分别识别。缺失的值不应从对侧复制。
+    # 多值串（如「20 Wsc 22 Wc」）由 step 3b 拆分后再经 step 5b 兜底。
 
     # 4. 处理本身就是中文值的情况（行为模式、脑平衡、性格类型）
     for label, value in merged_pairs:
@@ -338,7 +338,7 @@ def _extract_region_values(words, image_b64):
                     else:
                         result[_k1] = _m.group(2)
                         result[_k2] = _m.group(1)
-                break
+                # 不再 break — 处理所有待拆分的多值对
 
     # 6. Fallback: 通道百分比 X 就近匹配（合并失败时）
     pct_words = [(t, loc) for t, loc in word_list if re.match(r'^\d+\.?\d*\s*%$', t)]
