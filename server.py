@@ -188,8 +188,9 @@ def _extract_region_values(words, image_b64):
         if i in used:
             continue
         used.add(i)
-        # 只有 _LABEL_TO_KEY 中的标签才参与配对，其他词只作候选值
-        if cur not in _LABEL_TO_KEY:
+        # 只有合法标签才参与配对（_LABEL_TO_KEY + 行为/脑平衡/性格值词）
+        _LABEL_WORDS = {'动机型','构思型','均衡型','左脑型','右脑型','整合型','认知型','模仿型','开放型','逆思型','认知模仿型','开放整合型','逆思认知型','模仿开放型'}
+        if cur not in _LABEL_TO_KEY and cur not in _LABEL_WORDS:
             continue
         cx, cy = loc.get('left', 0), loc.get('top', 0)
         best_j, best_dy = None, 999
@@ -279,6 +280,20 @@ def _extract_region_values(words, image_b64):
                 merged_pairs[i] = (label, val2)
                 merged_pairs[best_j] = (other_label, val1)
             break
+
+    # 3c. 同功能区左右脑共享值（如果 left key 有值 right key 没有，使用同一组值）
+    _sibling_keys = [
+        ('thinking_logic', 'thinking_spatial'),
+        ('auditory_discrimination', 'auditory_feeling'),
+        ('body_discrimination', 'body_feeling'),
+        ('spirit_communication', 'spirit_creative'),
+        ('visual_discrimination', 'visual_feeling'),
+    ]
+    for _left, _right in _sibling_keys:
+        if _left in result and _right not in result:
+            result[_right] = result[_left]
+        elif _right in result and _left not in result:
+            result[_left] = result[_right]
 
     # 4. 处理本身就是中文值的情况（行为模式、脑平衡、性格类型）
     for label, value in merged_pairs:
@@ -1075,8 +1090,9 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 if i in used:
                     continue
                 used.add(i)
-                # 只有 _LABEL_TO_KEY 中的标签才参与配对
-                if cur not in _LABEL_TO_KEY:
+                # 只有合法标签才参与配对
+                _LABEL_WORDS_2 = {'动机型','构思型','均衡型','左脑型','右脑型','整合型','认知型','模仿型','开放型','逆思型','认知模仿型','开放整合型','逆思认知型','模仿开放型'}
+                if cur not in _LABEL_TO_KEY and cur not in _LABEL_WORDS_2:
                     continue
                 cx, cy = loc.get('left', 0), loc.get('top', 0)
                 # 找正下方X对齐最近的值块
