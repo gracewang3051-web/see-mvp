@@ -2339,3 +2339,29 @@ thinking_spatial 和 auditory_feeling 两个字段始终为空，之前的 step 
 ## 📊 最终状态（2026-07-11 终版 v2）
 
 **总计 82 项（本次 +4），全部闭环。**
+
+---
+
+## 🟡 P1 — _claimed_keys 变量未初始化导致 NameError（2026-07-11）
+
+### 问题
+
+服务器运行时报错：`_claimed_keys` 变量在 step 2 循环内使用（第214行 `if cur_key and cur_key in _claimed_keys`、第243行 `_claimed_keys.add(cur_key)`），但循环前未声明 `_claimed_keys = set()`。
+
+### 修复
+
+**文件**：`server.py` `_extract_region_values()` step 2（第198行后）
+
+- 在 `used = set()` 之后添加 `_claimed_keys = set()` 初始化
+
+### 涉及文件
+
+| 文件 | 变更 |
+|------|------|
+| `server.py` | +1 行 |
+
+---
+
+## 📊 最终状态（2026-07-11 终版 v3）
+
+**总计 83 项（本次 +1），全部闭环。**
