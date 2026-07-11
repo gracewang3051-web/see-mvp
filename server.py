@@ -209,6 +209,10 @@ def _extract_region_values(words, image_b64):
             if cur in _VALUE_WORDS:
                 merged_pairs.append((cur, None))
             continue
+        cur_key = _LABEL_TO_KEY.get(cur)
+        # 同 key 已有标签配对到值 → 跳过，不抢新值块
+        if cur_key and cur_key in _claimed_keys:
+            continue
         cx, cy = loc.get('left', 0), loc.get('top', 0)
         best_j, best_dy = None, 999
         for j, (nxt, loc2) in enumerate(word_list):
@@ -235,6 +239,8 @@ def _extract_region_values(words, image_b64):
         if best_j is not None:
             merged_pairs.append((cur, word_list[best_j][0]))
             used.add(best_j)
+            if cur_key:
+                _claimed_keys.add(cur_key)
         else:
             merged_pairs.append((cur, None))
 
