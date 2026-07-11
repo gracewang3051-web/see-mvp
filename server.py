@@ -196,6 +196,7 @@ def _extract_region_values(words, image_b64):
     # 2. 标签 + 下方值合并
     merged_pairs = []  # [(label_text, value_text)]
     used = set()
+    _claimed_keys = set()  # 已配对到值的 key，同 key 后续标签不抢新值块
     for i, (cur, loc) in enumerate(word_list):
         if i in used:
             continue
