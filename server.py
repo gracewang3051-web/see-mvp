@@ -174,12 +174,24 @@ def _extract_region_values(words, image_b64):
     """
     result = {}
 
+    _ocr_debug = os.environ.get('SEE_OCR_DEBUG', '') == '1'
+    def _dbg(msg):
+        if _ocr_debug:
+            import sys
+            print('[OCR-DEBUG] ' + msg, file=sys.stderr, flush=True)
+
     # 1. 按 Y 排序（10px 容差同行，同行左到右）
     sorted_w = sorted(words, key=lambda w: (
         round(w.get('location', {}).get('top', 0) / 10) * 10,
         w.get('location', {}).get('left', 0)
     ))
     word_list = [(w.get('words', '').strip(), w.get('location', {})) for w in sorted_w if w.get('words', '').strip()]
+
+    _dbg(f'=== OCR words ({len(word_list)} items) ===')
+    for _ti, (_tw, _tl) in enumerate(word_list):
+        _tx = _tl.get('left', 0)
+        _ty = _tl.get('top', 0)
+        _dbg(f'  [{_ti}] "{_tw}" @ x={_tx} y={_ty}')
 
     # 2. 标签 + 下方值合并
     merged_pairs = []  # [(label_text, value_text)]
@@ -225,6 +237,14 @@ def _extract_region_values(words, image_b64):
             used.add(best_j)
         else:
             merged_pairs.append((cur, None))
+
+    _dbg('=== Step 2 merged pairs ===')
+    for _mp in merged_pairs:
+        _dbg(f'  label="{_mp[0]}" value="{_mp[1]}"')
+
+    _dbg('=== Step 2 merged pairs ===')
+    for _mp in merged_pairs:
+        _dbg(f'  label="{_mp[0]}" value="{_mp[1]}"')
 
     # 3. 按标签文字映射到 key
     for label, value in merged_pairs:
@@ -364,6 +384,13 @@ def _extract_region_values(words, image_b64):
                 best_pct = pct_text
         if best_pct:
             result[ch_key] = best_pct
+
+    _dbg('=== Final result ===')
+    for _rk in sorted(result.keys()):
+        _dbg(f'  {_rk} = "{result[_rk]}"')
+    _missing = list(set(_LABEL_TO_KEY.values()) - set(result.keys()))
+    if _missing:
+        _dbg(f'  MISSING keys (no OCR value found): {sorted(_missing)}')
 
     return result
 
