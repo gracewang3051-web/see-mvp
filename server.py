@@ -188,9 +188,14 @@ def _extract_region_values(words, image_b64):
         if i in used:
             continue
         used.add(i)
-        # 只有合法标签才参与配对（_LABEL_TO_KEY + 行为/脑平衡/性格值词）
-        _LABEL_WORDS = {'动机型','构思型','均衡型','左脑型','右脑型','整合型','认知型','模仿型','开放型','逆思型','认知模仿型','开放整合型','逆思认知型','模仿开放型'}
-        if cur not in _LABEL_TO_KEY and cur not in _LABEL_WORDS:
+        # 只让 _LABEL_TO_KEY 中的标签参与值配对
+        if cur not in _LABEL_TO_KEY:
+            # 行为/脑平衡/性格等值词仍加入 merged_pairs（不配对），供后续 step 4/5 使用
+            _VALUE_WORDS = {'动机型','构思型','均衡型','左脑型','右脑型',
+                            '整合型','认知型','模仿型','开放型','逆思型',
+                            '认知模仿型','开放整合型','逆思认知型','模仿开放型'}
+            if cur in _VALUE_WORDS:
+                merged_pairs.append((cur, None))
             continue
         cx, cy = loc.get('left', 0), loc.get('top', 0)
         best_j, best_dy = None, 999
@@ -1090,9 +1095,9 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 if i in used:
                     continue
                 used.add(i)
-                # 只有合法标签才参与配对
-                _LABEL_WORDS_2 = {'动机型','构思型','均衡型','左脑型','右脑型','整合型','认知型','模仿型','开放型','逆思型','认知模仿型','开放整合型','逆思认知型','模仿开放型'}
-                if cur not in _LABEL_TO_KEY and cur not in _LABEL_WORDS_2:
+                # 只让 _LABEL_TO_KEY 中的标签参与值配对
+                if cur not in _LABEL_TO_KEY:
+                    merged.append(cur)
                     continue
                 cx, cy = loc.get('left', 0), loc.get('top', 0)
                 # 找正下方X对齐最近的值块
