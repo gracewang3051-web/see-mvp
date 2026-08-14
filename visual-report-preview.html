@@ -666,11 +666,12 @@ async function exportPDF() {
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
     let pdf;
-    if (pageImgH <= pdfH) {
-      // 单页：居中
+    // 容差：内容高度略超 A4（如 1px 内的取整误差）时，仍强制单页，避免出现空白第二页
+    const TOLERANCE = 4; // mm
+    if (pageImgH <= pdfH + TOLERANCE) {
+      // 单页：整页等比缩放铺满 A4（避免溢出产生空白页）
       pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const yOffset = (pdfH - pageImgH) / 2;
-      pdf.addImage(imgData, 'JPEG', 0, yOffset, pdfW, pageImgH);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, Math.min(pageImgH, pdfH));
     } else {
       // 多页：按 A4 高度切图
       pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
