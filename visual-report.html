@@ -729,7 +729,49 @@ async function exportPDF() {
       }
     }
 
-    pdf.save(getFreeFileName() + '.pdf');
+    // ===== 三端下载适配（参考旧版 index.html 的 downloadPDF 逻辑）=====
+    const filename = getFreeFileName() + '.pdf';
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+    const isWechat = /MicroMessenger/i.test(navigator.userAgent || '');
+
+    if (isMobile && !isWechat && navigator.share && navigator.canShare) {
+      // 移动端（非微信）：优先 Web Share API，弹系统分享面板（存文件/发微信/云盘）
+      try {
+        const blob = pdf.output('blob');
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: filename });
+          return;
+        }
+      } catch (shareErr) {
+        // Share API 失败或被用户取消 → 回退到直接下载
+        if (shareErr.name !== 'AbortError') { /* 非取消，继续回退 */ }
+      }
+      pdf.save(filename);
+      return;
+    }
+
+    if (isWechat) {
+      // 微信浏览器：Blob 下载受限，用 bloburl + 隐藏 a 标签 + 兼容回退
+      try {
+        const blobUrl = pdf.output('bloburl');
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 60000);
+      } catch (e) {
+        // 微信 blob 下载失败 → 提示用户长按保存或换浏览器
+        alert('微信内下载受限，请点击右上角「...」用浏览器打开后再导出 PDF');
+      }
+      return;
+    }
+
+    // 桌面端（及不支持 Share 的移动端）：直接下载
+    pdf.save(filename);
   } catch (e) {
     alert('PDF 导出失败：' + e.message);
   } finally {
