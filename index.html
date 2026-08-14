@@ -131,6 +131,19 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 .hidden { display: none !important; }
 
 #manualCard select, #manualCard input { background: #1a1a38; color: #e0dcd4; border-color: #3a3a55; }
+
+/* ===== 深度报告展示页（showReport=deep）移动端适配 ===== */
+/* 报告卡片标题栏：窄屏下标题与下载按钮上下排布，避免挤压 */
+#reportCard h2 { flex-wrap: wrap; row-gap: 8px; }
+#reportCard h2 > span[style*="float"] { float: none !important; width: 100%; justify-content: flex-start; }
+#reportCard h2 > span[style*="float"] .btn { flex: 1; justify-content: center; }
+/* 返回按钮：窄屏下占满整行，增大点击区域 */
+#backToInput a { width: 100%; text-align: center; padding: 12px 18px; }
+@media (max-width: 500px) {
+  #reportCard { padding: 16px 12px; }
+  .report-content { padding: 16px 12px; max-height: 60vh; }
+  #reportCard h2 { font-size: 1em; }
+}
 </style>
 <script src="dealer.js"></script>
 </head>
@@ -155,7 +168,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 <div class="container">
 
 <!-- ====== STEP 1: 输入你的思维画像 ====== -->
-<div class="card">
+<div class="card" id="step1Card">
   <h2><span class="step-badge">1</span> 输入你的思维画像</h2>
   <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <label style="font-size:.85em;color:var(--muted);white-space:nowrap">👤 姓名</label>
@@ -211,7 +224,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 </div>
 
 <!-- ====== 合盘入口 ====== -->
-<div class="card">
+<div class="card" id="compositeCard">
   <h2>💫 关系合盘</h2>
   <div style="font-size:.82em;color:var(--muted);margin-bottom:10px">上传对方思维导图，生成双人关系解读报告</div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
@@ -486,15 +499,37 @@ document.addEventListener('DOMContentLoaded', () => {
   if (savedName) document.getElementById('userName').value = savedName;
   initManualEntries();
 
-  // 深度报告跳转回来：检测 ?showReport=deep 参数，展示深度报告
+  // 深度报告跳转回来：检测 ?showReport=deep 参数，展示深度报告（干净的报告页，隐藏输入区）
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('showReport') === 'deep') {
     const deepMd = sessionStorage.getItem('see_deep_report_shared');
     if (deepMd) {
+      // 1. 隐藏所有输入区（保留顶部品牌 banner）
+      ['step1Card', 'manualCard', 'resultCard', 'compositeCard'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+
+      // 2. 展示深度报告卡片
       document.getElementById('reportCard').classList.remove('hidden');
       document.getElementById('reportContent').classList.remove('loading');
       document.getElementById('reportContent').innerHTML = parseMD(deepMd);
-      // 滚动到深度报告卡片
+
+      // 3. 注入 state.reports，让下载按钮（MD/Word/PDF）能正确导出深度报告
+      state.reports = { portrait: deepMd };
+      state.reportOrder = ['portrait'];
+
+      // 4. 在报告卡片上方插入「返回重新测评」入口
+      const reportCard = document.getElementById('reportCard');
+      if (!document.getElementById('backToInput')) {
+        const backBtn = document.createElement('div');
+        backBtn.id = 'backToInput';
+        backBtn.style.cssText = 'max-width:720px;margin:0 auto 12px;';
+        backBtn.innerHTML = '<a href="index.html" style="display:inline-block;padding:8px 18px;border-radius:8px;background:rgba(255,255,255,.12);color:#e0dcd4;text-decoration:none;font-size:.85em;border:1px solid #3a3a55">← 返回重新测评</a>';
+        reportCard.parentNode.insertBefore(backBtn, reportCard);
+      }
+
+      // 5. 滚动到报告卡片
       document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth' });
     }
   }
