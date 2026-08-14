@@ -215,7 +215,7 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
   </div>
   <div id="resultModules"></div>
   <div class="flex-row" style="margin-top:14px">
-    <button class="btn btn-primary" id="btnGenerate" onclick="generateReports()">📝 生成你的解读报告</button>
+    <button class="btn btn-primary" id="btnGenerate" onclick="generateReports()">📝 生成你的免费报告</button>
   </div>
 </div>
 
@@ -698,31 +698,26 @@ async function generateReports() {
     alert('请填写所有 27 个字段后才能生成报告（25题 + 大脑通道 + 接收器）');
     return;
   }
-  // 校验用户码
-  var code = getUserCode();
-  if (!code) { alert('请先输入用户码'); return; }
-  if (!isValidCode(code)) { alert('无效的用户码，请联系管理员获取'); return; }
-  // 检查配额
-  var count = getReportCount(code);
-  var max = getMaxReports(code);
-  if (count >= max) { alert('已生成 ' + count + ' 份报告，已达上限 ' + max + ' 份'); return; }
-  document.getElementById('btnGenerate').disabled = true;
-  document.getElementById('reportCard').classList.remove('hidden');
-  document.getElementById('reportContent').classList.add('loading');
-  document.getElementById('reportContent').textContent = '正在为你生成思维画像报告...';
+  // 免费可视化报告：纯前端计算，跳转到独立报告页（不校验用户码、不扣配额）
   var portrait = buildPortrait();
-  try {
-    var r = await callAPI('portrait', portrait, '');
-    state.reports = {portrait: r.content};
-    state.reportOrder = ['portrait'];
-    saveReports();
-    updateQuotaDisplay(code);
-    document.getElementById('reportContent').classList.remove('loading');
-    document.getElementById('reportContent').innerHTML = parseMD(r.content);
-  } catch(e) {
-    document.getElementById('reportContent').textContent = '生成失败: '+e.message;
-  }
-  document.getElementById('btnGenerate').disabled = false;
+  var brainChannel = document.querySelector('input[name="brainChannel"]:checked').value;
+  var brCheckedParts = [];
+  brChecked.forEach(function(cb){ brCheckedParts.push(cb.value); });
+  var brainReceiver = brCheckedParts.join('、');
+
+  // 将答案数据写入 sessionStorage，供 visual-report.html 读取
+  var payload = {
+    answers: state.answers,
+    name: getUserName(),
+    channel: brainChannel,
+    receiver: brainReceiver
+  };
+  sessionStorage.setItem('see_visual_report_data', JSON.stringify(payload));
+  sessionStorage.setItem('see_code_shared', getUserCode());
+  sessionStorage.setItem('see_portrait_name_shared', getUserName());
+
+  // 跳转到免费可视化报告页
+  window.location.href = 'visual-report.html';
 }
 
 

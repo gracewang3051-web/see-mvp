@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SEE 思维画像 · 报告预览版（示例数据）</title>
+<style>
+  :root {
+    --spirit: #E63946;   /* 精神·红 */
+    --think:  #7B2CBF;   /* 思维·紫 */
+    --audio:  #06A77D;   /* 听觉·绿 */
+    --visual: #0096C7;   /* 视觉·蓝 */
+    --body:   #F77F00;   /* 体觉·橙 */
+    --ink:    #2b2d42;
+    --line:   #e5e7ef;
+    --paper:  #ffffff;
+    --soft:   #f6f7fb;
+    --warn:   #ef4444;
+    --ok:     #10b981;
+    --need:   #f59e0b;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #eef0f6; font-family: "PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif; color: var(--ink); }
+
+  /* ===== 顶部导航（免费报告）===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: linear-gradient(135deg, #2b2d42, #4f46e5);
+    color: #fff; padding: 10px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(0,0,0,.15);
+  }
+  .topbar .brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; }
+  .topbar .brand .badge {
+    font-size: 10px; font-weight: 500; background: rgba(255,255,255,.2);
+    padding: 2px 8px; border-radius: 999px; letter-spacing: 1px;
+  }
+  .topbar .btns { display: flex; gap: 8px; }
+  .topbar button {
+    padding: 7px 14px; border-radius: 6px; border: 0; cursor: pointer;
+    background: rgba(255,255,255,.15); color: #fff; font-size: 13px;
+    transition: all .2s;
+  }
+  .topbar button:hover { background: rgba(255,255,255,.25); }
+  .topbar button.primary { background: #fbbf24; color: #2b2d42; font-weight: 700; }
+
+  /* ===== A4 页面 ===== */
+  .page {
+    width: 210mm; min-height: 297mm; margin: 16px auto;
+    background: var(--paper); padding: 10mm 12mm 12mm;
+    box-shadow: 0 6px 24px rgba(0,0,0,.08); position: relative;
+  }
+
+  .top { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
+  .top .brand { display: flex; align-items: center; gap: 10px; }
+  .top .logo { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, var(--spirit), var(--audio)); color: #fff; font-weight: 800; display: grid; place-items: center; letter-spacing: 1px; }
+  .top h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+  .top h1 small { color: #888; font-weight: 500; font-size: 12px; margin-left: 8px; }
+  .top .meta { font-size: 11px; color: #666; text-align: right; }
+  .top .meta b { color: var(--ink); }
+
+  .info { margin-top: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 11px; }
+  .info .cell { background: var(--soft); border-radius: 6px; padding: 4px 8px; }
+  .info .cell span { color: #888; margin-right: 4px; }
+  .info .cell b { color: var(--ink); }
+
+  .section-title { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+  .section-title::before { content: ""; width: 4px; height: 13px; background: var(--ink); border-radius: 2px; }
+
+  .center { display: grid; grid-template-columns: 1.05fr 1fr; gap: 10px; margin-top: 6px; }
+  .brain-card { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: var(--soft); }
+  .brain-card .legend { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 4px; font-size: 10px; }
+  .brain-card .legend div { display: flex; align-items: center; gap: 4px; }
+  .brain-card .legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  .abcd { display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 11px; }
+  .abcd .row { display: grid; grid-template-columns: 66px 1fr; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: var(--soft); }
+  .abcd .row .area { font-weight: 700; }
+  .abcd .row .area small { display: block; font-weight: 400; color: #888; font-size: 9px; }
+  .abcd .row .pills { display: flex; gap: 3px; flex-wrap: wrap; }
+  .pill { border: 1px dashed #c8cbd6; color: #999; padding: 1px 5px; border-radius: 999px; font-size: 9px; }
+  .pill.active { border-style: solid; color: #fff; }
+  .pill.a   { background: #1f5fbf; border-color: #1f5fbf; }
+  .pill.b   { background: #d63384; border-color: #d63384; }
+  .pill.c   { background: #4f46e5; border-color: #4f46e5; }
+  .pill.d   { background: #f59e0b; border-color: #f59e0b; }
+
+  .abilities { margin-top: 6px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .ab { border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: #fff; display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden; }
+  .ab::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--side); }
+  .ab .head { display: flex; align-items: center; justify-content: space-between; }
+  .ab .head .name { font-size: 11px; font-weight: 700; }
+  .ab .head .name small { display: block; font-weight: 400; color: #888; font-size: 9px; }
+  .ab .brain-tags { display: flex; gap: 4px; font-size: 9px; }
+  .b-tag { padding: 1px 4px; border-radius: 4px; border: 1px solid #d8dbe6; color: #666; }
+  .b-tag.hot { background: #fff1f1; color: #c0392b; border-color: #f5b5b5; }
+  .b-tag.cold { background: #fff8e6; color: #a16207; border-color: #f8d989; }
+
+  .battery { display: flex; align-items: center; gap: 4px; }
+  .bat { position: relative; flex: 1; height: 11px; border: 1.5px solid #c8cbd6; border-radius: 3px; background: #fff; overflow: hidden; }
+  .bat::after { content: ""; position: absolute; right: -4px; top: 2px; width: 2px; height: 7px; background: #c8cbd6; border-radius: 0 2px 2px 0; }
+  .bat .fill { height: 100%; background: var(--ok); width: 0%; transition: width .4s; }
+  .bat .fill.over  { background: var(--warn); }
+  .bat .fill.need  { background: var(--need); }
+  .bat .fill.bal   { background: linear-gradient(90deg, #10b981, #6366f1); }
+  .pct { font-size: 10px; min-width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .status { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; }
+  .status.over { background: #fff1f1; color: #c0392b; }
+  .status.need { background: #fff8e6; color: #a16207; }
+  .status.ok   { background: #ecfdf5; color: #047857; }
+  .status.bal  { background: #eef2ff; color: #4338ca; }
+
+  .summary { margin-top: 6px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .diag { border: 1px solid var(--line); border-radius: 8px; padding: 8px; border-top: 3px solid var(--side); }
+  .diag h3 { margin: 0 0 4px; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+  .diag h3 .ico { font-size: 13px; }
+  .diag ul { margin: 0; padding-left: 14px; font-size: 10.5px; line-height: 1.5; }
+  .diag ul li { margin-bottom: 1px; }
+  .diag .hint { font-size: 9.5px; color: #888; margin-top: 3px; }
+
+  .advice { margin-top: 6px; border: 1px dashed #d8dbe6; border-radius: 8px; padding: 8px; background: var(--soft); }
+  .advice h3 { margin: 0 0 4px; font-size: 12px; }
+  .advice .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; font-size: 10.5px; }
+  .advice .grid .item { background: #fff; border-radius: 5px; padding: 4px 7px; }
+  .advice .grid .item b { color: var(--ink); }
+
+  .footer { margin-top: 8px; border-top: 1px dashed #d8dbe6; padding-top: 4px; display: flex; justify-content: space-between; font-size: 9px; color: #888; }
+
+  /* ===== 深度解读报告入口 ===== */
+  .deep-entry {
+    margin: 16px auto; max-width: 210mm;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #2b2d42, #4f46e5);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.15);
+  }
+  .deep-entry .txt { color: #fff; }
+  .deep-entry .txt h3 { margin: 0 0 4px; font-size: 15px; }
+  .deep-entry .txt p { margin: 0; font-size: 12px; color: rgba(255,255,255,.75); }
+  .deep-entry button {
+    padding: 10px 20px; border-radius: 8px; border: 0; cursor: pointer;
+    background: #fbbf24; color: #2b2d42; font-weight: 700; font-size: 14px;
+    white-space: nowrap; transition: all .2s;
+  }
+  .deep-entry button:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(251,191,36,.4); }
+  .deep-entry button:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+  /* ===== 深度报告结果面板 ===== */
+  .deep-result {
+    max-width: 210mm; margin: 0 auto 16px; display: none;
+    background: var(--paper); border-radius: 12px; padding: 20px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.08);
+  }
+  .deep-result.show { display: block; }
+  .deep-result .hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .deep-result .hd h3 { margin: 0; font-size: 15px; }
+  .deep-result .hd .actions { display: flex; gap: 6px; }
+  .deep-result .hd button { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--line); background: #fff; cursor: pointer; font-size: 12px; }
+  .deep-content { padding: 16px; background: #fafbfd; border-radius: 8px; font-size: 13px; line-height: 1.8; }
+  .deep-content.loading { text-align: center; color: #888; padding: 40px; }
+  .deep-content h2 { font-size: 16px; color: var(--ink); margin: 16px 0 8px; }
+  .deep-content h3 { font-size: 14px; color: #4f46e5; margin: 12px 0 6px; }
+  .deep-content p { margin: 0 0 8px; }
+  .deep-content ul { margin: 8px 0; padding-left: 20px; }
+  .deep-content li { margin-bottom: 4px; }
+
+  /* ===== 移动端适配（≤768px）===== */
+  @media (max-width: 768px) {
+    .topbar { padding: 8px 12px; }
+    .topbar .brand { font-size: 13px; }
+    .topbar .brand .badge { font-size: 9px; padding: 1px 6px; }
+    .topbar button { padding: 6px 10px; font-size: 12px; }
+
+    /* A4 页面改为流式宽度 */
+    .page { width: auto; min-height: auto; margin: 0; padding: 12mm 10mm 14mm; box-shadow: none; }
+
+    /* 顶部报告头：上下排布 */
+    .top { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .top h1 { font-size: 18px; }
+    .top h1 small { display: block; margin-left: 0; margin-top: 2px; }
+    .top .meta { text-align: left; }
+
+    /* 客户信息条：2 列 */
+    .info { grid-template-columns: 1fr 1fr; }
+
+    /* 雷达图 + ABCD 改为上下排布 */
+    .center { grid-template-columns: 1fr; }
+    .brain-card svg { max-height: 240px; }
+
+    /* 10 大能力：5 列 → 2 列 */
+    .abilities { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .ab { padding: 10px; }
+    .ab .head .name { font-size: 13px; }
+    .ab .head .name small { font-size: 11px; }
+
+    /* 诊断：3 列 → 1 列 */
+    .summary { grid-template-columns: 1fr; gap: 10px; }
+
+    /* 30 天处方：2 列 → 1 列 */
+    .advice .grid { grid-template-columns: 1fr; }
+
+    /* 深度报告入口：上下排布 */
+    .deep-entry { flex-direction: column; align-items: stretch; text-align: center; padding: 14px 16px; }
+    .deep-entry button { width: 100%; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    .topbar, .deep-entry, .deep-result, .no-print { display: none !important; }
+    .page { margin: 0; box-shadow: none; width: 210mm; min-height: 297mm; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ================ 顶部导航 ================ -->
+<div class="topbar">
+  <div class="brand">🧠 SEE 思维画像 <span class="badge">预览版</span></div>
+  <div class="btns">
+    <button onclick="exportPDF()">🖨️ 导出 PDF</button>
+  </div>
+</div>
+
+<!-- ================ 报告主体 ================ -->
+<div class="page" id="report">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">SEE</div>
+      <h1>思维画像 · 我的大脑使用报告 <small>My Brain Usage Report</small></h1>
+    </div>
+    <div class="meta">
+      <div>测评编号：<b id="meta-id">SEE-2026-08-14-001</b></div>
+      <div>测评日期：<b id="meta-date">2026-08-14</b></div>
+      <div>测评师：<b>SEE 系统</b></div>
+    </div>
+  </div>
+
+  <div class="info">
+    <div class="cell"><span>姓名</span><b id="info-name">—</b></div>
+    <div class="cell"><span>大脑通道</span><b id="info-channel">—</b></div>
+    <div class="cell"><span>大脑接收器</span><b id="info-receiver">—</b></div>
+    <div class="cell"><span>报告类型</span><b>免费版</b></div>
+  </div>
+
+  <div class="section-title">5 大功能区使用概览</div>
+  <div class="center">
+    <div class="brain-card">
+      <svg viewBox="0 0 320 280" width="100%" height="185">
+        <rect x="0" y="0" width="320" height="280" fill="#f0f2f8"/>
+        <g fill="none" stroke="#d8dbe6" stroke-width="1">
+          <polygon points="160,40 273,108 240,236 80,236 47,108"/>
+          <polygon points="160,70 252,120 226,220 94,220 68,120"/>
+          <polygon points="160,100 231,131 212,202 108,202 89,131"/>
+          <polygon points="160,130 210,143 198,184 122,184 110,143"/>
+        </g>
+        <g stroke="#c8cbd6" stroke-width="1" stroke-dasharray="3,3">
+          <line x1="160" y1="160" x2="160" y2="40"/>
+          <line x1="160" y1="160" x2="273" y2="108"/>
+          <line x1="160" y1="160" x2="240" y2="236"/>
+          <line x1="160" y1="160" x2="80" y2="236"/>
+          <line x1="160" y1="160" x2="47" y2="108"/>
+        </g>
+        <g id="petals"></g>
+        <circle cx="160" cy="160" r="22" fill="#fff" stroke="#2b2d42" stroke-width="1.5"/>
+        <text x="160" y="156" text-anchor="middle" font-size="11" font-weight="700" fill="#2b2d42">SEE</text>
+        <text x="160" y="170" text-anchor="middle" font-size="9" fill="#888">大脑体</text>
+      </svg>
+      <div class="legend">
+        <div><i style="background:var(--spirit)"></i>精神·红</div>
+        <div><i style="background:var(--think)"></i>思维·紫</div>
+        <div><i style="background:var(--audio)"></i>听觉·绿</div>
+        <div><i style="background:var(--visual)"></i>视觉·蓝</div>
+        <div><i style="background:var(--body)"></i>体觉·橙</div>
+      </div>
+    </div>
+    <div class="abcd"><div id="abcd-rows"></div></div>
+  </div>
+
+  <div class="section-title">10 大能力电量分布 <small style="color:#888;font-weight:400;">⚡ 用电过度 · ✅ 状态良好 · 🔋 需要充电</small></div>
+  <div class="abilities" id="abilities"></div>
+
+  <div class="section-title">用电诊断 · 充电建议</div>
+  <div class="summary">
+    <div class="diag" style="--side: var(--warn)">
+      <h3><span class="ico">⚡</span> 用电过度（建议放电）</h3>
+      <ul id="diag-over"></ul>
+      <div class="hint">长期过度使用会消耗精力，需有意识地"断电"休息</div>
+    </div>
+    <div class="diag" style="--side: var(--ok)">
+      <h3><span class="ico">✅</span> 状态良好（维持节奏）</h3>
+      <ul id="diag-ok"></ul>
+      <div class="hint">保持当前使用习惯，可适度迭代输出方式</div>
+    </div>
+    <div class="diag" style="--side: var(--need)">
+      <h3><span class="ico">🔋</span> 需要充电（建议启动）</h3>
+      <ul id="diag-need"></ul>
+      <div class="hint">对应能力长期未启动，需要刻意练习和外部滋养</div>
+    </div>
+  </div>
+
+  <div class="advice">
+    <h3>🌱 30 天充电处方</h3>
+    <div class="grid" id="advice-grid"></div>
+  </div>
+
+  <div class="footer">
+    <div>SEE 思维画像 · 基于 SEE 卡认知模型</div>
+    <div>© 2026 大脑优势测评 · 仅供测评对象本人使用</div>
+  </div>
+</div>
+
+<!-- ================ 深度解读报告入口 ================ -->
+<div class="deep-entry">
+  <div class="txt">
+    <h3>🔍 想更深入地了解自己？</h3>
+    <p>查看 AI 生成的深度解读报告，包含个性化分析与成长建议</p>
+  </div>
+  <button id="btnDeep" onclick="requestDeepReport()">查看深度解读报告</button>
+</div>
+
+<!-- ================ 深度报告结果面板 ================ -->
+<div class="deep-result" id="deepResult">
+  <div class="hd">
+    <h3>📋 深度解读报告</h3>
+    <div class="actions">
+      <button onclick="downloadDeep('md')">📥 MD</button>
+      <button onclick="downloadDeep('doc')">📝 Word</button>
+      <button onclick="downloadDeepPDF()">🖨️ PDF</button>
+    </div>
+  </div>
+  <div class="deep-content" id="deepContent"></div>
+</div>
+
+<script>
+/* =========================================================
+   5 大功能区配置（与 see-report 一致）
+   ========================================================= */
+const AREAS = [
+  { key: "spirit", name: "精神", en: "战略方向", color: "var(--spirit)",
+    abilities: [
+      { hemi: "L", name: "目标规划", desc: "按计划推进 / 逻辑驱动" },
+      { hemi: "R", name: "愿景驱动", desc: "使命感 / 意义感" }
+    ] },
+  { key: "think", name: "思维", en: "创意孵化器", color: "var(--think)",
+    abilities: [
+      { hemi: "L", name: "深度分析", desc: "拆解 / 推理 / 因果" },
+      { hemi: "R", name: "创意联想", desc: "整体 / 直觉 / 灵感" }
+    ] },
+  { key: "audio", name: "听觉", en: "沟通路径", color: "var(--audio)",
+    abilities: [
+      { hemi: "L", name: "抓重点听", desc: "听内容 / 理因果" },
+      { hemi: "R", name: "听情绪", desc: "听语气 / 感受关系" }
+    ] },
+  { key: "visual", name: "视觉", en: "审美细节", color: "var(--visual)",
+    abilities: [
+      { hemi: "L", name: "细节审视", desc: "挑剔 / 顺序 / 准确" },
+      { hemi: "R", name: "整体审美", desc: "美感 / 平衡 / 氛围" }
+    ] },
+  { key: "body", name: "体觉", en: "行动感受", color: "var(--body)",
+    abilities: [
+      { hemi: "L", name: "步骤行动", desc: "按部就班 / 执行力" },
+      { hemi: "R", name: "直觉反应", desc: "身体感受 / 即兴" }
+    ] }
+];
+
+// 25题 → 5区映射（q01-q05→spirit, q06-q10→think, ...）
+const AREA_KEY_BY_MODULE = ["spirit", "think", "audio", "visual", "body"];
+
+// ABCD 语义标签（每区不同）
+const ABCD_LABELS = {
+  spirit: { A: "目标", B: "愿景", C: "双脑", D: "需支持" },
+  think:  { A: "分析", B: "整体", C: "双脑", D: "需支持" },
+  audio:  { A: "内容", B: "情绪", C: "双脑", D: "需支持" },
+  visual: { A: "细节", B: "美感", C: "双脑", D: "需支持" },
+  body:   { A: "步骤", B: "直觉", C: "双脑", D: "需支持" }
+};
+
+/* =========================================================
+   从 sessionStorage 读取答案数据
+   index.html 识别完成后写入 see_visual_report_data
+   ========================================================= */
+// 预览版：直接内置示例数据（不依赖 sessionStorage / 后端）
+const DEMO = {
+  spirit: ["A","B","C","C","B"],
+  think:  ["B","A","B","D","B"],
+  audio:  ["A","A","A","A","D"],
+  visual: ["C","B","C","B","C"],
+  body:   ["B","A","B","D","B"]
+};
+const demoAnswers = {};
+AREA_KEY_BY_MODULE.forEach((key, mi) => {
+  DEMO[key].forEach((v, i) => { demoAnswers['q' + String(mi*5 + i + 1).padStart(2,'0')] = v; });
+});
+let RAW = { answers: demoAnswers, name: '张同学（示例）', channel: '深度', receiver: '感知、分析' };
+
+// 转换为每区 {A,B,C,D} 计数
+function buildCounts() {
+  const counts = {};
+  AREA_KEY_BY_MODULE.forEach((key, mi) => {
+    const c = { A: 0, B: 0, C: 0, D: 0 };
+    for (let i = 1; i <= 5; i++) {
+      const qid = 'q' + String(mi * 5 + i).padStart(2, '0');
+      const a = (RAW.answers[qid] || '').toUpperCase();
+      if (c[a] !== undefined) c[a]++;
+    }
+    counts[key] = c;
+  });
+  return counts;
+}
+const COUNTS = buildCounts();
+
+/* =========================================================
+   计算每个功能区的主要频道 + 每个能力的电量
+   （与 see-report 的 analyze() 完全一致）
+   ========================================================= */
+function analyze(areaKey, counts) {
+  const total = (counts.A + counts.B + counts.C + counts.D) || 1;
+  const main = Object.entries(counts).sort((a,b) => b[1] - a[1])[0][0];
+  const mainCount = counts[main];
+
+  let L, R, status;
+  if (main === "A" && counts.A > 0) {
+    L = 90 + (counts.A / 5) * 10;
+    R = 20 + (counts.B / 5) * 10;
+    status = { L: "over", R: "need" };
+  } else if (main === "B" && counts.B > 0) {
+    R = 90 + (counts.B / 5) * 10;
+    L = 20 + (counts.A / 5) * 10;
+    status = { L: "need", R: "over" };
+  } else if (main === "C" && counts.C > 0) {
+    L = 65 + (counts.C / 5) * 10;
+    R = 65 + (counts.C / 5) * 10;
+    status = { L: "ok", R: "ok" };
+  } else {
+    L = 20 + (counts.A / 5) * 10;
+    R = 20 + (counts.B / 5) * 10;
+    status = { L: "need", R: "need" };
+  }
+
+  if (counts.D >= 3) {
+    L = Math.min(L, 30); R = Math.min(R, 30);
+    status = { L: "need", R: "need" };
+  }
+  if (counts.C >= 3 && main === "C") {
+    status = { L: "bal", R: "bal" };
+    L = 70 + (counts.C / 5) * 10;
+    R = 70 + (counts.C / 5) * 10;
+  }
+
+  return {
+    main, mainCount, counts,
+    abilities: [
+      { hemi: "L", pct: Math.round(L), status: status.L },
+      { hemi: "R", pct: Math.round(R), status: status.R }
+    ]
+  };
+}
+
+function renderPetals() {
+  const svg = document.getElementById('petals');
+  const cx = 160, cy = 160, maxR = 100;
+  const angles = [-90, -18, 54, 126, 198].map(a => a * Math.PI / 180);
+  const points = AREAS.map((a, i) => ({
+    x: cx + maxR * Math.cos(angles[i]),
+    y: cy + maxR * Math.sin(angles[i]),
+    a
+  }));
+  const path = points.map((p, i) => (i === 0 ? "M" : "L") + p.x + "," + p.y).join(" ") + " Z";
+  svg.innerHTML = `
+    <path d="${path}" fill="rgba(99,102,241,0.10)" stroke="#6366f1" stroke-width="1.5"/>
+    ${points.map(p => `
+      <circle cx="${p.x}" cy="${p.y}" r="6" fill="${p.a.color}" stroke="#fff" stroke-width="2"/>
+      <text x="${p.x + (p.x > cx ? 8 : -8)}" y="${p.y + (p.y > cy ? 14 : -8)}"
+            text-anchor="${p.x > cx ? 'start' : 'end'}"
+            font-size="11" font-weight="700" fill="${p.a.color}">${p.a.name}</text>
+      <text x="${p.x + (p.x > cx ? 8 : -8)}" y="${p.y + (p.y > cy ? 26 : 4)}"
+            text-anchor="${p.x > cx ? 'start' : 'end'}"
+            font-size="9" fill="#888">${p.a.en}</text>
+    `).join('')}
+  `;
+}
+
+function renderABCD() {
+  const container = document.getElementById('abcd-rows');
+  container.innerHTML = AREAS.map(a => {
+    const c = COUNTS[a.key];
+    const lb = ABCD_LABELS[a.key];
+    return `
+      <div class="row">
+        <div class="area" style="color:${a.color}">${a.name}<small>${a.en}</small></div>
+        <div class="pills">
+          <span class="pill a ${c.A > 0 ? 'active' : ''}">A ${lb.A} ${c.A}</span>
+          <span class="pill b ${c.B > 0 ? 'active' : ''}">B ${lb.B} ${c.B}</span>
+          <span class="pill c ${c.C > 0 ? 'active' : ''}">C ${lb.C} ${c.C}</span>
+          <span class="pill d ${c.D > 0 ? 'active' : ''}">D ${lb.D} ${c.D}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderAbilities() {
+  const container = document.getElementById('abilities');
+  container.innerHTML = AREAS.map(a => {
+    const r = analyze(a.key, COUNTS[a.key]);
+    return a.abilities.map((ab, i) => {
+      const data = r.abilities[i];
+      const statusMap = {
+        over: { cls: "over", text: "⚡ 用电过度", txtCls: "status over" },
+        need: { cls: "need", text: "🔋 需要充电", txtCls: "status need" },
+        ok:   { cls: "ok",   text: "✅ 状态良好", txtCls: "status ok" },
+        bal:  { cls: "bal",  text: "⚖️ 双脑平衡", txtCls: "status bal" }
+      };
+      const s = statusMap[data.status];
+      return `
+        <div class="ab" style="--side: ${a.color}">
+          <div class="head">
+            <div class="name">${a.name}·${ab.name}<small>${ab.desc}</small></div>
+            <div class="brain-tags">
+              <span class="b-tag ${data.hemi === 'L' ? 'hot' : 'cold'}">${data.hemi === 'L' ? '左脑' : '右脑'}</span>
+            </div>
+          </div>
+          <div class="battery">
+            <div class="bat"><div class="fill ${s.cls}" style="width:${data.pct}%"></div></div>
+            <div class="pct">${data.pct}%</div>
+          </div>
+          <div><span class="${s.txtCls}">${s.text}</span></div>
+        </div>
+      `;
+    }).join('');
+  }).join('');
+}
+
+function renderDiag() {
+  const overList = [], okList = [], needList = [];
+  AREAS.forEach(a => {
+    const r = analyze(a.key, COUNTS[a.key]);
+    r.abilities.forEach(ab => {
+      const item = `${a.name}·${a.abilities[ab.hemi === 'L' ? 0 : 1].name}`;
+      if (ab.status === "over") overList.push(`${item}（${ab.pct}%）`);
+      else if (ab.status === "need") needList.push(`${item}（${ab.pct}%）`);
+      else okList.push(`${item}（${ab.pct}%）`);
+    });
+  });
+  document.getElementById('diag-over').innerHTML = overList.map(x => `<li>${x}</li>`).join('') || '<li>暂无</li>';
+  document.getElementById('diag-ok').innerHTML   = okList.map(x => `<li>${x}</li>`).join('') || '<li>暂无</li>';
+  document.getElementById('diag-need').innerHTML = needList.map(x => `<li>${x}</li>`).join('') || '<li>暂无</li>';
+}
+
+function renderAdvice() {
+  const adviceMap = {
+    "精神·目标规划": "每日 5 分钟拆解目标 → 写 To-Do",
+    "精神·愿景驱动": "每周看 1 个榜样故事 / 写愿景板",
+    "思维·深度分析": "每天 1 道逻辑题 / 拆解 1 篇文章结构",
+    "思维·创意联想": "每天 10 分钟自由联想 / 思维导图",
+    "听觉·抓重点听": "听书 / 播客，抓 3 个要点复述",
+    "听觉·听情绪": "看访谈节目，关注对方情绪变化",
+    "视觉·细节审视": "找不同 / 拼图 / 细节涂鸦",
+    "视觉·整体审美": "逛美术馆 / 看色彩 / 拍一组照片",
+    "体觉·步骤行动": "跑步 / 跳绳 / 设定流程化任务",
+    "体觉·直觉反应": "即兴舞蹈 / 自由搏击 / 闭眼涂鸦"
+  };
+  const items = [];
+  AREAS.forEach(a => {
+    const r = analyze(a.key, COUNTS[a.key]);
+    r.abilities.forEach(ab => {
+      const name = `${a.name}·${a.abilities[ab.hemi === 'L' ? 0 : 1].name}`;
+      items.push(`<div class="item"><b>${name}</b>：${adviceMap[name] || "持续觉察"}</div>`);
+    });
+  });
+  document.getElementById('advice-grid').innerHTML = items.join('');
+}
+
+function syncInfo() {
+  document.getElementById('info-name').textContent = RAW.name || '—';
+  document.getElementById('info-channel').textContent = RAW.channel || '—';
+  document.getElementById('info-receiver').textContent = RAW.receiver || '—';
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('meta-date').textContent = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate());
+  document.getElementById('meta-id').textContent = 'SEE-' + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + '-' + pad(Math.floor(Math.random()*999));
+}
+
+function renderReport() {
+  syncInfo();
+  renderPetals();
+  renderABCD();
+  renderAbilities();
+  renderDiag();
+  renderAdvice();
+}
+
+/* =========================================================
+   免费报告 PDF 导出（纯前端 html2canvas + jsPDF，零后端依赖）
+   ========================================================= */
+function getFreeFileName() {
+  const name = RAW.name || '';
+  return (name ? name + '_' : '') + 'SEE_免费报告';
+}
+
+async function exportPDF() {
+  const btn = document.querySelector('.topbar .btns button');
+  const page = document.getElementById('report');
+
+  // 依赖检测
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    alert('PDF 组件加载中，请稍候重试（需联网加载 html2canvas / jsPDF）');
+    return;
+  }
+
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ 导出中...';
+
+  try {
+    // 临时放大字号/布局以提升截图清晰度，导出后还原
+    const canvas = await html2canvas(page, {
+      scale: 2,                    // 2x 清晰度
+      useCORS: true,               // 允许跨域图片
+      backgroundColor: '#ffffff',
+      logging: false,
+      windowWidth: page.scrollWidth
+    });
+
+    const { jsPDF } = window.jspdf;
+    // A4 尺寸（单位 mm）
+    const pdfW = 210, pdfH = 297;
+    const imgW = canvas.width;
+    const imgH = canvas.height;
+    const ratio = imgH / imgW;
+
+    // 图片按宽度铺满，若超高则分多页
+    const pageImgH = pdfW * ratio;           // 图片按 A4 宽缩放后的高度（mm）
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    let pdf;
+    if (pageImgH <= pdfH) {
+      // 单页：居中
+      pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const yOffset = (pdfH - pageImgH) / 2;
+      pdf.addImage(imgData, 'JPEG', 0, yOffset, pdfW, pageImgH);
+    } else {
+      // 多页：按 A4 高度切图
+      pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      let position = 0;
+      let pageIndex = 0;
+      const sliceRatio = pdfH / pdfW;        // 每页高度对应的图片比例
+      while (position < imgH) {
+        const sliceH = Math.min(imgH - position, imgW * sliceRatio);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = imgW;
+        sliceCanvas.height = sliceH;
+        const ctx = sliceCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, imgW, sliceH);
+        ctx.drawImage(canvas, 0, position, imgW, sliceH, 0, 0, imgW, sliceH);
+        const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.95);
+        if (pageIndex > 0) pdf.addPage();
+        pdf.addImage(sliceData, 'JPEG', 0, 0, pdfW, sliceH * pdfW / imgW);
+        position += sliceH;
+        pageIndex++;
+      }
+    }
+
+    pdf.save(getFreeFileName() + '.pdf');
+  } catch (e) {
+    alert('PDF 导出失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+/* =========================================================
+   深度解读报告：按需触发，调 /api/report 生成文字版
+   ========================================================= */
+const API_BASE = window.location.origin;
+let deepReportMd = '';
+
+// 深度报告所需的 dimension 映射 + persona（与 index.html 的 MODULES 完全一致）
+// 5区顺序：strategic/thinking/listening/visual/kinesthetic 对应 q01-05/q06-10/q11-15/q16-20/q21-25
+const DEEP_MODULES = [
+  { name: '战略方向', dimension: 'strategic', areaKey: 'spirit',
+    p: { A:{style:'目标驱动型',strength:'执行力强',risk:'缺乏灵活性',growth:'在计划中留探索空间'},
+         B:{style:'愿景驱动型',strength:'使命感强',risk:'目标不具体',growth:'将愿景拆解为步骤'},
+         C:{style:'双驱平衡型',strength:'方向与动力兼备',risk:'双重压力',growth:'灵活切换模式'},
+         D:{style:'探索过渡型',strength:'心态开放',risk:'缺乏持续动力',growth:'建立小目标+监督'} } },
+  { name: '思维功能', dimension: 'thinking', areaKey: 'think',
+    p: { A:{style:'分析型',strength:'逻辑严谨',risk:'忽略大局',growth:'从细节跳出来看全局'},
+         B:{style:'统合型',strength:'全局视野',risk:'忽略关键细节',growth:'培养细节意识'},
+         C:{style:'全维型',strength:'深度广度兼备',risk:'思维负载大',growth:'合理分配精力'},
+         D:{style:'梳理型',strength:'借助外力理清',risk:'独立迷失',growth:'建立思维框架'} } },
+  { name: '听觉', dimension: 'listening', areaKey: 'audio',
+    p: { A:{style:'内容型',strength:'抓取关键信息',risk:'忽略情绪需求',growth:'加入情感确认'},
+         B:{style:'情感型',strength:'共情能力强',risk:'忽略事实层面',growth:'关注事实'},
+         C:{style:'全息型',strength:'内容情感兼顾',risk:'精力消耗大',growth:'调整倾听深度'},
+         D:{style:'要点型',strength:'快节奏沟通',risk:'复杂遗漏',growth:'重要对话做笔记'} } },
+  { name: '视觉', dimension: 'visual', areaKey: 'visual',
+    p: { A:{style:'细节型',strength:'观察力强',risk:'因小失大',growth:'培养连接能力'},
+         B:{style:'审美型',strength:'品位出众',risk:'忽略功能性',growth:'关注实用性'},
+         C:{style:'全观型',strength:'细节整体平衡',risk:'标准过高',growth:'降低完美要求'},
+         D:{style:'大局型',strength:'不被细节困扰',risk:'错过重要信息',growth:'培养敏感度'} } },
+  { name: '体觉', dimension: 'kinesthetic', areaKey: 'body',
+    p: { A:{style:'执行型',strength:'行动力强效率高',risk:'缺乏直觉信任',growth:'留出直觉空间'},
+         B:{style:'直觉型',strength:'反应迅速',risk:'缺乏规划',growth:'重要决定理性检查'},
+         C:{style:'掌控型',strength:'力量精准兼备',risk:'完美主义',growth:'80%准备就行动'},
+         D:{style:'启动型',strength:'启动后能坚持',risk:'启动困难',growth:'建立启动仪式'} } }
+];
+
+function buildPortraitPayload() {
+  // 与 index.html 的 buildPortrait 输出完全一致，供 /api/report 的 interpret_see_card 使用
+  const modules = [];
+  DEEP_MODULES.forEach(m => {
+    const c = COUNTS[m.areaKey];
+    const dom = Object.entries(c).sort((x,y) => y[1]-x[1])[0][0];
+    const persona = m.p[dom] || {};
+    modules.push({
+      name: m.name, dimension: m.dimension, dominant: dom, counts: c,
+      style: persona.style, strength: persona.strength, risk: persona.risk, growth: persona.growth
+    });
+  });
+  return {
+    modules: modules,
+    handwritten: {},
+    traits: modules.map(m => `${m.name}: ${m.style}`),
+    dominant: {},
+    answers: RAW.answers,
+    confidence: { overall: 0.85, items: [] },
+    brain_channel: RAW.channel || '',
+    brain_receiver: RAW.receiver || ''
+  };
+}
+
+/* =========================================================
+   用户码 & 配额校验（复用旧版 index.html 的机制，深度报告才扣配额）
+   ========================================================= */
+let _userCache = [];
+let _usersPromise = null;
+function _fetchUsers() {
+  if (_usersPromise) return _usersPromise;
+  _usersPromise = fetch(API_BASE + '/api/db/users').then(function(r){
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(d){
+    _userCache = (d.users || []).map(function(u){ u.code = u.code || ''; return u; });
+    _usersPromise = null;
+    return _userCache;
+  }).catch(function(){
+    _usersPromise = null;
+    return [];
+  });
+  return _usersPromise;
+}
+function getUserCode() {
+  return sessionStorage.getItem('see_code_shared') || '';
+}
+function isValidCode(code) {
+  return _userCache.some(function(u){ return u.code === code; });
+}
+function getReportCount(code) {
+  var u = _userCache.find(function(x){ return x.code === code; });
+  var cached = u ? (u.reports || 0) : 0;
+  if (cached > 0) return cached;
+  var total = 0;
+  try { var s = localStorage.getItem('see_reports_v2_' + code); if (s) total += (JSON.parse(s).versions||[]).length; } catch(e) {}
+  try { var t = localStorage.getItem('see_talent_reports_v2_' + code); if (t) total += (JSON.parse(t).versions||[]).length; } catch(e) {}
+  return Math.max(cached, total);
+}
+function getMaxReports(code) {
+  var u = _userCache.find(function(x){ return x.code === code; });
+  return u ? (u.maxReports || 20) : 20;
+}
+function saveDeepReport() {
+  const code = getUserCode();
+  if (!code || !isValidCode(code)) return;
+  fetch(API_BASE + '/api/db/reports', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({code: code, type: 'portrait', sections: {portrait: deepReportMd || ''}})
+  }).then(function(){ _fetchUsers(); }).catch(function(){});
+  let versions = [];
+  try { const s = localStorage.getItem('see_reports_v2_' + code); if(s) versions = JSON.parse(s).versions||[]; } catch(e){}
+  versions.push({
+    time: new Date().toLocaleDateString('zh-CN') + ' ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}),
+    hasPortrait: !!deepReportMd,
+    portrait: deepReportMd || ''
+  });
+  if (versions.length > 20) versions = versions.slice(-20);
+  localStorage.setItem('see_reports_v2_' + code, JSON.stringify({versions, time: new Date().toISOString()}));
+}
+
+async function requestDeepReport() {
+  alert('这是本地预览版，深度解读报告需在线上环境生成。\n\n线上部署后，此按钮会校验用户码并调用 AI 生成深度报告。');
+  return;
+  /* eslint-disable no-unreachable */
+  const btn = document.getElementById('btnDeep');
+  const panel = document.getElementById('deepResult');
+  const content = document.getElementById('deepContent');
+
+  // 已有结果则直接展开
+  if (deepReportMd) {
+    panel.classList.add('show');
+    panel.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
+  // 校验用户码 + 配额（深度解读报告才计费）
+  await _fetchUsers();
+  var code = getUserCode();
+  if (!code) { alert('请先输入用户码'); return; }
+  if (!isValidCode(code)) { alert('无效的用户码，请联系管理员获取'); return; }
+  var count = getReportCount(code);
+  var max = getMaxReports(code);
+  if (count >= max) { alert('已生成 ' + count + ' 份深度报告，已达上限 ' + max + ' 份'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中...';
+  panel.classList.add('show');
+  content.classList.add('loading');
+  content.textContent = '正在为你生成深度解读报告（AI 分析中，约 20-40 秒）...';
+
+  try {
+    const portrait = buildPortraitPayload();
+    const resp = await fetch(API_BASE + '/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'portrait', portrait, baseReport: '' })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    deepReportMd = data.content || '';
+    saveDeepReport();
+    content.classList.remove('loading');
+    content.innerHTML = parseMD(deepReportMd);
+    btn.textContent = '✓ 已生成，点击查看';
+    btn.disabled = false;
+  } catch (e) {
+    content.classList.remove('loading');
+    content.textContent = '生成失败：' + e.message;
+    btn.textContent = '查看深度解读报告';
+    btn.disabled = false;
+  }
+}
+
+function parseMD(md) {
+  return md
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<)(.+)$/gm, '<p>$1</p>');
+}
+
+function getFileNameBase() {
+  const name = RAW.name || '';
+  return (name ? name + '_' : '') + 'SEE_深度解读报告';
+}
+
+function downloadDeep(format) {
+  if (!deepReportMd) return;
+  const filename = getFileNameBase();
+  if (format === 'md') {
+    const blob = new Blob([deepReportMd], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename + '.md';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } else if (format === 'doc') {
+    const docHtml = '<!DOCTYPE html><html><head><meta charset=utf-8><style>body{font-family:serif;max-width:720px;margin:20px auto;padding:16px;line-height:1.9;color:#333;font-size:16px}</style></head><body>' + parseMD(deepReportMd) + '</body></html>';
+    const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename + '.doc';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}
+
+function downloadDeepPDF() {
+  if (!deepReportMd) return;
+  const filename = getFileNameBase();
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = API_BASE + '/api/export-pdf';
+  form.target = '_blank';
+  form.style.display = 'none';
+  const t = document.createElement('input'); t.type = 'hidden'; t.name = 'title'; t.value = filename; form.appendChild(t);
+  const m = document.createElement('input'); m.type = 'hidden'; m.name = 'markdown'; m.value = deepReportMd; form.appendChild(m);
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+}
+
+/* =========================================================
+   启动
+   ========================================================= */
+// 若无数据（用户直接访问），引导回输入页
+renderReport();
+</script>
+</body>
+</html>
