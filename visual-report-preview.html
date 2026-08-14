@@ -148,6 +148,23 @@
   .deep-entry button:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(251,191,36,.4); }
   .deep-entry button:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
+  /* 深度报告用户码输入框 */
+  .deep-entry .deep-code { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .deep-entry .deep-code input {
+    padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,.4);
+    background: rgba(255,255,255,.95); color: #2b2d42; font-size: 14px;
+    outline: none; min-width: 160px; flex: 1;
+  }
+  .deep-entry .deep-code input:focus { border-color: #fbbf24; box-shadow: 0 0 0 3px rgba(251,191,36,.25); }
+  .deep-entry .deep-code button.code-ok {
+    background: #fbbf24; color: #2b2d42; font-weight: 700;
+  }
+  .deep-entry .deep-code button.code-cancel {
+    background: rgba(255,255,255,.2); color: #fff; font-weight: 500;
+  }
+  .deep-entry .deep-code button.code-cancel:hover { box-shadow: none; background: rgba(255,255,255,.3); }
+  .deep-entry .hidden { display: none !important; }
+
   /* ===== 深度报告结果面板 ===== */
   .deep-result {
     max-width: 210mm; margin: 0 auto 16px; display: none;
@@ -204,7 +221,10 @@
 
     /* 深度报告入口：上下排布 */
     .deep-entry { flex-direction: column; align-items: stretch; text-align: center; padding: 14px 16px; }
-    .deep-entry button { width: 100%; }
+    .deep-entry .deep-action button { width: 100%; }
+    .deep-entry .deep-code { flex-wrap: wrap; }
+    .deep-entry .deep-code input { width: 100%; min-width: 0; }
+    .deep-entry .deep-code button { flex: 1; }
   }
 
   @media print {
@@ -320,7 +340,14 @@
     <h3>🔍 想更深入地了解自己？</h3>
     <p>查看 AI 生成的深度解读报告，包含个性化分析与成长建议</p>
   </div>
-  <button id="btnDeep" onclick="requestDeepReport()">查看深度解读报告</button>
+  <div class="deep-action" id="deepAction">
+    <button id="btnDeep" onclick="showDeepCodeInput()">查看深度解读报告</button>
+  </div>
+  <div class="deep-code hidden" id="deepCodeBox">
+    <input type="text" id="deepCode" placeholder="请输入用户码" autocomplete="off">
+    <button class="code-ok" onclick="submitDeepCode()">确认</button>
+    <button class="code-cancel" onclick="hideDeepCodeInput()">取消</button>
+  </div>
 </div>
 
 <!-- ================ 深度报告结果面板 ================ -->
@@ -757,6 +784,9 @@ function _fetchUsers() {
   return _usersPromise;
 }
 function getUserCode() {
+  // 优先取深度报告输入框的值，其次 sessionStorage（URL 参数/旧流程遗留）
+  var box = document.getElementById('deepCode');
+  if (box && box.value.trim()) return box.value.trim();
   return sessionStorage.getItem('see_code_shared') || '';
 }
 function isValidCode(code) {
@@ -793,10 +823,46 @@ function saveDeepReport() {
   localStorage.setItem('see_reports_v2_' + code, JSON.stringify({versions, time: new Date().toISOString()}));
 }
 
-async function requestDeepReport() {
-  alert('这是本地预览版，深度解读报告需在线上环境生成。\n\n线上部署后，此按钮会校验用户码并调用 AI 生成深度报告。');
+// 深度报告：先展开用户码输入框
+function showDeepCodeInput() {
+  alert('这是本地预览版，深度解读报告需在线上环境生成。\n\n线上部署后，此按钮会要求输入用户码并调用 AI 生成深度报告。');
   return;
-  /* eslint-disable no-unreachable */
+  // 已有结果则直接展开结果面板
+  if (deepReportMd) {
+    document.getElementById('deepResult').classList.add('show');
+    document.getElementById('deepResult').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  // 若 sessionStorage 里已有用户码（URL 参数带进来），直接校验
+  var preCode = sessionStorage.getItem('see_code_shared') || '';
+  if (preCode) {
+    var box = document.getElementById('deepCode');
+    box.value = preCode;
+    submitDeepCode();
+    return;
+  }
+  document.getElementById('deepAction').classList.add('hidden');
+  document.getElementById('deepCodeBox').classList.remove('hidden');
+  var input = document.getElementById('deepCode');
+  input.focus();
+  // 回车提交
+  input.onkeydown = function(e) { if (e.key === 'Enter') submitDeepCode(); };
+}
+
+function hideDeepCodeInput() {
+  document.getElementById('deepAction').classList.remove('hidden');
+  document.getElementById('deepCodeBox').classList.add('hidden');
+}
+
+function submitDeepCode() {
+  var code = document.getElementById('deepCode').value.trim();
+  if (!code) { alert('请输入用户码'); return; }
+  sessionStorage.setItem('see_code_shared', code);
+  requestDeepReport(code);
+}
+
+async function requestDeepReport(code) {
+  code = code || getUserCode();
   const btn = document.getElementById('btnDeep');
   const panel = document.getElementById('deepResult');
   const content = document.getElementById('deepContent');
@@ -810,13 +876,14 @@ async function requestDeepReport() {
 
   // 校验用户码 + 配额（深度解读报告才计费）
   await _fetchUsers();
-  var code = getUserCode();
-  if (!code) { alert('请先输入用户码'); return; }
+  if (!code) { alert('请先输入用户码'); hideDeepCodeInput(); return; }
   if (!isValidCode(code)) { alert('无效的用户码，请联系管理员获取'); return; }
   var count = getReportCount(code);
   var max = getMaxReports(code);
   if (count >= max) { alert('已生成 ' + count + ' 份深度报告，已达上限 ' + max + ' 份'); return; }
 
+  // 校验通过，收起输入框，进入生成态
+  hideDeepCodeInput();
   btn.disabled = true;
   btn.textContent = '⏳ 生成中...';
   panel.classList.add('show');

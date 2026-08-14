@@ -154,31 +154,14 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
 
 <div class="container">
 
-<!-- ====== STEP 1: Upload ====== -->
+<!-- ====== STEP 1: 输入你的思维画像 ====== -->
 <div class="card">
-  <h2><span class="step-badge">1</span> 上传你的思维导图</h2>
+  <h2><span class="step-badge">1</span> 输入你的思维画像</h2>
   <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <label style="font-size:.85em;color:var(--muted);white-space:nowrap">🔑 用户码</label>
-    <input type="text" id="userCode" placeholder="输入你的用户码" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.85em;background:#1a1a38;color:#e0dcd4;flex:1;max-width:240px" onchange="loadUserReports()" onblur="loadUserReports()">
-    <button class="btn btn-outline btn-sm" onclick="loadUserReports()">加载</button>
-    <span id="quotaDisplay" style="font-size:.75em;color:var(--muted);white-space:nowrap"></span>
     <label style="font-size:.85em;color:var(--muted);white-space:nowrap">👤 姓名</label>
-    <input type="text" id="userName" placeholder="输入姓名" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.85em;background:#1a1a38;color:#e0dcd4;flex:1;max-width:160px" onchange="savePortraitName()">
-    <span style="font-size:.75em;color:var(--muted)">报告保存在当前设备浏览器，刷新不丢失；跨设备请重新生成或下载</span>
+    <input type="text" id="userName" placeholder="输入姓名（选填）" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.85em;background:#1a1a38;color:#e0dcd4;flex:1;max-width:200px" onchange="savePortraitName()">
   </div>
-  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-    <div class="icon">📸</div>
-    <p>点击或拖拽上传思维导图照片</p>
-    <p style="font-size:.75em;margin-top:4px">支持 JPG/PNG，请拍摄清晰</p>
-  </div>
-  <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFile(this.files[0])">
-  <img id="preview" class="preview-img">
-  <div class="flex-row" style="margin-top:10px">
-    <button class="btn btn-primary" id="btnRecognize" disabled onclick="startRecognition()">🔍 AI 智能识别</button>
-    <button class="btn btn-outline btn-sm" onclick="toggleManual()">✏️ 手动输入</button>
-    <span style="font-size:.8em;color:var(--muted)" id="uploadStatus"></span>
-  </div>
-  <div style="margin-top:12px;padding:12px 14px;background:#1a1a35;border:1px solid #3a3a55;border-radius:10px">
+  <div style="margin-bottom:14px;padding:12px 14px;background:#1a1a35;border:1px solid #3a3a55;border-radius:10px">
     <div style="font-size:.78em;color:var(--accent);margin-bottom:8px">🧠 大脑补充信息</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap">
       <div style="min-width:160px">
@@ -194,22 +177,18 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
       </div>
     </div>
   </div>
-  <div class="hidden" id="savedReportsSection" style="margin-top:12px;padding:10px 14px;background:#1a1a38;border-radius:8px;font-size:.85em">
-    <div style="color:var(--accent);margin-bottom:6px">📂 已保存的报告</div>
-    <div id="savedReportsList"></div>
-  </div>
 </div>
 
-<!-- ====== Manual ====== -->
-<div class="card hidden" id="manualCard">
-  <h2><span class="step-badge">✏</span> 手动输入答案 <span style="font-size:.7em;color:var(--muted);font-weight:normal">（5个板块，每板块输入5个字母）</span></h2>
+<!-- ====== STEP 2: 手动输入答案 ====== -->
+<div class="card" id="manualCard">
+  <h2><span class="step-badge">2</span> 输入 25 题答案 <span style="font-size:.7em;color:var(--muted);font-weight:normal">（5个板块，每板块输入5个字母 A/B/C/D）</span></h2>
   <div id="manualEntries"></div>
-  <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">✅ 确认答案</button>
+  <button class="btn btn-primary" style="margin-top:12px" onclick="applyManual()">📝 生成我的报告</button>
 </div>
 
-<!-- ====== STEP 2: Results ====== -->
+<!-- ====== STEP 3: 答案确认 ====== -->
 <div class="card hidden" id="resultCard">
-  <h2><span class="step-badge">2</span> 识别结果</h2>
+  <h2><span class="step-badge">3</span> 确认你的答案</h2>
   <div style="font-size:.85em;color:var(--accent);margin-bottom:12px;padding:6px 12px;background:#f0f8ef;border-radius:6px">
     👆 <strong>点击答案直接切换</strong> A→B→C→D，核对正确后生成报告
   </div>
@@ -217,12 +196,6 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
   <div class="flex-row" style="margin-top:14px">
     <button class="btn btn-primary" id="btnGenerate" onclick="generateReports()">📝 生成你的免费报告</button>
   </div>
-</div>
-
-<!-- ====== STEP 3: Report ====== -->
-<div class="card hidden" id="reportCard">
-  <h2><span class="step-badge">3</span> 你的解读报告 <span style="float:right;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="downloadReport('md')" style="font-size:.65em;padding:3px 8px">📥 MD</button><button class="btn btn-outline btn-sm" onclick="downloadReport('doc')" style="font-size:.65em;padding:3px 8px">📝 Word</button><button class="btn btn-outline btn-sm" onclick="downloadPDF()" style="font-size:.65em;padding:3px 8px">🖨️ PDF</button></span></h2>
-  <div class="report-content loading" id="reportContent">正在生成...</div>
 </div>
 
 <!-- ====== 合盘入口 ====== -->
@@ -247,6 +220,9 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
     </div>
   </div>
   <input type="file" id="compositeFile" accept="image/*" class="hidden" onchange="handleCompositeFile(this.files[0])">
+  <div class="hidden" id="compositeReportCard" style="margin-top:14px">
+    <div class="report-content" id="compositeReportContent" style="max-height:500px;overflow-y:auto"></div>
+  </div>
 </div>
 
 
@@ -350,17 +326,15 @@ let state = {
   recognitionDone: false
 };
 
-// ===== 用户码 & 持久化（与 talent 页共享）=====
+// ===== 用户码 & 持久化（用户码在深度报告阶段才输入）=====
 function getUserCode() {
-  // URL 参数优先（扫码进入）
+  // URL 参数优先（扫码进入）→ sessionStorage → 深度报告页输入后回填
   var urlCode = new URLSearchParams(window.location.search).get('code') || '';
   if (urlCode) {
     sessionStorage.setItem('see_code_shared', urlCode);
-    var inp = document.getElementById('userCode');
-    if (inp) { inp.value = urlCode; inp.parentElement.classList.add('hidden'); }
     return urlCode;
   }
-  return document.getElementById('userCode').value.trim() || sessionStorage.getItem('see_code_shared') || '';
+  return sessionStorage.getItem('see_code_shared') || '';
 }
 
 function getUserName() {
@@ -496,15 +470,9 @@ document.addEventListener('change', function(e) {
 
 document.addEventListener('DOMContentLoaded', () => {
   _fetchUsers();
-  const savedCode = sessionStorage.getItem('see_code_shared');
-  if (savedCode) { document.getElementById('userCode').value = savedCode; loadUserReports(); }
   const savedName = sessionStorage.getItem('see_portrait_name_shared');
   if (savedName) document.getElementById('userName').value = savedName;
   initManualEntries();
-  const zone = document.getElementById('uploadZone');
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
-  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
 });
 
 function handleFile(file) {
@@ -648,8 +616,8 @@ function applyManual() {
   state.handwritten = {self_label: '我', strategy_result: '深度', receiver_result: '结果', output_result: '分析'};
   state.confidence = {overall: 0.85, items: []};
   state.recognitionDone = true;
-  showResults();
-  document.getElementById('manualCard').classList.add('hidden');
+  // 直接生成报告（跳过答案确认步骤）
+  generateReports();
 }
 
 // ============ REPORT ============
@@ -717,7 +685,7 @@ async function generateReports() {
   sessionStorage.setItem('see_portrait_name_shared', getUserName());
 
   // 跳转到免费可视化报告页
-  window.location.href = 'visual-report.html';
+  window.location.href = 'visual-report.html?v=2';
 }
 
 
@@ -767,9 +735,8 @@ async function handleCompositeFile(file) {
       });
       const compData = await compResp.json();
       if (compData.error) { status.textContent = '❌ ' + compData.error; return; }
-      document.getElementById('reportContent').classList.remove('loading');
-      document.getElementById('reportContent').innerHTML = parseMD(compData.content);
-      document.getElementById('reportCard').classList.remove('hidden');
+      document.getElementById('compositeReportContent').innerHTML = parseMD(compData.content);
+      document.getElementById('compositeReportCard').classList.remove('hidden');
       status.textContent = '✅ 已生成';
     } catch(err) {
       status.textContent = '❌ ' + err.message;
