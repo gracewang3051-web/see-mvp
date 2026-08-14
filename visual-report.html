@@ -887,14 +887,31 @@ function getMaxReports(code) {
 function saveDeepReport() {
   const code = getUserCode();
   if (!code || !isValidCode(code)) return;
+  const timeLabel = new Date().toLocaleDateString('zh-CN') + ' ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
+
+  // 1. 保存深度解读报告（type=portrait）
   fetch(API_BASE + '/api/db/reports', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({code: code, type: 'portrait', sections: {portrait: deepReportMd || ''}})
   }).then(function(){ _fetchUsers(); }).catch(function(){});
+
+  // 2. 保存免费可视化报告（type=visual），含答案数据 + 姓名 + 通道/接收器
+  fetch(API_BASE + '/api/db/reports', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({code: code, type: 'visual', sections: {
+      name: RAW.name || '',
+      channel: RAW.channel || '',
+      receiver: RAW.receiver || '',
+      answers: RAW.answers || {},
+      counts: COUNTS || {}
+    }})
+  }).then(function(){ _fetchUsers(); }).catch(function(){});
+
+  // 3. 同步 localStorage（本设备缓存）
   let versions = [];
   try { const s = localStorage.getItem('see_reports_v2_' + code); if(s) versions = JSON.parse(s).versions||[]; } catch(e){}
   versions.push({
-    time: new Date().toLocaleDateString('zh-CN') + ' ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}),
+    time: timeLabel,
     hasPortrait: !!deepReportMd,
     portrait: deepReportMd || ''
   });
@@ -977,11 +994,20 @@ async function requestDeepReport(code) {
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     deepReportMd = data.content || '';
+
+    // 保存免费报告 + 深度报告到数据库
     saveDeepReport();
-    content.classList.remove('loading');
-    content.innerHTML = parseMD(deepReportMd);
-    btn.textContent = '✓ 已生成，点击查看';
-    btn.disabled = false;
+
+    // 将深度报告内容写入 sessionStorage，供 index.html 展示
+    sessionStorage.setItem('see_deep_report_shared', deepReportMd);
+    sessionStorage.setItem('see_visual_report_data', JSON.stringify({
+      answers: RAW.answers, name: RAW.name, channel: RAW.channel, receiver: RAW.receiver
+    }));
+
+    btn.textContent = '✓ 已生成，正在跳转...';
+
+    // 跳回输入页，在原来的报告输出区展示深度报告
+    window.location.href = 'index.html?showReport=deep';
   } catch (e) {
     content.classList.remove('loading');
     content.textContent = '生成失败：' + e.message;

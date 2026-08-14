@@ -173,7 +173,7 @@ function updateQuotaDisplay(code) {
 }
 const ALL_REPORTS = { portrait:'🧬 基础思维画像', action:'🌱 个人成长建议', communication:'💞 关系洞察', career:'🚀 事业发展' };
 const ALL_TALENT = { portrait:'🧬 先天特质画像', learning:'📖 学习风格', emotion:'💫 情绪模式', potential:'🎯 潜能发展' };
-let allReports = { portraitVersions:[], talentVersions:[], growthVersions:[] };
+let allReports = { portraitVersions:[], visualVersions:[], talentVersions:[], growthVersions:[] };
 
 function migrateOld(key, newKey, versionBuilder) {
   const old = localStorage.getItem(key);
@@ -216,7 +216,7 @@ function loadAll() {
   const s1 = localStorage.getItem('see_reports_v2_' + code);
   const s2 = localStorage.getItem('see_talent_reports_v2_' + code);
   const sg = localStorage.getItem('see_growth_reports_v2_' + code);
-  allReports.portraitVersions = []; allReports.talentVersions = []; allReports.growthVersions = [];
+  allReports.portraitVersions = []; allReports.visualVersions = []; allReports.talentVersions = []; allReports.growthVersions = [];
   try { if(s1) allReports.portraitVersions = JSON.parse(s1).versions||[]; } catch(e){}
   try { if(s2) allReports.talentVersions = JSON.parse(s2).versions||[]; } catch(e){}
   try { if(sg) allReports.growthVersions = JSON.parse(sg).versions||[]; } catch(e){}
@@ -239,6 +239,16 @@ function loadAll() {
             action: sec.action||'', communication: sec.communication||'', career: sec.career||''
           });
         }
+      } else if (v.type === 'visual') {
+        // 免费可视化报告
+        allReports.visualVersions.push({
+          time: timeLabel,
+          name: sec.name||'',
+          channel: sec.channel||'',
+          receiver: sec.receiver||'',
+          answers: sec.answers||{},
+          counts: sec.counts||{}
+        });
       } else if (v.type === 'talent') {
         if (!localTalentTimes.has(timeLabel)) {
           allReports.talentVersions.push({
@@ -271,12 +281,18 @@ function renderDashboard() {
   const tvs = allReports.talentVersions;
   const gvs = allReports.growthVersions;
 
-  // Portrait versions
-  if (pvs.length) {
+  // Portrait versions（深度解读报告 + 免费可视化报告 一起展示）
+  const vvs = allReports.visualVersions || [];
+  if (pvs.length || vvs.length) {
     let h = '<div class="items">';
+    // 免费可视化报告（点击跳转到可视化报告页查看）
+    vvs.forEach((v,i) => {
+      h += '<span class="item" onclick="viewVisual('+i+')">📊 免费报告·第'+(i+1)+'次 '+v.time+'</span>';
+    });
+    // 深度解读报告（点击在页内查看文字版）
     pvs.forEach((v,i) => {
-      if (v.hasPortrait) h += '<span class="item" onclick="viewR(\'portrait\','+i+')">🧬 第'+(i+1)+'次 '+v.time+'</span>';
-      else h += '<span class="item missing" onclick="location.href=\'index.html\'">🧬 第'+(i+1)+'次 '+v.time+' （未完成）</span>';
+      if (v.hasPortrait) h += '<span class="item" onclick="viewR(\'portrait\','+i+')">🔍 深度解读·第'+(i+1)+'次 '+v.time+'</span>';
+      else h += '<span class="item missing" onclick="location.href=\'index.html\'">🔍 深度解读·第'+(i+1)+'次 '+v.time+' （未完成）</span>';
     });
     document.getElementById('itemsPortrait').innerHTML = h+'</div>';
   } else {
@@ -360,6 +376,19 @@ async function generateGrowth() {
 }
 
 let currentView = null; // {src, idx} — 当前查看的报告
+
+// 查看免费可视化报告：跳转到 visual-report.html 重新渲染
+function viewVisual(idx) {
+  const v = (allReports.visualVersions || [])[idx];
+  if (!v) return;
+  sessionStorage.setItem('see_visual_report_data', JSON.stringify({
+    answers: v.answers || {},
+    name: v.name || '',
+    channel: v.channel || '',
+    receiver: v.receiver || ''
+  }));
+  window.location.href = 'visual-report.html';
+}
 
 function viewR(src, idx) {
   const version = src==='portrait' ? allReports.portraitVersions[idx]

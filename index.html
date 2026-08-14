@@ -198,6 +198,18 @@ body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; ba
   </div>
 </div>
 
+<!-- ====== 深度解读报告 ====== -->
+<div class="card hidden" id="reportCard">
+  <h2><span class="step-badge">🔍</span> 深度解读报告
+    <span style="float:right;display:flex;gap:4px">
+      <button class="btn btn-outline btn-sm" onclick="downloadReport('md')" style="font-size:.65em;padding:3px 8px">📥 MD</button>
+      <button class="btn btn-outline btn-sm" onclick="downloadReport('doc')" style="font-size:.65em;padding:3px 8px">📝 Word</button>
+      <button class="btn btn-outline btn-sm" onclick="downloadPDF()" style="font-size:.65em;padding:3px 8px">🖨️ PDF</button>
+    </span>
+  </h2>
+  <div class="report-content loading" id="reportContent">正在生成...</div>
+</div>
+
 <!-- ====== 合盘入口 ====== -->
 <div class="card">
   <h2>💫 关系合盘</h2>
@@ -473,6 +485,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedName = sessionStorage.getItem('see_portrait_name_shared');
   if (savedName) document.getElementById('userName').value = savedName;
   initManualEntries();
+
+  // 深度报告跳转回来：检测 ?showReport=deep 参数，展示深度报告
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('showReport') === 'deep') {
+    const deepMd = sessionStorage.getItem('see_deep_report_shared');
+    if (deepMd) {
+      document.getElementById('reportCard').classList.remove('hidden');
+      document.getElementById('reportContent').classList.remove('loading');
+      document.getElementById('reportContent').innerHTML = parseMD(deepMd);
+      // 滚动到深度报告卡片
+      document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth' });
+    }
+  }
 });
 
 function handleFile(file) {
