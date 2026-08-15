@@ -904,22 +904,22 @@ async function exportPDF() {
       'body{margin:0;padding:0;font-family:"PingFang SC","Microsoft YaHei",sans-serif;}' +
       document.querySelector('style').textContent +   // 复用主页面全部样式
       // ===== PDF 专用：广告区更紧凑，报告主体更突出 =====
-      '.promo{margin-top:6px;padding:6px 10px 5px;}' +
+      '.promo{margin-top:4px;padding:5px 10px 4px;}' +
       '.promo h3{margin:0 0 2px;font-size:11px;}' +
-      '.promo-intro{margin:0 0 4px;padding:4px 10px;font-size:9.5px;line-height:1.4;}' +
-      '.promo-grid{gap:3px;margin-bottom:4px;}' +
-      '.promo-grid .promo-card{padding:3px 8px;align-items:center;}' +
+      '.promo-intro{margin:0 0 3px;padding:3px 10px;font-size:9.5px;line-height:1.35;}' +
+      '.promo-grid{gap:3px;margin-bottom:3px;}' +
+      '.promo-grid .promo-card{padding:2px 8px;align-items:center;}' +
       '.promo-grid .promo-card .title{display:inline;font-size:10px;}' +
       '.promo-grid .promo-card .desc{display:inline;font-size:8.5px;margin-left:4px;}' +
       '.promo-grid .promo-card .arrow{display:none;}' +
-      '.promo-services{gap:3px;margin-bottom:4px;}' +
-      '.promo-service{padding:2px 8px;align-items:center;}' +
+      '.promo-services{gap:3px;margin-bottom:3px;}' +
+      '.promo-service{padding:1px 8px;align-items:center;}' +
       '.promo-service .icon{font-size:12px;line-height:1;width:15px;}' +
       '.promo-service .title{display:inline;font-size:9.5px;}' +
       '.promo-service .desc{display:inline;font-size:8px;margin-left:4px;line-height:1.2;}' +
-      '.promo-consult-btn{padding:4px 12px;font-size:11px;}' +
-      '.promo-qr{padding:4px 8px;gap:8px;}' +
-      '.promo-qr img{width:44px;height:44px;}' +
+      '.promo-consult-btn{padding:3px 12px;font-size:11px;}' +
+      '.promo-qr{padding:3px 8px;gap:8px;}' +
+      '.promo-qr img{width:36px;height:36px;}' +
       '</style></head><body>' +
       '<div id="report" class="page">' + page.innerHTML + '</div>' +   // 复用报告内容（含 .page class）
       '</body></html>');
@@ -967,8 +967,8 @@ async function exportPDF() {
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
     let pdf;
-    // 容差：内容高度略超 A4（如 1px 内的取整误差）时，仍强制单页，避免出现空白第二页
-    const TOLERANCE = 4; // mm
+    // 容差：内容高度略超 A4（苹果手机字体渲染略高）时，仍强制单页，避免二维码被切到第二页
+    const TOLERANCE = 8; // mm
     if (pageImgH <= pdfH + TOLERANCE) {
       // 单页：整页等比缩放铺满 A4（避免溢出产生空白页）
       pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
