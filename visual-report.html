@@ -945,7 +945,7 @@ async function exportPDF() {
       promo.appendChild(qrDiv);
     }
     const canvas = await html2canvas(clone, {
-      scale: 2,                    // 2x 清晰度
+      scale: 3,                    // 3x 清晰度（约 288 DPI，接近印刷级）
       useCORS: true,               // 允许跨域图片
       backgroundColor: '#ffffff',
       logging: false,
