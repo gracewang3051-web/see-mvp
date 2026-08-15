@@ -441,7 +441,8 @@ def _deepseek_chat(messages, max_tokens=3000, temperature=0.7):
             "model": "deepseek-v4-pro",
             "messages": messages,
             "max_tokens": max_tokens,
-            "temperature": temperature
+            "temperature": temperature,
+            "reasoning_effort": "none"
         }).encode(),
         {"Content-Type": "application/json", "Authorization": f"Bearer {DEEPSEEK_KEY}"}
     )
@@ -673,7 +674,8 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 "model": "deepseek-v4-pro",
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": 3000,
-                "temperature": 0.7
+                "temperature": 0.7,
+                "reasoning_effort": "none"
             }).encode()
 
             result = proxy_request(
@@ -1320,7 +1322,8 @@ class SEEHandler(SimpleHTTPRequestHandler):
                 json.dumps({
                     "model": "deepseek-v4-pro",
                     "messages": messages,
-                    "max_tokens": 3000, "temperature": 0.5
+                    "max_tokens": 3000, "temperature": 0.5,
+                    "reasoning_effort": "none"
                 }).encode(),
                 {"Content-Type":"application/json","Authorization":f"Bearer {DEEPSEEK_KEY}"}
             )
@@ -1442,7 +1445,8 @@ class SEEHandler(SimpleHTTPRequestHandler):
             json.dumps({
                 "model": "deepseek-v4-pro",
                 "messages": messages,
-                "max_tokens": 3000, "temperature": 0.5
+                "max_tokens": 3000, "temperature": 0.5,
+                "reasoning_effort": "none"
             }).encode(),
             {"Content-Type":"application/json","Authorization":f"Bearer {DEEPSEEK_KEY}"}
         )
@@ -1488,7 +1492,8 @@ OCR文字内容：
                 json.dumps({
                     "model": "deepseek-v4-pro",
                     "messages": [{"role":"user","content": prompt}],
-                    "max_tokens": 2000, "temperature": 0.1
+                    "max_tokens": 2000, "temperature": 0.1,
+                    "reasoning_effort": "none"
                 }).encode(),
                 {"Content-Type":"application/json","Authorization":f"Bearer {DEEPSEEK_KEY}"}
             )
@@ -1694,7 +1699,8 @@ OCR文字内容：
                     "model": "deepseek-v4-pro",
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": 4000 if action == 'summarize' else 800,
-                    "temperature": 0.5
+                    "temperature": 0.5,
+                    "reasoning_effort": "none"
                 }).encode(),
                 {"Content-Type": "application/json", "Authorization": f"Bearer {DEEPSEEK_KEY}"}
             )

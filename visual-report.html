@@ -48,36 +48,36 @@
   /* ===== A4 页面 ===== */
   .page {
     width: 210mm; min-height: 297mm; margin: 16px auto;
-    background: var(--paper); padding: 10mm 12mm 12mm;
+    background: var(--paper); padding: 8mm 11mm 9mm;
     box-shadow: 0 6px 24px rgba(0,0,0,.08); position: relative;
   }
 
-  .top { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
+  .top { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 6px; }
   .top .brand { display: flex; align-items: center; gap: 10px; }
-  .top .logo { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, var(--spirit), var(--audio)); color: #fff; font-weight: 800; display: grid; place-items: center; letter-spacing: 1px; }
-  .top h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
-  .top h1 small { color: #888; font-weight: 500; font-size: 12px; margin-left: 8px; }
-  .top .meta { font-size: 11px; color: #666; text-align: right; }
+  .top .logo { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--spirit), var(--audio)); color: #fff; font-weight: 800; display: grid; place-items: center; letter-spacing: 1px; }
+  .top h1 { font-size: 19px; margin: 0; letter-spacing: 1px; }
+  .top h1 small { color: #888; font-weight: 500; font-size: 11px; margin-left: 8px; }
+  .top .meta { font-size: 10.5px; color: #666; text-align: right; }
   .top .meta b { color: var(--ink); }
 
-  .info { margin-top: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 11px; }
-  .info .cell { background: var(--soft); border-radius: 6px; padding: 4px 8px; }
+  .info { margin-top: 4px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; font-size: 11px; }
+  .info .cell { background: var(--soft); border-radius: 6px; padding: 3px 8px; }
   .info .cell span { color: #888; margin-right: 4px; }
   .info .cell b { color: var(--ink); }
 
-  .section-title { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
-  .section-title::before { content: ""; width: 4px; height: 13px; background: var(--ink); border-radius: 2px; }
+  .section-title { margin-top: 5px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; }
+  .section-title::before { content: ""; width: 4px; height: 12px; background: var(--ink); border-radius: 2px; }
 
-  .center { display: grid; grid-template-columns: 1.05fr 1fr; gap: 10px; margin-top: 6px; }
-  .brain-card { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: var(--soft); }
-  .brain-card .legend { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 4px; font-size: 10px; }
-  .brain-card .legend div { display: flex; align-items: center; gap: 4px; }
+  .center { display: grid; grid-template-columns: 1.05fr 1fr; gap: 8px; margin-top: 4px; }
+  .brain-card { border: 1px solid var(--line); border-radius: 10px; padding: 6px; background: var(--soft); }
+  .brain-card .legend { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 3px; font-size: 9.5px; }
+  .brain-card .legend div { display: flex; align-items: center; gap: 3px; }
   .brain-card .legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-  .abcd { display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 11px; }
-  .abcd .row { display: grid; grid-template-columns: 66px 1fr; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: var(--soft); }
+  .abcd { display: grid; grid-template-columns: 1fr; gap: 3px; font-size: 10.5px; }
+  .abcd .row { display: grid; grid-template-columns: 66px 1fr; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; background: var(--soft); }
   .abcd .row .area { font-weight: 700; }
-  .abcd .row .area small { display: block; font-weight: 400; color: #888; font-size: 9px; }
+  .abcd .row .area small { display: block; font-weight: 400; color: #888; font-size: 8.5px; }
   .abcd .row .pills { display: flex; gap: 3px; flex-wrap: wrap; }
   .pill { border: 1px dashed #c8cbd6; color: #999; padding: 1px 5px; border-radius: 999px; font-size: 9px; }
   .pill.active { border-style: solid; color: #fff; }
@@ -86,8 +86,8 @@
   .pill.c   { background: #4f46e5; border-color: #4f46e5; }
   .pill.d   { background: #f59e0b; border-color: #f59e0b; }
 
-  .abilities { margin-top: 6px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .ab { border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: #fff; display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden; }
+  .abilities { margin-top: 4px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .ab { border: 1px solid var(--line); border-radius: 8px; padding: 4px 5px; background: #fff; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; }
   .ab::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--side); }
   .ab .head { display: flex; align-items: center; justify-content: space-between; }
   .ab .head .name { font-size: 11px; font-weight: 700; }
@@ -98,7 +98,7 @@
   .b-tag.cold { background: #fff8e6; color: #a16207; border-color: #f8d989; }
 
   .battery { display: flex; align-items: center; gap: 4px; }
-  .bat { position: relative; flex: 1; height: 11px; border: 1.5px solid #c8cbd6; border-radius: 3px; background: #fff; overflow: hidden; }
+  .bat { position: relative; flex: 1; height: 8px; border: 1.5px solid #c8cbd6; border-radius: 3px; background: #fff; overflow: hidden; }
   .bat::after { content: ""; position: absolute; right: -4px; top: 2px; width: 2px; height: 7px; background: #c8cbd6; border-radius: 0 2px 2px 0; }
   .bat .fill { height: 100%; background: var(--ok); width: 0%; transition: width .4s; }
   .bat .fill.over  { background: var(--warn); }
@@ -112,21 +112,182 @@
   .status.ok   { background: #ecfdf5; color: #047857; }
   .status.bal  { background: #eef2ff; color: #4338ca; }
 
-  .summary { margin-top: 6px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-  .diag { border: 1px solid var(--line); border-radius: 8px; padding: 8px; border-top: 3px solid var(--side); }
-  .diag h3 { margin: 0 0 4px; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+  .summary { margin-top: 4px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+  .diag { border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; border-top: 3px solid var(--side); }
+  .diag h3 { margin: 0 0 2px; font-size: 12px; display: flex; align-items: center; gap: 5px; }
   .diag h3 .ico { font-size: 13px; }
-  .diag ul { margin: 0; padding-left: 14px; font-size: 10.5px; line-height: 1.5; }
-  .diag ul li { margin-bottom: 1px; }
-  .diag .hint { font-size: 9.5px; color: #888; margin-top: 3px; }
+  .diag ul { margin: 0; padding-left: 13px; font-size: 10.5px; line-height: 1.4; }
+  .diag ul li { margin-bottom: 0; }
+  .diag .hint { font-size: 9px; color: #888; margin-top: 2px; }
 
-  .advice { margin-top: 6px; border: 1px dashed #d8dbe6; border-radius: 8px; padding: 8px; background: var(--soft); }
-  .advice h3 { margin: 0 0 4px; font-size: 12px; }
-  .advice .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; font-size: 10.5px; }
-  .advice .grid .item { background: #fff; border-radius: 5px; padding: 4px 7px; }
+  .advice { margin-top: 4px; border: 1px dashed #d8dbe6; border-radius: 8px; padding: 4px 8px; background: var(--soft); }
+  .advice h3 { margin: 0 0 3px; font-size: 12px; }
+  .advice .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; font-size: 10.5px; line-height: 1.4; }
+  .advice .grid .item { background: #fff; border-radius: 5px; padding: 2px 6px; }
   .advice .grid .item b { color: var(--ink); }
 
-  .footer { margin-top: 8px; border-top: 1px dashed #d8dbe6; padding-top: 4px; display: flex; justify-content: space-between; font-size: 9px; color: #888; }
+  .footer { margin-top: 6px; border-top: 1px dashed #d8dbe6; padding-top: 3px; display: flex; justify-content: space-between; font-size: 8.5px; color: #888; }
+
+  /* ===== 后续服务宣传区块（页面+PDF）===== */
+  .promo {
+    margin-top: 6px;
+    padding: 7px 10px 5px;
+    background: linear-gradient(135deg, #fafbfd 0%, #f0f2f8 100%);
+    border: 1.5px dashed #c8cbd6;
+    border-radius: 8px;
+  }
+  .promo h3 {
+    margin: 0 0 2px;
+    font-size: 12px;
+    color: var(--ink);
+    text-align: center;
+    letter-spacing: .04em;
+  }
+  .promo h3 small { color: #888; font-weight: 400; font-size: 9.5px; margin-left: 6px; letter-spacing: 0; }
+  .promo-intro {
+    margin: 0 0 5px;
+    padding: 5px 10px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    font-size: 10.5px;
+    color: #555;
+    line-height: 1.5;
+    text-align: center;
+  }
+  .promo-intro b { color: var(--ink); }
+  .promo-intro .hl { color: var(--accent); font-weight: 700; }
+  .promo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    margin-bottom: 5px;
+  }
+  .promo-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 5px 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    transition: all .2s;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .promo-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 3px 10px rgba(79,70,229,.12); }
+  .promo-card .icon {
+    font-size: 14px;
+    line-height: 1.35;
+    flex-shrink: 0;
+    width: 18px;
+    text-align: center;
+  }
+  .promo-card .body { flex: 1; min-width: 0; }
+  .promo-card .body .title { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink); line-height: 1.25; }
+  .promo-card .body .desc { display: block; font-size: 8.5px; color: #888; line-height: 1.3; }
+  .promo-card .body .arrow { font-size: 8.5px; font-weight: 700; color: var(--accent); }
+  .promo-card:hover .arrow { color: #3730a3; }
+  .promo-card.consult { cursor: pointer; }
+  .promo-card.consult .arrow { color: #b45309; }
+
+  /* 测评场景列表（各自介绍 + 统一咨询）*/
+  .promo-services {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .promo-service {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .promo-service .icon { font-size: 13px; line-height: 1.4; flex-shrink: 0; width: 17px; text-align: center; }
+  .promo-service .body { flex: 1; min-width: 0; }
+  .promo-service .body .title { font-size: 10.5px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+  .promo-service .body .desc { font-size: 8.5px; color: #888; line-height: 1.2; margin-top: 0; }
+  .promo-service.full { grid-column: span 2; }
+
+  /* 统一咨询入口 */
+  .promo-consult-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+    width: 100%;
+    letter-spacing: .5px;
+    box-shadow: 0 3px 12px rgba(239,68,68,.28);
+    transition: all .2s;
+  }
+  .promo-consult-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 18px rgba(239,68,68,.4); }
+
+  /* 咨询顾问展开面板（点击统一咨询按钮后展开）*/
+  .promo-consultant {
+    display: none;
+    margin-top: 5px;
+    padding: 8px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid #fbbf24;
+    box-shadow: 0 3px 12px rgba(251,191,36,.15);
+  }
+  .promo-consultant.show { display: flex; align-items: center; gap: 10px; }
+  .promo-consultant img {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #f0f2f8;
+  }
+  .promo-consultant .ct-text { flex: 1; min-width: 0; }
+  .promo-consultant .ct-text .ttl { font-size: 11px; font-weight: 700; color: #b45309; margin-bottom: 1px; }
+  .promo-consultant .ct-text .desc { font-size: 8.5px; color: #666; line-height: 1.4; }
+
+  .promo-qr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+  }
+  .promo-qr img {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #f0f2f8;
+  }
+  .promo-qr .qr-text { flex: 1; min-width: 0; }
+  .promo-qr .qr-text .ttl {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0;
+  }
+  .promo-qr .qr-text .desc {
+    font-size: 8.5px;
+    color: #666;
+    line-height: 1.35;
+  }
+  .promo-qr .qr-text .desc b { color: var(--accent); }
 
   /* ===== 深度解读报告入口 ===== */
   .deep-entry {
@@ -140,6 +301,7 @@
   .deep-entry .txt { color: #fff; }
   .deep-entry .txt h3 { margin: 0 0 4px; font-size: 15px; }
   .deep-entry .txt p { margin: 0; font-size: 12px; color: rgba(255,255,255,.75); }
+  .deep-entry .deep-action { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .deep-entry button {
     padding: 10px 20px; border-radius: 8px; border: 0; cursor: pointer;
     background: #fbbf24; color: #2b2d42; font-weight: 700; font-size: 14px;
@@ -147,6 +309,10 @@
   }
   .deep-entry button:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(251,191,36,.4); }
   .deep-entry button:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+  .deep-entry button#btnInnate {
+    background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.35);
+  }
+  .deep-entry button#btnInnate:hover { background: rgba(255,255,255,.26); box-shadow: 0 4px 14px rgba(255,255,255,.15); }
 
   /* 深度报告用户码输入框 */
   .deep-entry .deep-code { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -219,8 +385,21 @@
     /* 30 天处方：2 列 → 1 列 */
     .advice .grid { grid-template-columns: 1fr; }
 
+    /* 后续服务宣传：保持 2 列 */
+    .promo { padding: 10px 8px 8px; }
+    .promo-grid { gap: 5px; }
+    .promo-card { padding: 5px 6px; }
+    .promo-card .icon { font-size: 14px; width: 18px; }
+    .promo-services { gap: 5px; }
+    .promo-service { padding: 5px 6px; }
+    .promo-consultant.show { padding: 8px; gap: 8px; }
+    .promo-consultant img { width: 68px; height: 68px; }
+    .promo-qr { padding: 7px 8px; gap: 8px; }
+    .promo-qr img { width: 64px; height: 64px; }
+
     /* 深度报告入口：上下排布 */
     .deep-entry { flex-direction: column; align-items: stretch; text-align: center; padding: 14px 16px; }
+    .deep-entry .deep-action { flex-direction: column; align-items: stretch; width: 100%; }
     .deep-entry .deep-action button { width: 100%; }
     .deep-entry .deep-code { flex-wrap: wrap; }
     .deep-entry .deep-code input { width: 100%; min-width: 0; }
@@ -270,7 +449,7 @@
   <div class="section-title">5 大功能区使用概览</div>
   <div class="center">
     <div class="brain-card">
-      <svg viewBox="0 0 320 280" width="100%" height="185">
+      <svg viewBox="0 0 320 280" width="100%" height="128">
         <rect x="0" y="0" width="320" height="280" fill="#f0f2f8"/>
         <g fill="none" stroke="#d8dbe6" stroke-width="1">
           <polygon points="160,40 273,108 240,236 80,236 47,108"/>
@@ -332,35 +511,91 @@
     <div>SEE 思维画像 · 基于 SEE 卡认知模型</div>
     <div>© 2026 大脑优势测评 · 仅供测评对象本人使用</div>
   </div>
+
+  <!-- ===== 后续服务宣传区块（页面+PDF 末尾）===== -->
+  <div class="promo">
+    <h3>🌟 看见自己 · 理解他人 · 陪伴成长</h3>
+    <div class="promo-intro">
+      SEE 是<b>深度体系、轻量入口</b>的元认知成长体系——这份报告只是入口，<span class="hl">不贴标签、没有侵犯感</span>，你可以继续解锁<b>深度解读报告、先天大脑特质报告</b>等深度服务。
+    </div>
+    <div class="promo-grid">
+      <a class="promo-card" onclick="goDeepReport()">
+        <div class="icon">🔍</div>
+        <div class="body">
+          <span class="title">深度解读报告</span><span class="desc">深度多场景反应思维模式分析 <b class="arrow">点击查看 →</b></span>
+        </div>
+      </a>
+      <a class="promo-card" onclick="goInnateReport()">
+        <div class="icon">🌿</div>
+        <div class="body">
+          <span class="title">先天大脑特质报告</span><span class="desc">先天特质与天赋倾向解读 <b class="arrow">点击查看 →</b></span>
+        </div>
+      </a>
+    </div>
+
+    <!-- 更多测评场景（各自介绍 + 统一咨询）-->
+    <div class="promo-services">
+      <div class="promo-service">
+        <div class="icon">📚</div>
+        <div class="body">
+          <div class="title">学习力测评</div>
+          <div class="desc">找到你的专属学习通道与节奏，让学习更高效</div>
+        </div>
+      </div>
+      <div class="promo-service">
+        <div class="icon">🚀</div>
+        <div class="body">
+          <div class="title">职涯测评</div>
+          <div class="desc">识别职业优势与方向，让事业选择更清晰</div>
+        </div>
+      </div>
+      <div class="promo-service">
+        <div class="icon">🤝</div>
+        <div class="body">
+          <div class="title">团队建设</div>
+          <div class="desc">理解成员差异，提升沟通协作与团队效能</div>
+        </div>
+      </div>
+      <div class="promo-service">
+        <div class="icon">👨‍👩‍👧</div>
+        <div class="body">
+          <div class="title">亲子 / 家庭成长</div>
+          <div class="desc">看见彼此认知差异，改善亲子沟通与关系</div>
+        </div>
+      </div>
+      <div class="promo-service full">
+        <div class="icon">🏫</div>
+        <div class="body">
+          <div class="title">学校 / 家校共育</div>
+          <div class="desc">班会活动与教师成长支持，家校用同一种语言理解孩子</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统一咨询入口 -->
+    <button class="promo-consult-btn" onclick="toggleConsultant()">💬 以上测评以及活动详情可咨询顾问 →</button>
+
+    <!-- 咨询顾问二维码（点击统一咨询按钮后展开）-->
+    <div class="promo-consultant" id="promoConsultant">
+      <img src="qr_consultant.png" alt="咨询顾问二维码">
+      <div class="ct-text">
+        <div class="ttl">💬 咨询专属顾问</div>
+        <div class="desc">扫码添加顾问，为你定制学习力、职涯、团队建设、亲子成长、学校共育等专属服务方案</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ================ 深度解读报告入口 ================ -->
 <div class="deep-entry">
   <div class="txt">
     <h3>🔍 想更深入地了解自己？</h3>
-    <p>查看 AI 生成的深度解读报告，包含个性化分析与成长建议</p>
+    <p>继续探索你的大脑优势，解锁更多专属解读</p>
   </div>
   <div class="deep-action" id="deepAction">
-    <button id="btnDeep" onclick="showDeepCodeInput()">查看深度解读报告</button>
+    <button id="btnDeep" onclick="goDeepReport()">查看深度解读报告</button>
+    <button id="btnInnate" onclick="goInnateReport()">查看先天大脑特质报告</button>
   </div>
-  <div class="deep-code hidden" id="deepCodeBox">
-    <input type="text" id="deepCode" placeholder="请输入用户码" autocomplete="off">
-    <button class="code-ok" onclick="submitDeepCode()">确认</button>
-    <button class="code-cancel" onclick="hideDeepCodeInput()">取消</button>
-  </div>
-</div>
-
-<!-- ================ 深度报告结果面板 ================ -->
-<div class="deep-result" id="deepResult">
-  <div class="hd">
-    <h3>📋 深度解读报告</h3>
-    <div class="actions">
-      <button onclick="downloadDeep('md')">📥 MD</button>
-      <button onclick="downloadDeep('doc')">📝 Word</button>
-      <button onclick="downloadDeepPDF()">🖨️ PDF</button>
-    </div>
-  </div>
-  <div class="deep-content" id="deepContent"></div>
 </div>
 
 <script>
@@ -668,6 +903,23 @@ async function exportPDF() {
       '<style>' +
       'body{margin:0;padding:0;font-family:"PingFang SC","Microsoft YaHei",sans-serif;}' +
       document.querySelector('style').textContent +   // 复用主页面全部样式
+      // ===== PDF 专用：广告区更紧凑，报告主体更突出 =====
+      '.promo{margin-top:6px;padding:6px 10px 5px;}' +
+      '.promo h3{margin:0 0 2px;font-size:11px;}' +
+      '.promo-intro{margin:0 0 4px;padding:4px 10px;font-size:9.5px;line-height:1.4;}' +
+      '.promo-grid{gap:3px;margin-bottom:4px;}' +
+      '.promo-grid .promo-card{padding:3px 8px;align-items:center;}' +
+      '.promo-grid .promo-card .title{display:inline;font-size:10px;}' +
+      '.promo-grid .promo-card .desc{display:inline;font-size:8.5px;margin-left:4px;}' +
+      '.promo-grid .promo-card .arrow{display:none;}' +
+      '.promo-services{gap:3px;margin-bottom:4px;}' +
+      '.promo-service{padding:2px 8px;align-items:center;}' +
+      '.promo-service .icon{font-size:12px;line-height:1;width:15px;}' +
+      '.promo-service .title{display:inline;font-size:9.5px;}' +
+      '.promo-service .desc{display:inline;font-size:8px;margin-left:4px;line-height:1.2;}' +
+      '.promo-consult-btn{padding:4px 12px;font-size:11px;}' +
+      '.promo-qr{padding:4px 8px;gap:8px;}' +
+      '.promo-qr img{width:44px;height:44px;}' +
       '</style></head><body>' +
       '<div id="report" class="page">' + page.innerHTML + '</div>' +   // 复用报告内容（含 .page class）
       '</body></html>');
@@ -677,6 +929,21 @@ async function exportPDF() {
     await new Promise(r => setTimeout(r, 300));
 
     clone = doc.getElementById('report');
+    // PDF 中移除咨询顾问二维码（网页交互用，PDF 不需要）
+    const pc = clone.querySelector('.promo-consultant');
+    if (pc) pc.parentNode.removeChild(pc);
+    // PDF 末尾追加「关注公众号」区块（仅 PDF 展示，网页不显示）
+    const promo = clone.querySelector('.promo');
+    if (promo) {
+      const qrDiv = doc.createElement('div');
+      qrDiv.className = 'promo-qr';
+      qrDiv.innerHTML = '<img src="qr_official.jpg" alt="公众号二维码">' +
+        '<div class="qr-text">' +
+        '<div class="ttl">📱 关注公众号</div>' +
+        '<div class="desc">扫码关注 <b>SEE 生命印迹</b><br>获取最新测评、活动福利与大脑训练干货</div>' +
+        '</div>';
+      promo.appendChild(qrDiv);
+    }
     const canvas = await html2canvas(clone, {
       scale: 2,                    // 2x 清晰度
       useCORS: true,               // 允许跨域图片
@@ -919,100 +1186,30 @@ function saveDeepReport() {
   localStorage.setItem('see_reports_v2_' + code, JSON.stringify({versions, time: new Date().toISOString()}));
 }
 
-// 深度报告：先展开用户码输入框
-function showDeepCodeInput() {
-  // 已有结果则直接展开结果面板
-  if (deepReportMd) {
-    document.getElementById('deepResult').classList.add('show');
-    document.getElementById('deepResult').scrollIntoView({ behavior: 'smooth' });
-    return;
-  }
-  // 若 sessionStorage 里已有用户码（URL 参数带进来），直接校验
-  var preCode = sessionStorage.getItem('see_code_shared') || '';
-  if (preCode) {
-    var box = document.getElementById('deepCode');
-    box.value = preCode;
-    submitDeepCode();
-    return;
-  }
-  document.getElementById('deepAction').classList.add('hidden');
-  document.getElementById('deepCodeBox').classList.remove('hidden');
-  var input = document.getElementById('deepCode');
-  input.focus();
-  // 回车提交
-  input.onkeydown = function(e) { if (e.key === 'Enter') submitDeepCode(); };
+// 深度报告：跳转到独立深度解读报告页
+function goDeepReport() {
+  // 跳转到独立的深度解读报告页，在独立页面输入用户码
+  window.location.href = 'deep-report.html';
 }
 
-function hideDeepCodeInput() {
-  document.getElementById('deepAction').classList.remove('hidden');
-  document.getElementById('deepCodeBox').classList.add('hidden');
+// 先天大脑特质报告：跳转到先天思维特质报告页
+function goInnateReport() {
+  // 携带姓名/用户码到先天报告页（talent.html 会读取 sessionStorage）
+  if (RAW.name) sessionStorage.setItem('see_name_shared', RAW.name);
+  const code = getUserCode();
+  if (code) sessionStorage.setItem('see_code_shared', code);
+  window.location.href = 'talent.html';
 }
 
-function submitDeepCode() {
-  var code = document.getElementById('deepCode').value.trim();
-  if (!code) { alert('请输入用户码'); return; }
-  sessionStorage.setItem('see_code_shared', code);
-  requestDeepReport(code);
-}
-
-async function requestDeepReport(code) {
-  code = code || getUserCode();
-  const btn = document.getElementById('btnDeep');
-  const panel = document.getElementById('deepResult');
-  const content = document.getElementById('deepContent');
-
-  // 已有结果则直接展开
-  if (deepReportMd) {
+// 咨询顾问：点击场景卡片后展开/收起顾问二维码
+function toggleConsultant() {
+  const panel = document.getElementById('promoConsultant');
+  if (!panel) return;
+  if (panel.classList.contains('show')) {
+    panel.classList.remove('show');
+  } else {
     panel.classList.add('show');
-    panel.scrollIntoView({ behavior: 'smooth' });
-    return;
-  }
-
-  // 校验用户码 + 配额（深度解读报告才计费）
-  await _fetchUsers();
-  if (!code) { alert('请先输入用户码'); hideDeepCodeInput(); return; }
-  if (!isValidCode(code)) { alert('无效的用户码，请联系管理员获取'); return; }
-  var count = getReportCount(code);
-  var max = getMaxReports(code);
-  if (count >= max) { alert('已生成 ' + count + ' 份深度报告，已达上限 ' + max + ' 份'); return; }
-
-  // 校验通过，收起输入框，进入生成态
-  hideDeepCodeInput();
-  btn.disabled = true;
-  btn.textContent = '⏳ 生成中...';
-  panel.classList.add('show');
-  content.classList.add('loading');
-  content.textContent = '正在为你生成深度解读报告（AI 分析中，约 20-40 秒）...';
-
-  try {
-    const portrait = buildPortraitPayload();
-    const resp = await fetch(API_BASE + '/api/report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'portrait', portrait, baseReport: '' })
-    });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
-    deepReportMd = data.content || '';
-
-    // 保存免费报告 + 深度报告到数据库
-    saveDeepReport();
-
-    // 将深度报告内容写入 sessionStorage，供 index.html 展示
-    sessionStorage.setItem('see_deep_report_shared', deepReportMd);
-    sessionStorage.setItem('see_visual_report_data', JSON.stringify({
-      answers: RAW.answers, name: RAW.name, channel: RAW.channel, receiver: RAW.receiver
-    }));
-
-    btn.textContent = '✓ 已生成，正在跳转...';
-
-    // 跳回输入页，在原来的报告输出区展示深度报告
-    window.location.href = 'index.html?showReport=deep';
-  } catch (e) {
-    content.classList.remove('loading');
-    content.textContent = '生成失败：' + e.message;
-    btn.textContent = '查看深度解读报告';
-    btn.disabled = false;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
