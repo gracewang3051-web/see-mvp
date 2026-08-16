@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SEE 思维画像 · 我的大脑使用报告（A 版）</title>
+<style>
+  /* ============ 设计令牌（潮玩品牌版） ============ */
+  :root {
+    --page-width: 210mm;
+    --page-height: 297mm;
+    --page-padding-x: 10mm;
+    --page-padding-y: 8mm;
+    --section-gap: 2.5mm;
+    --card-radius: 3mm;
+
+    --ink: #1f2942;
+    --muted: #6f7788;
+    --line: #e3e6f0;
+    --surface: #f6f7fb;
+
+    /* 5 大功能区潮玩色 */
+    --spirit: #ef4b58;      /* 精神·红 */
+    --thinking: #7b2cbf;    /* 思维·紫 */
+    --hearing: #14a37f;     /* 听觉·绿 */
+    --visual: #1098c1;      /* 视觉·蓝 */
+    --somatic: #f59e0b;     /* 体觉·橙 */
+
+    --warn: #ef4b58;
+    --ok: #14a37f;
+    --need: #f59e0b;
+    --bal: #1098c1;
+
+    /* 潮玩品牌主色 */
+    --brand: #6d28d9;        /* 紫色品牌 */
+    --brand-soft: #ede9fe;   /* 紫色浅底 */
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    color: var(--ink);
+    font-family: "PingFang SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ============ 淡粉 + 淡蓝品牌背景（潮玩品牌版） ============ */
+  body {
+    background:
+      radial-gradient(circle at 0% 0%,   rgba(244,114,182,.14) 0%, transparent 45%),
+      radial-gradient(circle at 100% 0%, rgba(96,165,250,.16) 0%, transparent 45%),
+      radial-gradient(circle at 0% 100%, rgba(96,165,250,.12) 0%, transparent 45%),
+      radial-gradient(circle at 100% 100%, rgba(244,114,182,.12) 0%, transparent 45%),
+      linear-gradient(160deg, #fdf2f8 0%, #eef2ff 55%, #eff6ff 100%);
+    min-height: 100vh;
+    position: relative;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(circle at 10% 20%,  rgba(124,58,237,.5) 1px, transparent 2px),
+      radial-gradient(circle at 70% 15%,  rgba(236,72,153,.5) 1px, transparent 2px),
+      radial-gradient(circle at 30% 80%,  rgba(20,163,127,.5) 1px, transparent 2px),
+      radial-gradient(circle at 90% 70%,  rgba(245,158,11,.5) 1px, transparent 2px),
+      radial-gradient(circle at 50% 50%,  rgba(124,58,237,.35) 1.5px, transparent 3px),
+      radial-gradient(circle at 15% 60%,  rgba(16,152,193,.45) 1px, transparent 2px);
+    background-size: 100% 100%;
+    pointer-events: none; z-index: 0;
+    opacity: .7;
+  }
+
+  /* ============ 顶部导航（屏幕专用，不进 PDF） ============ */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(10px);
+    color: var(--ink); padding: 10px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(124,58,237,.12);
+    border-bottom: 1px solid rgba(124,58,237,.12);
+  }
+  .topbar .brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; }
+  .topbar .brand .logo-mini {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--spirit), var(--thinking));
+    color: #fff; font-weight: 800; display: grid; place-items: center;
+    font-size: 11px; letter-spacing: .5px;
+  }
+  .topbar .brand .badge {
+    font-size: 10px; font-weight: 500; background: var(--brand-soft);
+    padding: 2px 8px; border-radius: 999px; letter-spacing: 1px; color: var(--brand);
+  }
+  .topbar .btns { display: flex; gap: 8px; }
+  .topbar button {
+    padding: 7px 14px; border-radius: 8px; border: 0; cursor: pointer;
+    background: var(--surface); color: var(--ink); font-size: 13px; transition: all .2s;
+  }
+  .topbar button:hover { background: var(--brand-soft); }
+  .topbar button.primary {
+    background: linear-gradient(135deg, var(--thinking), var(--brand));
+    color: #fff; font-weight: 700;
+  }
+
+  /* ============ A4 报告页（白色圆角卡，轻投影悬浮感） ============ */
+  .report-page {
+    position: relative;
+    width: var(--page-width);
+    height: var(--page-height);
+    margin: 16px auto;
+    background: #ffffff;
+    border-radius: var(--card-radius);
+    box-shadow: 0 12px 40px rgba(99,102,241,.10), 0 4px 16px rgba(0,0,0,.05);
+    /* overflow 移除，让指纹小人可溢出到背景上 */
+  }
+
+  .report-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    padding: var(--page-padding-y) var(--page-padding-x);
+    display: flex;
+    flex-direction: column;
+    gap: var(--section-gap);
+    /* 等比例缩小内容，四周留出边距给小人 */
+    transform: scale(0.92);
+    transform-origin: center center;
+  }
+
+  /* ============ 潮玩装饰层：彩色节点、拼图块、加号 ============ */
+  .deco-layer {
+    position: absolute; z-index: 1; inset: 0;
+    pointer-events: none;
+  }
+  .deco-node {
+    position: absolute; border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+  }
+  .deco-plus {
+    position: absolute;
+    color: var(--brand); font-weight: 700;
+    opacity: .5;
+  }
+  .deco-puzzle {
+    position: absolute;
+    opacity: .35;
+  }
+
+  /* ============ 指纹小人装饰层（绝对定位，不占布局） ============ */
+  .mascot-layer {
+    position: absolute; z-index: 3; inset: 0;
+    pointer-events: none;
+  }
+  .mascot {
+    position: absolute; object-fit: contain;
+    user-select: none; -webkit-user-drag: none;
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,.16));
+  }
+  /* ===== 三个角色：发现（左上）— 理解（中部右侧）— 行动（右下） ===== */
+  /* 蓝色放大镜小人：左上，靠近五大功能区 */
+  .mascot.m-discover {
+    left: 0mm; top: 4mm; width: 19mm; opacity: 1;
+  }
+  /* 红色拼图小人：中部右侧，靠近能力诊断 */
+  .mascot.m-understand {
+    right: -1mm; top: 42%; width: 20mm; opacity: 1;
+  }
+  /* 绿黄平板小人：右下，靠近二维码/服务入口 */
+  .mascot.m-action {
+    right: 0mm; bottom: 4mm; width: 21mm; opacity: 1;
+  }
+
+  /* ============ 报告头（潮玩品牌：圆角 logo + 紫粉渐变） ============ */
+  .report-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 3mm;
+  }
+  .report-header .brand { display: flex; align-items: center; gap: 3mm; }
+  .report-header .logo {
+    width: 14mm; height: 14mm; border-radius: 3.5mm;
+    background: linear-gradient(135deg, #ef4444 0%, #ec4899 50%, #8b5cf6 100%);
+    color: #fff; font-weight: 800; display: grid; place-items: center;
+    letter-spacing: .5px; font-size: 13px;
+    box-shadow: 0 4px 12px rgba(139,92,246,.35);
+  }
+  .report-header h1 { font-size: 21px; margin: 0; letter-spacing: .5px; color: var(--ink); }
+  .report-header h1 small { color: var(--muted); font-weight: 500; font-size: 11px; margin-left: 8px; }
+  .report-header .meta { font-size: 10.5px; color: var(--muted); text-align: right; line-height: 1.7; }
+  .report-header .meta b { color: var(--ink); }
+
+  /* ============ 客户信息条（圆角胶囊） ============ */
+  .profile-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 2mm;
+    font-size: 11px;
+  }
+  .profile-strip .cell {
+    background: var(--surface); border-radius: 1.5mm;
+    padding: 1.8mm 3mm; overflow: hidden;
+    border: .15mm solid var(--line);
+  }
+  .profile-strip .cell span { color: var(--muted); margin-right: 1mm; white-space: nowrap; font-size: 10px; }
+  .profile-strip .cell b { color: var(--ink); font-weight: 700; }
+
+  /* ============ 区块标题（紫色品牌条） ============ */
+  .section-title {
+    display: flex; align-items: center; gap: 2mm;
+    font-size: 13px; font-weight: 700; letter-spacing: .3px;
+    color: var(--brand);
+  }
+  .section-title::before {
+    content: ""; width: 1.5mm; height: 4mm;
+    background: linear-gradient(180deg, var(--spirit), var(--thinking));
+    border-radius: 1mm;
+  }
+  .section-title small { color: var(--muted); font-weight: 400; font-size: 10px; }
+
+  /* ============ 概览区（雷达图 + ABCD） ============ */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 3mm;
+  }
+  .brain-card {
+    border: .25mm solid var(--line); border-radius: var(--card-radius);
+    padding: 2.5mm; background: var(--surface);
+  }
+  .brain-card .legend {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 1mm;
+    margin-top: 1.5mm; font-size: 9px; color: var(--muted);
+  }
+  .brain-card .legend div { display: flex; align-items: center; gap: 1mm; min-width: 0; }
+  .brain-card .legend i { width: 2.5mm; height: 2.5mm; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+  /* ABCD：用紫色小标签紧凑排布 */
+  .abcd { display: grid; grid-template-columns: 1fr; gap: 1.2mm; font-size: 9.5px; align-content: center; }
+  .abcd .row {
+    display: grid; grid-template-columns: 14mm 1fr; align-items: center;
+    gap: 2mm; padding: 1.2mm 2mm; border-radius: 1.5mm;
+    background: linear-gradient(90deg, var(--brand-soft) 0%, var(--surface) 60%);
+    border-left: 1mm solid var(--thinking);
+  }
+  .abcd .row .area { font-weight: 700; color: var(--brand); }
+  .abcd .row .area small { display: block; font-weight: 400; color: var(--muted); font-size: 7.5px; }
+  .abcd .row .pills { display: flex; gap: 1mm; flex-wrap: wrap; }
+  .pill {
+    padding: .3mm 1.5mm; border-radius: 999px; font-size: 7.5px;
+    border: .2mm solid var(--line); color: var(--muted);
+    background: #fff;
+  }
+  .pill.active { border-style: solid; font-weight: 700; }
+  .pill.a.active { color: var(--spirit);   border-color: var(--spirit);   background: rgba(239,75,88,.1); }
+  .pill.b.active { color: var(--thinking); border-color: var(--thinking); background: rgba(123,44,191,.1); }
+  .pill.c.active { color: var(--hearing);  border-color: var(--hearing);  background: rgba(20,163,127,.1); }
+  .pill.d.active { color: var(--need);     border-color: var(--need);     background: rgba(245,158,11,.1); }
+
+  /* ============ 能力卡片（5×2，顶部彩色长条 + 圆角） ============ */
+  .ability-grid {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2mm;
+  }
+  .ability-card {
+    min-width: 0; overflow: hidden;
+    border: .25mm solid var(--line); border-radius: var(--card-radius);
+    background: #fff;
+    display: flex; flex-direction: column; gap: 1mm;
+    position: relative;
+    padding-top: 4mm;
+  }
+  /* 顶部彩色长条 */
+  .ability-card::before {
+    content: ""; position: absolute; left: 0; top: 0; right: 0; height: 1.5mm;
+    background: var(--side);
+  }
+  .ability-card .body {
+    padding: 0 2.5mm 2.5mm;
+    display: flex; flex-direction: column; gap: 1mm; flex: 1;
+  }
+  .ability-card .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1mm; }
+  .ability-card .name { font-size: 10.5px; font-weight: 700; line-height: 1.2; min-width: 0; color: var(--ink); }
+  .ability-card .name small { display: block; font-weight: 400; color: var(--muted); font-size: 7.5px; }
+  .b-tag {
+    flex-shrink: 0; padding: .2mm 1.2mm; border-radius: 1mm;
+    border: .2mm solid var(--line); color: var(--muted); font-size: 7px;
+    background: #f6f7fb;
+  }
+  .b-tag.hot  { background: rgba(239,75,88,.08);  color: var(--spirit);   border-color: rgba(239,75,88,.35); }
+  .b-tag.cold { background: rgba(123,44,191,.08); color: var(--thinking); border-color: rgba(123,44,191,.35); }
+
+  .battery { display: flex; align-items: center; gap: 1mm; }
+  .bat {
+    position: relative; flex: 1; height: 3mm;
+    border: .25mm solid var(--line); border-radius: 1.5mm; background: #fff; overflow: hidden;
+  }
+  .bat .fill { height: 100%; width: 0%; transition: width .4s; border-radius: 1.5mm; }
+  .bat .fill.over { background: var(--warn); }
+  .bat .fill.need { background: var(--need); }
+  .bat .fill.ok   { background: var(--ok); }
+  .bat .fill.bal  { background: linear-gradient(90deg, var(--ok), var(--bal)); }
+  .pct { font-size: 8.5px; min-width: 8mm; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+
+  /* 状态药丸标签 */
+  .status {
+    font-size: 8px; font-weight: 700; padding: .3mm 1.4mm; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: .8mm;
+    border: .2mm solid currentColor;
+  }
+  .status .svg-ico { width: 2.8mm; height: 2.8mm; flex-shrink: 0; }
+  .status.over { background: rgba(239,75,88,.1);   color: var(--spirit); }
+  .status.need { background: rgba(245,158,11,.1);  color: #b45309; }
+  .status.ok   { background: rgba(20,163,127,.1);  color: var(--hearing); }
+  .status.bal  { background: rgba(16,152,193,.1);  color: var(--bal); }
+
+  /* ============ 诊断三栏（红/绿/橙边框 + 圆角 + 图标） ============ */
+  .diagnosis-grid {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.5mm; align-items: stretch;
+  }
+  .diagnosis-card {
+    display: flex; flex-direction: column;
+    border-radius: var(--card-radius);
+    padding: 2.5mm 3mm;
+    background: #fff;
+    border: .4mm solid var(--side);
+    border-top: 1.2mm solid var(--side);
+  }
+  .diagnosis-card h3 {
+    margin: 0 0 1.5mm; font-size: 11.5px;
+    display: flex; align-items: center; gap: 1.5mm;
+    color: var(--side);
+  }
+  .diagnosis-card h3 .svg-ico { width: 4mm; height: 4mm; color: var(--side); }
+  .diagnosis-card ul {
+    margin: 0; padding-left: 4mm; font-size: 9.5px; line-height: 1.6; color: var(--ink);
+  }
+  .diagnosis-card ul li { margin-bottom: .5mm; }
+  .diagnosis-card .hint {
+    margin-top: auto; padding-top: 1.5mm;
+    font-size: 7.5px; color: var(--muted);
+  }
+
+  /* ============ 服务区（紫色指引按钮 + 公众号二维码独立展示） ============ */
+  .service-footer {
+    border: .3mm dashed var(--line); border-radius: var(--card-radius);
+    padding: 2.5mm 3mm;
+    background: linear-gradient(135deg, var(--brand-soft) 0%, #fff 100%);
+  }
+  .service-footer h3 {
+    margin: 0 0 1.5mm; font-size: 12px; text-align: center; letter-spacing: .5px;
+    color: var(--brand);
+  }
+  .service-intro {
+    margin: 0 0 1.5mm; padding: 1.5mm 3mm; background: #fff;
+    border-radius: 1.5mm; border: .2mm solid var(--line);
+    font-size: 9px; color: #555; line-height: 1.45; text-align: center;
+  }
+  .service-intro b { color: var(--ink); }
+  .service-intro .hl { color: var(--thinking); font-weight: 700; }
+
+  .service-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5mm; margin-bottom: 1.5mm; }
+  .service-card {
+    background: #fff; border: .2mm solid var(--line); border-radius: 1.5mm;
+    padding: 1.2mm 2.5mm; display: flex; align-items: center; gap: 2mm;
+    text-decoration: none; color: inherit; cursor: pointer; min-width: 0;
+    transition: all .2s;
+  }
+  .service-card:hover { border-color: var(--thinking); transform: translateY(-.5mm); box-shadow: 0 2px 8px rgba(124,58,237,.15); }
+  .service-card .svg-ico { width: 4mm; height: 4mm; flex-shrink: 0; color: var(--thinking); }
+  .service-card .body { min-width: 0; }
+  .service-card .title { font-size: 9.5px; font-weight: 700; line-height: 1.3; color: var(--ink); }
+  .service-card .desc { font-size: 8px; color: var(--muted); line-height: 1.3; }
+  .service-card .arrow { font-size: 8px; font-weight: 700; color: var(--thinking); }
+
+  .service-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5mm; margin-bottom: 1.5mm; }
+  .service-item {
+    background: #fff; border: .2mm solid var(--line); border-radius: 1.5mm;
+    padding: 1.2mm 2.5mm; display: flex; align-items: center; gap: 2mm; min-width: 0;
+  }
+  .service-item .svg-ico { width: 3.5mm; height: 3.5mm; flex-shrink: 0; color: var(--thinking); }
+  .service-item .title { font-size: 9px; font-weight: 700; line-height: 1.3; }
+  .service-item .desc { font-size: 7.5px; color: var(--muted); line-height: 1.3; margin-left: 1.5mm; }
+  .service-item.full { grid-column: span 2; }
+
+  /* 橙黄品牌指引按钮 */
+  .service-consult-btn {
+    display: flex; align-items: center; justify-content: center; gap: 1.5mm;
+    padding: 2mm 4mm; width: 100%;
+    background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
+    border: none; border-radius: 2mm; cursor: pointer;
+    font-size: 10.5px; font-weight: 800; color: #fff; letter-spacing: .5px;
+    box-shadow: 0 2px 8px rgba(249,115,22,.3);
+    transition: all .2s;
+  }
+  .service-consult-btn:hover { transform: translateY(-.5mm); box-shadow: 0 4px 14px rgba(249,115,22,.4); }
+  .service-consult-btn .svg-ico { width: 3.5mm; height: 3.5mm; }
+  .consultant-panel {
+    display: none; margin-top: 1.5mm; padding: 2mm; background: #fff;
+    border-radius: 1.5mm; border: .2mm solid var(--thinking);
+  }
+  .consultant-panel.show { display: flex; align-items: center; gap: 2mm; }
+  .consultant-panel img { width: 14mm; height: 14mm; border-radius: 1mm; object-fit: cover; flex-shrink: 0; }
+  .consultant-panel .ttl { font-size: 9.5px; font-weight: 700; color: var(--thinking); margin-bottom: .5mm; }
+  .consultant-panel .desc { font-size: 7.5px; color: var(--muted); line-height: 1.4; }
+
+  /* 公众号二维码独立展示（PDF 追加部分，参考版风格） */
+  .promo-qr {
+    display: flex; align-items: center; gap: 2.5mm;
+    padding: 1.5mm 2.5mm; background: #fff; border-radius: 1.5mm;
+    border: .2mm solid var(--line); margin-top: 1.5mm;
+  }
+  .promo-qr img { width: 14mm; height: 14mm; border-radius: 1mm; object-fit: cover; flex-shrink: 0; }
+  .promo-qr .ttl { font-size: 10px; font-weight: 700; margin-bottom: .5mm; color: var(--ink); }
+  .promo-qr .desc { font-size: 8px; color: var(--muted); line-height: 1.4; }
+
+  /* ============ 页脚 ============ */
+  .report-footer {
+    margin-top: auto;
+    border-top: .2mm dashed var(--line); padding-top: 1.5mm;
+    display: flex; justify-content: space-between; font-size: 8px; color: var(--muted);
+  }
+
+  /* ============ PDF 追加的公众号二维码（仅 PDF，网页不显示） ============ */
+  .promo-qr {
+    display: flex; align-items: center; gap: 2.5mm;
+    padding: 1.5mm 2.5mm; background: #fff; border-radius: 1.5mm;
+    border: .2mm solid var(--line); margin-top: 1.5mm;
+  }
+  .promo-qr img { width: 15mm; height: 15mm; border-radius: 1mm; object-fit: cover; flex-shrink: 0; }
+  .promo-qr .ttl { font-size: 10px; font-weight: 700; margin-bottom: .5mm; }
+  .promo-qr .desc { font-size: 8px; color: var(--muted); line-height: 1.4; }
+  .promo-qr .desc b { color: var(--thinking); }
+
+  .screen-only { }
+
+  /* ============ 移动端（≤768px） ============ */
+  @media (max-width: 768px) {
+    .topbar { padding: 8px 12px; }
+    .topbar .brand { font-size: 13px; }
+    .topbar button { padding: 6px 10px; font-size: 12px; }
+
+    .report-page { width: auto; height: auto; min-height: auto; margin: 0; box-shadow: none; }
+    .report-content { height: auto; padding: 10mm 8mm 12mm; }
+
+    .report-header { flex-direction: column; align-items: flex-start; gap: 2mm; }
+    .report-header .meta { text-align: left; }
+
+    .profile-strip { grid-template-columns: repeat(2, 1fr); }
+    .overview-grid { grid-template-columns: 1fr; }
+    .ability-grid { grid-template-columns: repeat(2, 1fr); }
+    .diagnosis-grid { grid-template-columns: 1fr; }
+    .service-list { grid-template-columns: 1fr; }
+    .service-item.full { grid-column: auto; }
+    .service-grid { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    .topbar { display: none !important; }
+    .report-page { box-shadow: none; margin: 0; }
+    html, body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================ 顶部导航（屏幕专用） ================ -->
+<div class="topbar screen-only">
+  <div class="brand">SEE 思维画像 <span class="badge">A 版免费报告</span></div>
+  <div class="btns">
+    <button class="primary" onclick="exportPDF()">导出 PDF</button>
+  </div>
+</div>
+
+<!-- ================ 报告主体 ================ -->
+<div class="report-page" id="report">
+  <!-- 潮玩装饰层：彩色节点、拼图块、加号 -->
+  <div class="deco-layer" id="decoLayer"></div>
+  <!-- 指纹小人装饰层 -->
+  <div class="mascot-layer" id="mascotLayer"></div>
+
+  <div class="report-content">
+    <!-- 报告头 -->
+    <div class="report-header">
+      <div class="brand">
+        <div class="logo">SEE</div>
+        <h1>思维画像 · 我的大脑使用报告 <small>My Brain Usage Report</small></h1>
+      </div>
+      <div class="meta">
+        <div>测评编号：<b id="meta-id">—</b></div>
+        <div>测评日期：<b id="meta-date">—</b></div>
+        <div>测评师：<b>SEE 系统</b></div>
+      </div>
+    </div>
+
+    <!-- 客户信息条 -->
+    <div class="profile-strip">
+      <div class="cell"><span>姓名</span><b id="info-name" class="one-line">—</b></div>
+      <div class="cell"><span>大脑通道</span><b id="info-channel" class="one-line">—</b></div>
+      <div class="cell"><span>大脑接收器</span><b id="info-receiver" class="one-line">—</b></div>
+      <div class="cell"><span>报告类型</span><b>免费版</b></div>
+    </div>
+
+    <!-- 概览区 -->
+    <div class="section-title">5 大功能区使用概览</div>
+    <div class="overview-grid">
+      <div class="brain-card">
+        <svg viewBox="0 0 320 280" width="100%" height="128">
+          <g fill="none" stroke="#d8dce6" stroke-width="1">
+            <polygon points="160,40 273,108 240,236 80,236 47,108"/>
+            <polygon points="160,70 252,120 226,220 94,220 68,120"/>
+            <polygon points="160,100 231,131 212,202 108,202 89,131"/>
+            <polygon points="160,130 210,143 198,184 122,184 110,143"/>
+          </g>
+          <g stroke="#d8dce6" stroke-width="1" stroke-dasharray="3,3">
+            <line x1="160" y1="160" x2="160" y2="40"/>
+            <line x1="160" y1="160" x2="273" y2="108"/>
+            <line x1="160" y1="160" x2="240" y2="236"/>
+            <line x1="160" y1="160" x2="80" y2="236"/>
+            <line x1="160" y1="160" x2="47" y2="108"/>
+          </g>
+          <g id="petals"></g>
+          <circle cx="160" cy="160" r="22" fill="#fff" stroke="#1f2942" stroke-width="1.5"/>
+          <text x="160" y="156" text-anchor="middle" font-size="11" font-weight="700" fill="#1f2942">SEE</text>
+          <text x="160" y="170" text-anchor="middle" font-size="9" fill="#6f7788">大脑体</text>
+        </svg>
+        <div class="legend">
+          <div><i style="background:var(--spirit)"></i>精神·红</div>
+          <div><i style="background:var(--thinking)"></i>思维·紫</div>
+          <div><i style="background:var(--hearing)"></i>听觉·绿</div>
+          <div><i style="background:var(--visual)"></i>视觉·蓝</div>
+          <div><i style="background:var(--somatic)"></i>体觉·橙</div>
+        </div>
+      </div>
+      <div class="abcd"><div id="abcd-rows"></div></div>
+    </div>
+
+    <!-- 能力分布 -->
+    <div class="section-title">10 大能力电量分布 <small id="legend-note"></small></div>
+    <div class="ability-grid" id="abilities"></div>
+
+    <!-- 诊断三栏 -->
+    <div class="section-title">用电诊断 · 充电建议</div>
+    <div class="diagnosis-grid">
+      <div class="diagnosis-card" style="--side: var(--warn)">
+        <h3><span class="svg-ico" data-ico="over"></span> 用电过度（建议放电）</h3>
+        <ul id="diag-over"></ul>
+        <div class="hint">长期过度使用会消耗精力，需有意识地"断电"休息</div>
+      </div>
+      <div class="diagnosis-card" style="--side: var(--ok)">
+        <h3><span class="svg-ico" data-ico="ok"></span> 状态良好（维持节奏）</h3>
+        <ul id="diag-ok"></ul>
+        <div class="hint">保持当前使用习惯，可适度迭代输出方式</div>
+      </div>
+      <div class="diagnosis-card" style="--side: var(--need)">
+        <h3><span class="svg-ico" data-ico="need"></span> 需要充电（建议启动）</h3>
+        <ul id="diag-need"></ul>
+        <div class="hint">对应能力长期未启动，需要刻意练习和外部滋养</div>
+      </div>
+    </div>
+
+    <!-- 服务区 -->
+    <div class="service-footer">
+      <h3>看见自己 · 理解他人 · 陪伴成长</h3>
+      <div class="service-intro">
+        SEE 是<b>深度体系、轻量入口</b>的元认知成长体系——这份报告只是入口，<span class="hl">不贴标签、没有侵犯感</span>，你可以继续解锁<b>深度解读报告、先天大脑特质报告</b>等深度服务。
+      </div>
+      <div class="service-grid" id="service-grid"></div>
+      <div class="service-list" id="service-list"></div>
+      <button class="service-consult-btn" onclick="toggleConsultant()">
+        <span class="svg-ico" data-ico="chat"></span> 以上测评以及活动详情可咨询顾问 →
+      </button>
+      <div class="consultant-panel" id="consultantPanel">
+        <img src="qr_consultant.png" alt="咨询顾问二维码">
+        <div>
+          <div class="ttl">咨询专属顾问</div>
+          <div class="desc">扫码添加顾问，为你定制学习力、职涯、团队建设、亲子成长、学校共育等专属服务方案</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <div class="report-footer">
+      <div>SEE 思维画像 · 基于 SEE 卡认知模型</div>
+      <div>© 2026 大脑优势测评 · 仅供测评对象本人使用</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* =========================================================
+   SEE 报告 A 版 · 数据驱动 + 组件化
+   ========================================================= */
+
+/* ============ 设计令牌（JS 侧引用） ============ */
+const TOKENS = {
+  spirit:  { name: "精神", en: "战略方向", color: "var(--spirit)" },
+  thinking:{ name: "思维", en: "创意孵化器", color: "var(--thinking)" },
+  hearing: { name: "听觉", en: "沟通路径", color: "var(--hearing)" },
+  visual:  { name: "视觉", en: "审美细节", color: "var(--visual)" },
+  somatic: { name: "体觉", en: "行动感受", color: "var(--somatic)" }
+};
+
+/* ============ 5 区定义（含 10 能力） ============ */
+const AREAS = [
+  { key: "spirit", ...TOKENS.spirit,
+    abilities: [
+      { hemi: "L", name: "目标规划", desc: "按计划推进 / 逻辑驱动" },
+      { hemi: "R", name: "愿景驱动", desc: "使命感 / 意义感" }
+    ] },
+  { key: "thinking", ...TOKENS.thinking,
+    abilities: [
+      { hemi: "L", name: "深度分析", desc: "拆解 / 推理 / 因果" },
+      { hemi: "R", name: "创意联想", desc: "整体 / 直觉 / 灵感" }
+    ] },
+  { key: "hearing", ...TOKENS.hearing,
+    abilities: [
+      { hemi: "L", name: "抓重点听", desc: "听内容 / 理因果" },
+      { hemi: "R", name: "听情绪", desc: "听语气 / 感受关系" }
+    ] },
+  { key: "visual", ...TOKENS.visual,
+    abilities: [
+      { hemi: "L", name: "细节审视", desc: "挑剔 / 顺序 / 准确" },
+      { hemi: "R", name: "整体审美", desc: "美感 / 平衡 / 氛围" }
+    ] },
+  { key: "somatic", ...TOKENS.somatic,
+    abilities: [
+      { hemi: "L", name: "步骤行动", desc: "按部就班 / 执行力" },
+      { hemi: "R", name: "直觉反应", desc: "身体感受 / 即兴" }
+    ] }
+];
+
+const AREA_KEYS = ["spirit", "thinking", "hearing", "visual", "somatic"];
+
+const ABCD_LABELS = {
+  spirit:   { A: "目标", B: "愿景", C: "双脑", D: "需支持" },
+  thinking: { A: "分析", B: "整体", C: "双脑", D: "需支持" },
+  hearing:  { A: "内容", B: "情绪", C: "双脑", D: "需支持" },
+  visual:   { A: "细节", B: "美感", C: "双脑", D: "需支持" },
+  somatic:  { A: "步骤", B: "直觉", C: "双脑", D: "需支持" }
+};
+
+/* =========================================================
+   SVG 图标体系（替代 Emoji）
+   ========================================================= */
+const SVG_ICONS = {
+  over: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>',
+  need: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/><path d="M6 11v2"/><path d="M10 11v2"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  bal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 17h14"/><path d="m5 7 7 5 7-5"/><path d="m5 17 7-5 7 5"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>',
+  leaf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 4 13c0-4 3-8 9-9 5 1 7 5 7 9a7 7 0 0 1-9 7z"/><path d="M4 21c2-4 6-7 12-9"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+  rocket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>',
+  team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  family: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  school: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>'
+};
+
+/* =========================================================
+   数据层：URL 参数 + sessionStorage 兼容
+   ========================================================= */
+function normalizeData(raw) {
+  const data = {
+    answers: {},
+    name: "",
+    channel: "",
+    receiver: "",
+    reportId: "",
+    reportDate: ""
+  };
+  if (!raw || typeof raw !== "object") return data;
+
+  // 姓名：去空白，超长截断
+  data.name = String(raw.name || "").trim().slice(0, 30);
+  data.channel = String(raw.channel || "").trim().slice(0, 20);
+  data.receiver = String(raw.receiver || "").trim().slice(0, 30);
+  data.reportId = String(raw.reportId || "").trim();
+  data.reportDate = String(raw.reportDate || "").trim();
+
+  // 答案：只保留 q01-q25 的合法值（A/B/C/D，大小写归一）
+  if (raw.answers && typeof raw.answers === "object") {
+    Object.keys(raw.answers).forEach(k => {
+      if (/^q([0-2][0-9])$/.test(k)) {
+        const v = String(raw.answers[k]).toUpperCase();
+        if (/^[ABCD]$/.test(v)) data.answers[k] = v;
+      }
+    });
+  }
+  return data;
+}
+
+function loadData() {
+  // 1) URL 参数 ?data=<json>（便于分享/预览）
+  const params = new URLSearchParams(window.location.search);
+  let raw = null;
+  if (params.get("data")) {
+    try { raw = JSON.parse(decodeURIComponent(params.get("data"))); } catch (e) { raw = null; }
+  }
+  // 2) sessionStorage 兜底（兼容旧链路）
+  if (!raw) {
+    try {
+      const s = sessionStorage.getItem("see_visual_report_data");
+      if (s) raw = JSON.parse(s);
+    } catch (e) { raw = null; }
+  }
+  // 3) demo 模式
+  if (!raw && params.get("demo") === "1") {
+    raw = buildDemoData();
+  }
+  return normalizeData(raw);
+}
+
+function buildDemoData() {
+  const DEMO = {
+    spirit:  ["A","B","C","C","B"],
+    thinking:["B","A","B","D","B"],
+    hearing: ["A","A","A","A","D"],
+    visual:  ["C","B","C","B","C"],
+    somatic: ["B","A","B","D","B"]
+  };
+  const answers = {};
+  AREA_KEYS.forEach((key, mi) => {
+    DEMO[key].forEach((v, i) => {
+      answers["q" + String(mi * 5 + i + 1).padStart(2, "0")] = v;
+    });
+  });
+  return { answers, name: "张同学（示例）", channel: "深度", receiver: "感知、分析" };
+}
+
+const DATA = loadData();
+
+/* =========================================================
+   计算：每区 ABCD 计数 + 能力电量
+   ========================================================= */
+function buildCounts() {
+  const counts = {};
+  AREA_KEYS.forEach((key, mi) => {
+    const c = { A: 0, B: 0, C: 0, D: 0 };
+    for (let i = 1; i <= 5; i++) {
+      const qid = "q" + String(mi * 5 + i).padStart(2, "0");
+      const a = (DATA.answers[qid] || "").toUpperCase();
+      if (c[a] !== undefined) c[a]++;
+    }
+    counts[key] = c;
+  });
+  return counts;
+}
+const COUNTS = buildCounts();
+
+function analyze(areaKey, counts) {
+  const total = (counts.A + counts.B + counts.C + counts.D) || 1;
+  const main = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+
+  let L, R, status;
+  if (main === "A" && counts.A > 0) {
+    L = 90 + (counts.A / 5) * 10; R = 20 + (counts.B / 5) * 10;
+    status = { L: "over", R: "need" };
+  } else if (main === "B" && counts.B > 0) {
+    R = 90 + (counts.B / 5) * 10; L = 20 + (counts.A / 5) * 10;
+    status = { L: "need", R: "over" };
+  } else if (main === "C" && counts.C > 0) {
+    L = 65 + (counts.C / 5) * 10; R = 65 + (counts.C / 5) * 10;
+    status = { L: "ok", R: "ok" };
+  } else {
+    L = 20 + (counts.A / 5) * 10; R = 20 + (counts.B / 5) * 10;
+    status = { L: "need", R: "need" };
+  }
+  if (counts.D >= 3) {
+    L = Math.min(L, 30); R = Math.min(R, 30); status = { L: "need", R: "need" };
+  }
+  if (counts.C >= 3 && main === "C") {
+    status = { L: "bal", R: "bal" };
+    L = 70 + (counts.C / 5) * 10; R = 70 + (counts.C / 5) * 10;
+  }
+  return {
+    main, counts,
+    abilities: [
+      { hemi: "L", pct: Math.round(L), status: status.L },
+      { hemi: "R", pct: Math.round(R), status: status.R }
+    ]
+  };
+}
+
+/* =========================================================
+   组件渲染
+   ========================================================= */
+
+/* 指纹小人品牌角色：三个角色形成"发现—理解—行动"阅读路线 */
+const MASCOTS = [
+  // 蓝色放大镜小人：左上，靠近五大功能区，代表"发现自己"（发现）
+  { src: "assets/mascot-visual.png",   cls: "m-discover" },
+  // 红色拼图小人：中部右侧，靠近能力诊断，代表"理解与拼接大脑地图"（理解）
+  { src: "assets/mascot-spirit.png",   cls: "m-understand" },
+  // 绿黄平板小人：右下，靠近二维码/服务入口，代表"查看报告和进入下一步"（行动）
+  { src: "assets/mascot-somatic.png",  cls: "m-action" }
+];
+function renderMascots() {
+  const layer = document.getElementById("mascotLayer");
+  layer.innerHTML = MASCOTS.map(m =>
+    `<img class="mascot ${m.cls}" src="${m.src}" alt="">`
+  ).join("");
+}
+
+/* 潮玩装饰层：已移除加号和拼图 */
+function renderDeco() {
+  const layer = document.getElementById("decoLayer");
+  if (layer) layer.innerHTML = "";
+}
+
+/* 报告头 + 信息条 */
+function renderHeader() {
+  document.getElementById("info-name").textContent = DATA.name || "—";
+  document.getElementById("info-channel").textContent = DATA.channel || "—";
+  document.getElementById("info-receiver").textContent = DATA.receiver || "—";
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const dateStr = DATA.reportDate ||
+    (now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()));
+  const idStr = DATA.reportId ||
+    ("SEE-" + now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + "-" + pad(Math.floor(Math.random() * 999)));
+  document.getElementById("meta-date").textContent = dateStr;
+  document.getElementById("meta-id").textContent = idStr;
+}
+
+/* 雷达图花瓣 */
+function renderPetals() {
+  const svg = document.getElementById("petals");
+  const cx = 160, cy = 160, maxR = 100;
+  const angles = [-90, -18, 54, 126, 198].map(a => a * Math.PI / 180);
+  const points = AREAS.map((a, i) => ({
+    x: cx + maxR * Math.cos(angles[i]),
+    y: cy + maxR * Math.sin(angles[i]),
+    a
+  }));
+  const path = points.map((p, i) => (i === 0 ? "M" : "L") + p.x + "," + p.y).join(" ") + " Z";
+  svg.innerHTML = `
+    <path d="${path}" fill="rgba(123,44,191,0.08)" stroke="#7b2cbf" stroke-width="1.5"/>
+    ${points.map(p => `
+      <circle cx="${p.x}" cy="${p.y}" r="6" fill="${p.a.color}" stroke="#fff" stroke-width="2"/>
+      <text x="${p.x + (p.x > cx ? 8 : -8)}" y="${p.y + (p.y > cy ? 14 : -8)}"
+            text-anchor="${p.x > cx ? "start" : "end"}"
+            font-size="11" font-weight="700" fill="${p.a.color}">${p.a.name}</text>
+      <text x="${p.x + (p.x > cx ? 8 : -8)}" y="${p.y + (p.y > cy ? 26 : 4)}"
+            text-anchor="${p.x > cx ? "start" : "end"}"
+            font-size="9" fill="#6f7788">${p.a.en}</text>
+    `).join("")}
+  `;
+}
+
+/* ABCD 计数矩阵 */
+function renderABCD() {
+  const container = document.getElementById("abcd-rows");
+  container.innerHTML = AREAS.map(a => {
+    const c = COUNTS[a.key];
+    const lb = ABCD_LABELS[a.key];
+    return `
+      <div class="row">
+        <div class="area" style="color:${a.color}">${a.name}<small>${a.en}</small></div>
+        <div class="pills">
+          <span class="pill a ${c.A > 0 ? "active" : ""}">A ${lb.A} ${c.A}</span>
+          <span class="pill b ${c.B > 0 ? "active" : ""}">B ${lb.B} ${c.B}</span>
+          <span class="pill c ${c.C > 0 ? "active" : ""}">C ${lb.C} ${c.C}</span>
+          <span class="pill d ${c.D > 0 ? "active" : ""}">D ${lb.D} ${c.D}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+/* 10 能力卡片 */
+function renderAbilities() {
+  const container = document.getElementById("abilities");
+  const statusMap = {
+    over: { cls: "over", text: "用电过度", ico: "over" },
+    need: { cls: "need", text: "需要充电", ico: "need" },
+    ok:   { cls: "ok",   text: "状态良好", ico: "ok" },
+    bal:  { cls: "bal",  text: "双脑平衡", ico: "bal" }
+  };
+  container.innerHTML = AREAS.map(a => {
+    const r = analyze(a.key, COUNTS[a.key]);
+    return a.abilities.map((ab, i) => {
+      const d = r.abilities[i];
+      const s = statusMap[d.status];
+      return `
+        <div class="ability-card" style="--side: ${a.color}">
+          <div class="head">
+            <div class="name">${a.name}·${ab.name}<small>${ab.desc}</small></div>
+            <span class="b-tag ${d.hemi === "L" ? "hot" : "cold"}">${d.hemi === "L" ? "左脑" : "右脑"}</span>
+          </div>
+          <div class="battery">
+            <div class="bat"><div class="fill ${s.cls}" style="width:${d.pct}%"></div></div>
+            <div class="pct">${d.pct}%</div>
+          </div>
+          <div><span class="status ${s.cls}"><span class="svg-ico" data-ico="${s.ico}"></span>${s.text}</span></div>
+        </div>
+      `;
+    }).join("");
+  }).join("");
+}
+
+/* 诊断三栏 */
+function renderDiag() {
+  const overList = [], okList = [], needList = [];
+  AREAS.forEach(a => {
+    const r = analyze(a.key, COUNTS[a.key]);
+    r.abilities.forEach(ab => {
+      const item = `${a.name}·${a.abilities[ab.hemi === "L" ? 0 : 1].name}`;
+      if (ab.status === "over") overList.push(`${item}（${ab.pct}%）`);
+      else if (ab.status === "need") needList.push(`${item}（${ab.pct}%）`);
+      else okList.push(`${item}（${ab.pct}%）`);
+    });
+  });
+  const fmt = list => list.map(x => `<li>${x}</li>`).join("") || "<li>暂无</li>";
+  document.getElementById("diag-over").innerHTML = fmt(overList);
+  document.getElementById("diag-ok").innerHTML = fmt(okList);
+  document.getElementById("diag-need").innerHTML = fmt(needList);
+}
+
+/* 服务区 */
+function renderService() {
+  // 两个跳转卡片
+  document.getElementById("service-grid").innerHTML = `
+    <a class="service-card" onclick="goDeepReport()">
+      <span class="svg-ico" data-ico="search"></span>
+      <div class="body">
+        <div class="title">深度解读报告</div>
+        <div class="desc">深度多场景反应思维模式分析 <b class="arrow">点击查看 →</b></div>
+      </div>
+    </a>
+    <a class="service-card" onclick="goInnateReport()">
+      <span class="svg-ico" data-ico="leaf"></span>
+      <div class="body">
+        <div class="title">先天大脑特质报告</div>
+        <div class="desc">先天特质与天赋倾向解读 <b class="arrow">点击查看 →</b></div>
+      </div>
+    </a>
+  `;
+  // 五个场景
+  const items = [
+    { ico: "book",   title: "学习力测评",      desc: "找到你的专属学习通道与节奏，让学习更高效" },
+    { ico: "rocket", title: "职涯测评",        desc: "识别职业优势与方向，让事业选择更清晰" },
+    { ico: "team",   title: "团队建设",        desc: "理解成员差异，提升沟通协作与团队效能" },
+    { ico: "family", title: "亲子 / 家庭成长", desc: "看见彼此认知差异，改善亲子沟通与关系" },
+    { ico: "school", title: "学校 / 家校共育", desc: "班会活动与教师成长支持，家校用同一种语言理解孩子", full: true }
+  ];
+  document.getElementById("service-list").innerHTML = items.map(it => `
+    <div class="service-item ${it.full ? "full" : ""}">
+      <span class="svg-ico" data-ico="${it.ico}"></span>
+      <div class="body">
+        <div class="title">${it.title}</div>
+        <div class="desc">${it.desc}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+/* SVG 图标注入 */
+function injectIcons() {
+  document.querySelectorAll(".svg-ico[data-ico]").forEach(el => {
+    const name = el.getAttribute("data-ico");
+    if (SVG_ICONS[name]) el.innerHTML = SVG_ICONS[name];
+  });
+}
+
+/* 图例说明（10 能力分布标题旁） */
+function renderLegendNote() {
+  const note = document.getElementById("legend-note");
+  note.innerHTML = `
+    <span class="status over"><span class="svg-ico" data-ico="over"></span>用电过度</span>
+    <span class="status ok"><span class="svg-ico" data-ico="ok"></span>状态良好</span>
+    <span class="status need"><span class="svg-ico" data-ico="need"></span>需要充电</span>
+  `;
+  // 图例里的图标也要注入
+  injectIcons();
+}
+
+/* =========================================================
+   服务跳转
+   ========================================================= */
+function goDeepReport() {
+  window.location.href = "deep-report.html";
+}
+function goInnateReport() {
+  if (DATA.name) sessionStorage.setItem("see_name_shared", DATA.name);
+  window.location.href = "talent.html";
+}
+function toggleConsultant() {
+  const panel = document.getElementById("consultantPanel");
+  if (panel) panel.classList.toggle("show");
+}
+
+/* =========================================================
+   总渲染
+   ========================================================= */
+function renderReport() {
+  renderDeco();
+  renderMascots();
+  renderHeader();
+  renderPetals();
+  renderABCD();
+  renderAbilities();
+  renderDiag();
+  renderService();
+  renderLegendNote();
+}
+
+/* =========================================================
+   PDF 导出（纯前端 html2canvas + jsPDF）
+   ========================================================= */
+function getFreeFileName() {
+  const name = DATA.name || "";
+  return (name ? name + "_" : "") + "SEE_免费报告";
+}
+
+async function exportPDF() {
+  const btn = document.querySelector(".topbar .primary");
+  if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+
+  try {
+    const page = document.getElementById("report");
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;";
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+      "body{margin:0;padding:0;font-family:\"PingFang SC\",\"Microsoft YaHei\",sans-serif;}" +
+      document.querySelector("style").textContent +
+      // ===== PDF 专用：A4 容器 + 淡粉淡蓝背景，白卡占满，三个角色定位 =====
+      "body{overflow:hidden;}" +
+      ".pdf-stage{width:794px;height:1123px;margin:0;position:relative;overflow:hidden;background:" +
+      "radial-gradient(circle at 0% 0%, rgba(244,114,182,.14) 0%, transparent 45%)," +
+      "radial-gradient(circle at 100% 0%, rgba(96,165,250,.16) 0%, transparent 45%)," +
+      "radial-gradient(circle at 0% 100%, rgba(96,165,250,.12) 0%, transparent 45%)," +
+      "radial-gradient(circle at 100% 100%, rgba(244,114,182,.12) 0%, transparent 45%)," +
+      "linear-gradient(160deg, #fdf2f8 0%, #eef2ff 55%, #eff6ff 100%);}" +
+      ".pdf-stage .report-page{width:794px;height:1123px;margin:0;overflow:hidden;box-shadow:none;}" +
+      ".pdf-stage .report-page .mascot-layer{display:none;}" +  // 白卡内部小人隐藏，改用 stage 三角色
+      ".pdf-stage .report-page .deco-layer{display:none;}" +   // 装饰层也隐藏，改用 stage 装饰
+      ".pdf-stage .stage-mascot{position:absolute;object-fit:contain;z-index:5;filter:drop-shadow(0 3px 8px rgba(0,0,0,.16));}" +
+      ".pdf-stage .sm-discover{left:0;top:0;width:18mm;transform:translate(0%,8%);}" +
+      ".pdf-stage .sm-understand{right:0;top:42%;width:19mm;transform:translate(12%,-50%);}" +
+      ".pdf-stage .sm-action{right:0;bottom:0;width:20mm;transform:translate(0%,28%);}" +
+      ".consultant-panel{display:none;}" +
+      ".service-consult-btn{pointer-events:none;}" +
+      "</style></head><body>" +
+      '<div class="pdf-stage">' +
+      '<img class="stage-mascot sm-discover" src="assets/mascot-visual.png" alt="">' +
+      '<img class="stage-mascot sm-understand" src="assets/mascot-spirit.png" alt="">' +
+      '<img class="stage-mascot sm-action" src="assets/mascot-somatic.png" alt="">' +
+      page.outerHTML + "</div>" +
+      "</body></html>");
+    doc.close();
+    await new Promise(r => setTimeout(r, 600));
+
+    const stage = doc.querySelector(".pdf-stage");
+    const clone = doc.getElementById("report");
+    // PDF 追加公众号二维码
+    const sf = clone.querySelector(".service-footer");
+    if (sf) {
+      const qr = doc.createElement("div");
+      qr.className = "promo-qr";
+      qr.innerHTML = '<img src="qr_official.jpg" alt="公众号二维码">' +
+        '<div><div class="ttl">关注公众号</div>' +
+        '<div class="desc">扫码关注 <b>SEE 生命印迹</b><br>获取最新测评、活动福利与大脑训练干货</div></div>';
+      sf.appendChild(qr);
+    }
+
+    const canvas = await html2canvas(stage, {
+      scale: 3, useCORS: true, backgroundColor: "#f3e8ff", logging: false, windowWidth: 794, windowHeight: 1123
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdfW = 210, pdfH = 297;
+    const ratio = canvas.height / canvas.width;
+    const pageImgH = pdfW * ratio;
+    const TOLERANCE = 8; // mm
+    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+
+    if (pageImgH <= pdfH + TOLERANCE) {
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, pdfW, Math.min(pageImgH, pdfH));
+    } else {
+      // 多页兜底
+      const pagePx = Math.floor(canvas.width * (pdfH / pdfW));
+      let rendered = 0;
+      while (rendered < canvas.height) {
+        const slice = document.createElement("canvas");
+        slice.width = canvas.width;
+        slice.height = Math.min(pagePx, canvas.height - rendered);
+        const ctx = slice.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, slice.width, slice.height);
+        ctx.drawImage(canvas, 0, rendered, canvas.width, slice.height, 0, 0, canvas.width, slice.height);
+        if (rendered > 0) pdf.addPage();
+        pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, pdfW, pdfH);
+        rendered += pagePx;
+      }
+    }
+    pdf.save(getFreeFileName() + ".pdf");
+  } catch (e) {
+    console.error(e);
+    alert("PDF 生成失败，请重试");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "导出 PDF"; }
+  }
+}
+
+/* 启动 */
+renderReport();
+</script>
+</body>
+</html>
